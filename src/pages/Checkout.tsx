@@ -1,11 +1,10 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
 import { motion } from 'framer-motion';
 import { Check, Lock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -118,7 +117,6 @@ export default function CheckoutPage() {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="pt-32 text-center">
           <h1 className="font-display text-2xl mb-4">
             {locale === 'zh' ? '购物车为空' : 'Your cart is empty'}
@@ -138,7 +136,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-6 max-w-5xl">
           <h1 className="font-display text-3xl text-center mb-8">{t.checkout.title}</h1>

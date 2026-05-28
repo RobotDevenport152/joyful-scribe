@@ -1,7 +1,5 @@
-import { useApp } from '@/contexts/AppContext';
-import Navbar from '@/components/Navbar';
+﻿import { useApp } from '@/contexts/AppContext';
 import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
 import SEOHead from '@/components/SEOHead';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Package, Mail, RefreshCw } from 'lucide-react';
@@ -15,8 +13,6 @@ export default function ReturnsPage() {
         title={locale === 'zh' ? '退换货政策 — 太平洋羊驼' : 'Return Policy — Pacific Alpacas'}
         description={locale === 'zh' ? '30天无忧退换，品质问题免费处理。' : '30-day hassle-free returns. Quality issues handled at no cost.'}
       />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6 max-w-3xl">

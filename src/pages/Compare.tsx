@@ -1,7 +1,5 @@
-import { useApp } from '@/contexts/AppContext';
-import Navbar from '@/components/Navbar';
+﻿import { useApp } from '@/contexts/AppContext';
 import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
 import SEOHead from '@/components/SEOHead';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
@@ -82,8 +80,6 @@ export default function ComparePage() {
         title={locale === 'zh' ? '产品系列对比 — 太平洋羊驼' : 'Compare Collections — Pacific Alpacas'}
         description={locale === 'zh' ? '经典款、轻奢款、高奢款全面对比，找到最适合你的那一款。' : 'Compare Classic, Luxury and Premium tiers to find your perfect alpaca duvet.'}
       />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6">

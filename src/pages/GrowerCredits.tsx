@@ -1,9 +1,7 @@
-import { useNavigate, Link } from 'react-router-dom';
+﻿import { useNavigate, Link } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { Copy } from 'lucide-react';
@@ -40,8 +38,6 @@ export default function GrowerCreditsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEOHead title={locale === 'zh' ? '我的积分账户' : 'My Credits'} />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6 max-w-3xl">

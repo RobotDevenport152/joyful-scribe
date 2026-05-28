@@ -1,8 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
@@ -56,7 +55,6 @@ export default function RegisterPage() {
         title={locale === 'zh' ? '注册' : 'Register'}
         description={locale === 'zh' ? '创建 Pacific Alpacas 账户' : 'Create your Pacific Alpacas account'}
       />
-      <Navbar />
 
       <div className="flex-1 flex items-center justify-center px-6 py-24">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">

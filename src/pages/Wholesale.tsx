@@ -1,7 +1,5 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Scissors, Droplets, Package } from 'lucide-react';
@@ -39,8 +37,6 @@ export default function WholesalePage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <CartDrawer />
 
       {/* Hero */}
       <section className="pt-24 pb-12 bg-primary text-primary-foreground">

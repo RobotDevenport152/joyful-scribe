@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
 import { CheckCircle, MapPin, Clock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -101,7 +100,6 @@ export default function OrderSuccessPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="pt-32 pb-16 text-center">
 
         {/* Loading */}

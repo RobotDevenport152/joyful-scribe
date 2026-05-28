@@ -1,8 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
@@ -41,7 +40,6 @@ export default function LoginPage() {
         title={locale === 'zh' ? '登录' : 'Login'}
         description={locale === 'zh' ? '登录您的 Pacific Alpacas 账户' : 'Sign in to your Pacific Alpacas account'}
       />
-      <Navbar />
 
       <div className="flex-1 flex items-center justify-center px-6 py-24">
         <motion.div

@@ -1,7 +1,5 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
@@ -190,8 +188,6 @@ export default function GrowersInfoPage() {
         title={locale === 'zh' ? '牧场合作信息 — 太平洋羊驼' : 'Grower Information — Pacific Alpacas'}
         description={locale === 'zh' ? '查找收集点、剪毛师和可参观的羊驼农场' : 'Find collection points, shearers and farms to visit'}
       />
-      <Navbar />
-      <CartDrawer />
 
       {/* Hero */}
       <section className="pt-24 pb-12 bg-primary text-primary-foreground">

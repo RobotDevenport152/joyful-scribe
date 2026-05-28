@@ -390,16 +390,37 @@ const { t, locale, setLocale } = useApp();
 
 ### Route map
 
+All public and auth-required routes share `PublicLayout` (Navbar + CartDrawer shell). Admin routes use their own isolated `AdminLayout`.
+
 ```
-/                    → Index.tsx            (public)
-/shop                → ShopPage.tsx         (public)
-/shop/:slug          → ProductDetailPage.tsx (public)
-/trace/:batchCode    → TraceabilityPage.tsx  (public)
-/checkout            → CheckoutPage.tsx      (auth optional)
-/order-success       → OrderSuccessPage.tsx  (auth optional)
-/login               → AuthPage.tsx          (public, redirects if logged in)
-/grower              → GrowerDashboard.tsx   (auth required, grower role)
-/admin/*             → AdminLayout.tsx       (auth required, admin role)
+PublicLayout (Navbar + CartDrawer)
+├── /                    → Index.tsx
+├── /shop                → Shop.tsx
+├── /product/:id         → ProductDetail.tsx
+├── /traceability        → Traceability.tsx
+├── /contact             → Contact.tsx
+├── /growers-info        → GrowersInfo.tsx
+├── /wholesale           → Wholesale.tsx
+├── /china               → ChinaLanding.tsx
+├── /compare             → Compare.tsx
+├── /returns             → Returns.tsx
+├── /login               → Login.tsx
+├── /register            → Register.tsx
+├── /forgot-password     → ForgotPassword.tsx
+├── /reset-password      → ResetPassword.tsx
+├── /checkout            → ProtectedRoute → Checkout.tsx
+├── /order-success       → ProtectedRoute → OrderSuccess.tsx
+├── /my-orders           → ProtectedRoute → MyOrders.tsx
+├── /grower/batches      → ProtectedRoute(grower) → GrowerBatches.tsx
+└── /grower/credits      → ProtectedRoute(grower) → GrowerCredits.tsx
+
+ProtectedRoute(admin) → AdminLayout
+├── /admin               → AdminDashboard.tsx
+├── /admin/products      → AdminProducts.tsx
+├── /admin/orders        → AdminOrders.tsx
+├── /admin/growers       → AdminGrowers.tsx
+├── /admin/fiber-batches → AdminFiberBatches.tsx
+└── /admin/promos        → AdminPromos.tsx
 ```
 
 ### Page responsibilities
@@ -671,7 +692,7 @@ These items are tracked here so they are not forgotten and not re-introduced.
 |---|---|---|---|
 | Enable TypeScript strict mode | `tsconfig.app.json` | High | `noImplicitAny: true, strict: true` — fix type errors incrementally |
 | Migrate `uiStore.ts` to AppContext | `src/stores/uiStore.ts` | Medium | Language and mobile menu state should live in AppContext |
-| Remove legacy `cartStore.ts` | `src/stores/cartStore.ts` | Medium | CartContext is the canonical source; Zustand store is a duplicate |
+| Evaluate `cartStore.ts` vs `CartContext` | `src/stores/cartStore.ts`, `src/contexts/CartContext.tsx` | High | `cartStore` stores actual per-currency DB prices (`price_nzd`, `price_cny`, `price_usd`); `CartContext` uses `Math.round(nzd * 4.5)` rate conversion — the bug `cartStore` was built to fix. Do NOT remove `cartStore` until `CartContext` is updated to also use DB prices. |
 | Phase out `dbToLegacyProduct` adapter | `src/lib/store.ts` | Medium | Components should consume Supabase DB types directly |
 | Move promo code validation server-side | `lib/store.ts` + Edge Function | High | Client-side `PROMO_CODES` constant is only for UI feedback; actual validation must be in `create-checkout` Edge Function (verify this is already the case) |
 | Add `.env.example` | repo root | Low | New developers need a template with placeholder values |

@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useProduct, useProducts } from '@/hooks/useProducts';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -57,7 +55,6 @@ export default function ProductDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="pt-32 text-center">
           <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         </div>
@@ -68,7 +65,6 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="pt-32 text-center">
           <h1 className="font-display text-3xl mb-4">{locale === 'zh' ? '产品未找到' : 'Product Not Found'}</h1>
           <Link to="/shop" className="text-gold hover:underline font-body">
@@ -120,8 +116,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6">

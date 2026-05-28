@@ -1,11 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { Search, ShoppingBag, Heart } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { type Product } from '@/lib/store';
 import { useProducts } from '@/hooks/useProducts';
 import { useWishlist } from '@/hooks/useWishlist';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -89,8 +87,6 @@ export default function ShopPage() {
         title={locale === 'zh' ? '产品展示 — 太平洋羊驼' : 'Shop — Pacific Alpacas'}
         description={locale === 'zh' ? '探索我们的羊驼纤维奢华产品系列' : 'Explore our luxury alpaca fiber collections'}
       />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6">

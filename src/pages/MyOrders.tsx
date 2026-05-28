@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
@@ -69,7 +67,6 @@ export default function MyOrdersPage() {
   if (!authLoading && !user) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="pt-32 text-center">
           <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h1 className="font-display text-2xl mb-4">{locale === 'zh' ? '请先登录' : 'Please log in'}</h1>
@@ -82,8 +79,6 @@ export default function MyOrdersPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEOHead title={locale === 'zh' ? '我的订单' : 'My Orders'} />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6 max-w-4xl">

@@ -1,12 +1,10 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useQuery } from '@tanstack/react-query';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { Download } from 'lucide-react';
@@ -96,8 +94,6 @@ export default function GrowerBatchesPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEOHead title={locale === 'zh' ? '我的纤维批次' : 'My Fiber Batches'} />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6 max-w-5xl">

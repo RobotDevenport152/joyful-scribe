@@ -1,8 +1,6 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { products } from '@/lib/store';
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
 import SEOHead from '@/components/SEOHead';
 import { Package, ShoppingCart, AlertTriangle, Users, BarChart3, Download, CheckSquare, TrendingUp, TrendingDown } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -92,8 +90,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-muted">
       <SEOHead title={locale === 'zh' ? '管理后台' : 'Admin Panel'} description="Pacific Alpacas admin dashboard" />
-      <Navbar />
-      <CartDrawer />
 
       <div className="pt-20 flex">
         {/* Sidebar */}

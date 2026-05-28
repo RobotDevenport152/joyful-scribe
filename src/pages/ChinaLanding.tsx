@@ -1,6 +1,4 @@
-import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
-import Footer from '@/components/Footer';
+﻿import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Trophy, Tv, Leaf, PawPrint, Thermometer, Feather, Droplets, Bug, Zap, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -29,8 +27,6 @@ export default function ChinaLandingPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <CartDrawer />
 
       {/* Hero */}
       <section className="pt-24 pb-20 bg-primary text-primary-foreground">
