@@ -26,7 +26,7 @@ interface BatchResult {
   status: string;
 }
 
-const STATUS_MAP: Record<string, number> = { raw: 0, scoured: 1, combed: 2, ready: 5 };
+const STATUS_MAP: Record<string, number> = { raw: 0, scoured: 1, combed: 2, felted: 3, sterilized: 4, ready: 5 };
 
 export default function TraceabilityPage() {
   const { locale } = useApp();

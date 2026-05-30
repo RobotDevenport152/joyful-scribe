@@ -2,11 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import type { Currency } from '@/lib/store';
+import { useExchangeRates, type ExchangeRates } from '@/hooks/useExchangeRates';
 
 type DbProduct = Tables<'products'>;
 
+const FALLBACK_RATES: ExchangeRates = { NZD: 1, CNY: 4.5, USD: 0.6 };
+
 // Convert DB product to legacy Product format for compatibility
-export function dbToLegacyProduct(p: DbProduct) {
+export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_RATES) {
   // images is jsonb [{url,alt,is_primary}] or text[] of URL strings — handle both
   const rawImages = Array.isArray(p.images) ? (p.images as any[]) : [];
   const imageUrls: string[] = rawImages
@@ -23,8 +26,8 @@ export function dbToLegacyProduct(p: DbProduct) {
     category: p.category as any,
     prices: {
       NZD: nzd,
-      CNY: Math.round(nzd * 4.5),
-      USD: Math.round(nzd * 0.6),
+      CNY: Math.round(nzd * rates.CNY),
+      USD: Math.round(nzd * rates.USD),
     } as Record<Currency, number>,
     image: images[0] || '/placeholder.svg',
     images: images,
@@ -44,8 +47,9 @@ export function dbToLegacyProduct(p: DbProduct) {
 }
 
 export function useProducts(category?: string) {
+  const { rates } = useExchangeRates();
   return useQuery({
-    queryKey: ['products', category],
+    queryKey: ['products', category, rates],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -59,14 +63,15 @@ export function useProducts(category?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map(dbToLegacyProduct);
+      return (data ?? []).map(p => dbToLegacyProduct(p, rates));
     },
   });
 }
 
 export function useProduct(id: string) {
+  const { rates } = useExchangeRates();
   return useQuery({
-    queryKey: ['product', id],
+    queryKey: ['product', id, rates],
     queryFn: async () => {
       // Try by UUID first, then by slug
       let result = await supabase
@@ -85,15 +90,16 @@ export function useProduct(id: string) {
 
       if (result.error) throw result.error;
       if (!result.data) throw new Error('Product not found');
-      return dbToLegacyProduct(result.data);
+      return dbToLegacyProduct(result.data, rates);
     },
     enabled: !!id,
   });
 }
 
 export function useFeaturedProducts() {
+  const { rates } = useExchangeRates();
   return useQuery({
-    queryKey: ['products', 'featured'],
+    queryKey: ['products', 'featured', rates],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -102,7 +108,7 @@ export function useFeaturedProducts() {
         .eq('is_active', true)
         .limit(6);
       if (error) throw error;
-      return (data ?? []).map(dbToLegacyProduct);
+      return (data ?? []).map(p => dbToLegacyProduct(p, rates));
     },
   });
 }

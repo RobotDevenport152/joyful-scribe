@@ -19,26 +19,28 @@ const AdminDashboard = () => {
   const loadDashboard = async () => {
     const today = new Date().toISOString().split('T')[0];
 
-    const [ordersRes, productsRes, recentRes] = await Promise.all([
-      supabase.from('orders').select('*').gte('created_at', today),
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const [ordersRes, productsRes, recentRes, monthlyRes] = await Promise.all([
+      supabase.from('orders').select('total').gte('created_at', today),
       supabase.from('products').select('id, name_zh, stock_quantity, price_nzd').lt('stock_quantity', 5).eq('is_active', true),
-      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(10),
+      supabase.from('orders').select('id, order_number, created_at, total, shipping_name, customer_name, shipping_email, customer_email, status').order('created_at', { ascending: false }).limit(10),
+      supabase.from('orders').select('created_at, total').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: true }),
     ]);
 
     const todayOrders = ordersRes.data ?? [];
     setStats({
       todayOrders: todayOrders.length,
-      todayRevenue: todayOrders.reduce((sum, o) => sum + Number(o.total_nzd || 0), 0),
+      todayRevenue: todayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
     });
     setLowStock(productsRes.data ?? []);
     setRecentOrders(recentRes.data ?? []);
 
-    // Generate monthly trend data from orders
-    const allOrders = recentRes.data ?? [];
     const monthly: Record<string, number> = {};
-    allOrders.forEach(o => {
-      const month = new Date(o.created_at).toLocaleDateString('zh-CN', { month: 'short' });
-      monthly[month] = (monthly[month] || 0) + Number(o.total_nzd || 0);
+    (monthlyRes.data ?? []).forEach(o => {
+      const month = new Date(o.created_at!).toLocaleDateString('zh-CN', { month: 'short' });
+      monthly[month] = (monthly[month] || 0) + Number(o.total || 0);
     });
     setMonthlyData(Object.entries(monthly).map(([name, revenue]) => ({ name, revenue })));
   };
@@ -137,8 +139,8 @@ const AdminDashboard = () => {
                 <TableRow key={o.id}>
                   <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
                   <TableCell>{new Date(o.created_at).toLocaleDateString('zh-CN')}</TableCell>
-                  <TableCell>{o.customer_name || o.customer_email}</TableCell>
-                  <TableCell>NZ${Number(o.total_nzd || 0).toFixed(0)}</TableCell>
+                  <TableCell>{o.shipping_name || o.customer_name || o.shipping_email || o.customer_email}</TableCell>
+                  <TableCell>NZ${Number(o.total || 0).toFixed(0)}</TableCell>
                   <TableCell>
                     <Badge className={STATUS_COLORS[o.status || 'pending']}>{o.status || 'pending'}</Badge>
                   </TableCell>

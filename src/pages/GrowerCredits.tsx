@@ -2,20 +2,12 @@
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useGrowerCredits } from '@/hooks/useGrowerCredits';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { Copy } from 'lucide-react';
 import { useState } from 'react';
 
-const MOCK_TRANSACTIONS = [
-  { id: '1', date: '2025-03-15', description_zh: 'PA-2025-001 批次收购结算', description_en: 'Batch PA-2025-001 settlement', amount: 2034, type: 'credit' },
-  { id: '2', date: '2025-02-20', description_zh: 'PA-2025-002 批次预付款', description_en: 'Batch PA-2025-002 advance', amount: 800, type: 'credit' },
-  { id: '3', date: '2025-01-10', description_zh: '兑换优惠券 GROWER50', description_en: 'Redeemed coupon GROWER50', amount: -50, type: 'debit' },
-  { id: '4', date: '2024-11-10', description_zh: 'PA-2024-087 批次收购结算', description_en: 'Batch PA-2024-087 settlement', amount: 1927, type: 'credit' },
-  { id: '5', date: '2024-06-05', description_zh: 'PA-2024-043 批次收购结算', description_en: 'Batch PA-2024-043 settlement', amount: 1251, type: 'credit' },
-];
-
-const CREDIT_BALANCE = 5962;
 const PROMO_CODE = 'GROWER50';
 
 export default function GrowerCreditsPage() {
@@ -23,11 +15,16 @@ export default function GrowerCreditsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const { data: creditsData, isLoading: creditsLoading } = useGrowerCredits(user?.id ?? '');
 
   if (!authLoading && !user) {
     navigate('/login');
     return null;
   }
+
+  const balance = creditsData?.balance ?? 0;
+  const transactions = creditsData?.transactions ?? [];
+  const loading = authLoading || creditsLoading;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(PROMO_CODE);
@@ -79,7 +76,7 @@ export default function GrowerCreditsPage() {
               {locale === 'zh' ? '当前积分余额' : 'Current Credit Balance'}
             </p>
             <p className="font-display text-5xl font-semibold text-gold mb-2">
-              NZD ${CREDIT_BALANCE.toLocaleString()}
+              {loading ? '—' : `NZD $${balance.toLocaleString()}`}
             </p>
             <p className="font-body text-sm text-muted-foreground">
               {locale === 'zh' ? '可在商城直接抵扣' : 'Available to redeem in store'}
@@ -149,19 +146,34 @@ export default function GrowerCreditsPage() {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_TRANSACTIONS.map(tx => (
-                  <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="p-4 text-muted-foreground whitespace-nowrap">
-                      {new Date(tx.date).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-NZ')}
-                    </td>
-                    <td className="p-4">
-                      {locale === 'zh' ? tx.description_zh : tx.description_en}
-                    </td>
-                    <td className={`p-4 text-right font-semibold tabular-nums ${tx.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {tx.amount > 0 ? '+' : ''}${tx.amount.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                {loading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border">
+                        <td className="p-4"><div className="h-4 bg-muted rounded animate-pulse w-20" /></td>
+                        <td className="p-4"><div className="h-4 bg-muted rounded animate-pulse w-48" /></td>
+                        <td className="p-4"><div className="h-4 bg-muted rounded animate-pulse w-16 ml-auto" /></td>
+                      </tr>
+                    ))
+                  : transactions.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={3} className="p-8 text-center text-muted-foreground font-body text-sm">
+                          {locale === 'zh' ? '暂无交易记录' : 'No transactions yet'}
+                        </td>
+                      </tr>
+                    )
+                    : transactions.map(tx => (
+                        <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="p-4 text-muted-foreground whitespace-nowrap">
+                            {new Date(tx.created_at!).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-NZ')}
+                          </td>
+                          <td className="p-4">{tx.description ?? '—'}</td>
+                          <td className={`p-4 text-right font-semibold tabular-nums ${tx.amount_nzd > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {tx.amount_nzd > 0 ? '+' : ''}${tx.amount_nzd.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                }
               </tbody>
             </table>
           </div>

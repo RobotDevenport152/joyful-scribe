@@ -1,3 +1,22 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Environment — never commit secrets
+.env
+.env.*
+!.env.example
+
+# Video files
+*.mp4
+*.mov
+*.avi
+*.webm
+*.mkv
+
 # Logs
 logs
 *.log
@@ -7,12 +26,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Bun lock files (project uses npm)
+bun.lock
+bun.lockb
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Local dev
 *.local
 
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea

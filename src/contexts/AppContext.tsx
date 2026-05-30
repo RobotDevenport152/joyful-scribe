@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { type Locale, translations } from '@/lib/i18n';
 import { CartProvider, useCart } from '@/contexts/CartContext';
+import i18n from '@/i18n';
 
 // P2 FIX: t is now strongly typed — no more 't: any'.
 // Consumers get full autocomplete: t.nav.home, t.checkout.total, etc.
@@ -37,6 +38,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     localStorage.setItem('pa-locale', l);
+    i18n.changeLanguage(l);
   }, []);
 
   const addRecentlyViewed = useCallback((id: string) => {
@@ -45,6 +47,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return deduped;
     });
   }, []);
+
+  useEffect(() => {
+    i18n.changeLanguage(locale);
+  }, [locale]);
 
   useEffect(() => {
     localStorage.setItem('pa-recently-viewed', JSON.stringify(recentlyViewed));
