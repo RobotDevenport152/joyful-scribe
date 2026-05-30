@@ -31,7 +31,7 @@ export function useGrowerCredits(userId: string) {
       if (error) throw error;
 
       return {
-        balance: Number(grower.credit_balance) ?? 0,
+        balance: Number(grower.credit_balance ?? 0),
         transactions: transactions ?? [],
       };
     },

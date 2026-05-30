@@ -36,7 +36,7 @@ export default function ShopPage() {
 
   const filtered = useMemo(() => {
     if (!dbProducts) return [];
-    let list = [...dbProducts].filter(p => {
+    const list = [...dbProducts].filter(p => {
       const name = locale === 'zh' ? p.nameZh : p.nameEn;
       const desc = locale === 'zh' ? p.descZh : p.descEn;
       const q = debouncedSearch.toLowerCase();
