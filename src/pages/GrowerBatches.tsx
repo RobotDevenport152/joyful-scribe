@@ -65,11 +65,11 @@ export default function GrowerBatchesPage() {
       if (error) throw error;
       return (data ?? []).map((d: any) => ({
         batch_code: d.batch_code,
-        created_at: d.created_at,
+        created_at: d.harvest_date ?? d.created_at,
         weight_kg: d.weight_kg ?? 0,
-        grade: d.fiber_grade ?? 'N/A',
-        status: d.status ?? 'received',
-        payout_nzd: d.payout ?? 0,
+        grade: d.grade ?? 'N/A',
+        status: d.processing_status ?? 'received',
+        payout_nzd: 0,
       })) as Batch[];
     },
     enabled: !!user,

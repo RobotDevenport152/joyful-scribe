@@ -63,11 +63,10 @@ const GrowerDashboard = () => {
     if (!user) return;
     setLoading(true);
 
-    // Find grower by user email
     const { data: growerData } = await supabase
       .from('growers')
       .select('*')
-      .eq('owner_name', user.email ?? '')
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (growerData) {

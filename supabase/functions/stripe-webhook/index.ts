@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
@@ -26,13 +27,62 @@ serve(async (req) => {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
+  // Idempotency: ignore duplicate deliveries
+  const serviceClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+
+  const { data: alreadyProcessed } = await serviceClient
+    .from("processed_webhook_events")
+    .select("id")
+    .eq("id", event.id)
+    .maybeSingle();
+
+  if (alreadyProcessed) {
+    console.log("webhook_duplicate_ignored", { event_id: event.id });
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   switch (event.type) {
-    case "checkout.session.completed":
-      // Order fulfillment is bug #2 — handled separately
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const orderId = session.metadata?.order_id;
+
+      if (!orderId) {
+        console.error("webhook_missing_order_id", { session_id: session.id });
+        break;
+      }
+
+      const paymentIntentId = typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id ?? null;
+
+      const { error } = await serviceClient
+        .from("orders")
+        .update({
+          status: "paid",
+          ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+        })
+        .eq("id", orderId)
+        .eq("status", "pending"); // guard: only update if still pending
+
+      if (error) {
+        console.error("webhook_order_update_failed", { order_id: orderId, error: error.message });
+      } else {
+        console.log("webhook_order_fulfilled", { order_id: orderId, session_id: session.id });
+      }
       break;
+    }
+
     default:
       console.log("webhook_unhandled_event", { type: event.type });
   }
+
+  // Record event as processed
+  await serviceClient.from("processed_webhook_events").insert({ id: event.id });
 
   return new Response(JSON.stringify({ received: true }), {
     headers: { "Content-Type": "application/json" },

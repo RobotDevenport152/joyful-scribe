@@ -1,16 +1,28 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ShoppingCart, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react';
 
+type OrderRow = Pick<Tables<'orders'>, 'id' | 'order_number' | 'created_at' | 'total' | 'shipping_name' | 'shipping_email' | 'status'>;
+type ProductRow = Pick<Tables<'products'>, 'id' | 'name_zh' | 'stock_quantity' | 'price_nzd'>;
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  paid: 'bg-blue-100 text-blue-800',
+  processing: 'bg-purple-100 text-purple-800',
+  shipped: 'bg-green-100 text-green-800',
+  delivered: 'bg-green-200 text-green-900',
+};
+
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({ todayOrders: 0, todayRevenue: 0 });
-  const [lowStock, setLowStock] = useState<any[]>([]);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [stats, setStats] = useState({ todayOrders: 0, todayRevenue: 0, totalOrders: 0 });
+  const [lowStock, setLowStock] = useState<ProductRow[]>([]);
+  const [recentOrders, setRecentOrders] = useState<OrderRow[]>([]);
+  const [monthlyData, setMonthlyData] = useState<{ name: string; revenue: number }[]>([]);
 
   useEffect(() => {
     loadDashboard();
@@ -18,24 +30,25 @@ const AdminDashboard = () => {
 
   const loadDashboard = async () => {
     const today = new Date().toISOString().split('T')[0];
-
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const [ordersRes, productsRes, recentRes, monthlyRes] = await Promise.all([
+    const [ordersRes, productsRes, recentRes, monthlyRes, countRes] = await Promise.all([
       supabase.from('orders').select('total').gte('created_at', today),
       supabase.from('products').select('id, name_zh, stock_quantity, price_nzd').lt('stock_quantity', 5).eq('is_active', true),
-      supabase.from('orders').select('id, order_number, created_at, total, shipping_name, customer_name, shipping_email, customer_email, status').order('created_at', { ascending: false }).limit(10),
+      supabase.from('orders').select('id, order_number, created_at, total, shipping_name, shipping_email, status').order('created_at', { ascending: false }).limit(10),
       supabase.from('orders').select('created_at, total').gte('created_at', sixMonthsAgo.toISOString()).order('created_at', { ascending: true }),
+      supabase.from('orders').select('id', { count: 'exact', head: true }),
     ]);
 
     const todayOrders = ordersRes.data ?? [];
     setStats({
       todayOrders: todayOrders.length,
       todayRevenue: todayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0),
+      totalOrders: countRes.count ?? 0,
     });
-    setLowStock(productsRes.data ?? []);
-    setRecentOrders(recentRes.data ?? []);
+    setLowStock((productsRes.data ?? []) as ProductRow[]);
+    setRecentOrders((recentRes.data ?? []) as OrderRow[]);
 
     const monthly: Record<string, number> = {};
     (monthlyRes.data ?? []).forEach(o => {
@@ -43,14 +56,6 @@ const AdminDashboard = () => {
       monthly[month] = (monthly[month] || 0) + Number(o.total || 0);
     });
     setMonthlyData(Object.entries(monthly).map(([name, revenue]) => ({ name, revenue })));
-  };
-
-  const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    paid: 'bg-blue-100 text-blue-800',
-    processing: 'bg-purple-100 text-purple-800',
-    shipped: 'bg-green-100 text-green-800',
-    delivered: 'bg-green-200 text-green-900',
   };
 
   return (
@@ -80,7 +85,7 @@ const AdminDashboard = () => {
         <Card>
           <CardContent className="pt-4 flex items-center gap-3">
             <TrendingUp className="w-8 h-8 text-accent" />
-            <div><p className="text-xs text-muted-foreground">总订单</p><p className="text-xl font-bold">{recentOrders.length}+</p></div>
+            <div><p className="text-xs text-muted-foreground">总订单</p><p className="text-xl font-bold">{stats.totalOrders}</p></div>
           </CardContent>
         </Card>
       </div>
@@ -138,8 +143,8 @@ const AdminDashboard = () => {
               {recentOrders.map(o => (
                 <TableRow key={o.id}>
                   <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
-                  <TableCell>{new Date(o.created_at).toLocaleDateString('zh-CN')}</TableCell>
-                  <TableCell>{o.shipping_name || o.customer_name || o.shipping_email || o.customer_email}</TableCell>
+                  <TableCell>{new Date(o.created_at!).toLocaleDateString('zh-CN')}</TableCell>
+                  <TableCell>{o.shipping_name || o.shipping_email}</TableCell>
                   <TableCell>NZ${Number(o.total || 0).toFixed(0)}</TableCell>
                   <TableCell>
                     <Badge className={STATUS_COLORS[o.status || 'pending']}>{o.status || 'pending'}</Badge>
