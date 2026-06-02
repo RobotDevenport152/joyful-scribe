@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,21 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, MapPin, Clock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-type OrderStatus = 'loading' | 'paid' | 'pending' | 'payment_failed' | 'not_found';
+type OrderStatus = 'loading' | 'paid' | 'processing_payment' | 'payment_failed' | 'not_found';
 
-/**
- * P0 FIX: Previously, this page trusted the URL param ?number= as proof of
- * payment. Any user could navigate to /order-success?number=ANYTHING and see
- * a success screen — whether or not they'd paid.
- *
- * Now we:
- * 1. Look up the order from the DB using the authenticated user's session
- * 2. Show the correct state based on actual DB status (paid / pending / failed)
- * 3. Handle the case where the Stripe webhook hasn't fired yet (polling)
- *
- * Note: The webhook may arrive a few seconds after Stripe redirects the user.
- * We poll up to ~10s before falling back to a "processing" message.
- */
+const MAX_POLLS     = 8;
+const POLL_INTERVAL = 2000;
+
 export default function OrderSuccessPage() {
   const { locale, clearCart } = useApp();
   const { user } = useAuth();
@@ -29,80 +19,63 @@ export default function OrderSuccessPage() {
   const orderNumber = searchParams.get('number') || '';
   const batchCode   = searchParams.get('batch') || 'PA-2025-001';
 
-  const [orderStatus, setOrderStatus] = useState<OrderStatus>('loading');
-  const [pollCount, setPollCount] = useState(0);
-
-  const MAX_POLLS = 5;
-  const POLL_INTERVAL_MS = 2000;
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>(
+    orderNumber ? 'loading' : 'not_found',
+  );
 
   useEffect(() => {
     if (!orderNumber || !user) return;
 
     let cancelled = false;
+    let attempts  = 0;
 
-    async function checkOrder() {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('status')
-        .eq('order_number', orderNumber)
-        .eq('user_id', user!.id)   // Security: only fetch the authenticated user's own order
-        .single();
-
+    async function poll() {
       if (cancelled) return;
-
-      if (error || !data) {
-        setOrderStatus('not_found');
-        return;
-      }
-
-      const status = data.status as string;
-
-      if (status === 'paid' || status === 'processing' || status === 'shipped' || status === 'delivered') {
-        setOrderStatus('paid');
-        clearCart(); // P0 FIX: clear cart so user can't accidentally re-order
-      } else if (status === 'payment_failed') {
-        setOrderStatus('payment_failed');
-      } else {
-        // Still 'pending' — webhook may not have arrived yet
-        setOrderStatus('pending');
-      }
-    }
-
-    checkOrder();
-
-    return () => { cancelled = true; };
-  }, [orderNumber, user]);
-
-  // Poll while pending (webhook may be in-flight)
-  useEffect(() => {
-    if (orderStatus !== 'pending' || pollCount >= MAX_POLLS) return;
-
-    const timer = setTimeout(async () => {
-      if (!orderNumber || !user) return;
 
       const { data } = await supabase
         .from('orders')
         .select('status')
         .eq('order_number', orderNumber)
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user!.id)
+        .maybeSingle();
 
-      if (data?.status === 'paid' || data?.status === 'processing') {
-        setOrderStatus('paid');
-        clearCart();
-      } else {
-        setPollCount(c => c + 1);
+      if (cancelled) return;
+
+      if (data) {
+        const status = data.status as string;
+        if (['paid', 'processing', 'shipped', 'delivered'].includes(status)) {
+          setOrderStatus('paid');
+          clearCart();
+          return;
+        }
+        // 'payment_failed' is not currently a valid DB enum value but handle it defensively
+        if (status === 'payment_failed') {
+          setOrderStatus('payment_failed');
+          return;
+        }
       }
-    }, POLL_INTERVAL_MS);
 
-    return () => clearTimeout(timer);
-  }, [orderStatus, pollCount, orderNumber, user]);
+      // Order not in DB yet (webhook in-flight) or still pending — keep polling
+      attempts++;
+      if (attempts >= MAX_POLLS) {
+        // After ~16s show "processing" rather than "not found" — the customer paid,
+        // the webhook may just be slow. Showing "not found" would be alarming.
+        setOrderStatus('processing_payment');
+        return;
+      }
+
+      setTimeout(poll, POLL_INTERVAL);
+    }
+
+    poll();
+    return () => { cancelled = true; };
+  }, [orderNumber, user]);
 
   return (
     <div className="min-h-screen bg-background">
       <div className="pt-32 pb-16 text-center">
 
-        {/* Loading */}
+        {/* Confirming */}
         {orderStatus === 'loading' && (
           <div className="flex flex-col items-center gap-4">
             <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
@@ -145,7 +118,6 @@ export default function OrderSuccessPage() {
               </Link>
             </div>
 
-            {/* Traceability CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
               className="max-w-md mx-auto bg-card border border-border rounded-lg p-6"
@@ -167,8 +139,8 @@ export default function OrderSuccessPage() {
           </motion.div>
         )}
 
-        {/* Webhook in-flight — still pending after polling */}
-        {orderStatus === 'pending' && pollCount >= MAX_POLLS && (
+        {/* Webhook in-flight or slow — reassure the customer */}
+        {orderStatus === 'processing_payment' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-6">
               <Clock className="w-10 h-10 text-yellow-600" />
@@ -206,7 +178,7 @@ export default function OrderSuccessPage() {
           </motion.div>
         )}
 
-        {/* Order not found */}
+        {/* No order number in URL — shouldn't happen via normal checkout flow */}
         {orderStatus === 'not_found' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h1 className="font-display text-2xl mb-4">

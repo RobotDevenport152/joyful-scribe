@@ -179,19 +179,21 @@ src/
 | Table | Purpose |
 |---|---|
 | `products` | Product catalog. Fields: id, name_zh, name_en, slug, category, tier, price_nzd, stock_quantity, images (jsonb), certifications (jsonb), fiber_batch_id |
-| `orders` | Customer orders. Fields: id, order_number, user_id, status, total (NOT total_nzd), shipping_name, shipping_email, items (jsonb), promo_code |
-| `order_items` | Line items per order |
+| `checkout_sessions` | Temporary cart + shipping data held while the customer completes Stripe Checkout. Webhook reads this to create the real order. Service-role-only access. |
+| `orders` | Customer orders — created by the Stripe webhook **after** payment is confirmed. Fields: id, order_number, user_id, customer_email (required), status, total, shipping_name, shipping_email, items (jsonb), promo_code |
+| `order_items` | Line items per order (for admin UI) |
 | `growers` | Alpaca farm profiles. Fields: id, farm_name, owner_name, region, user_id (FK to auth.users), credit_balance |
 | `fiber_batches` | Fiber traceability. Fields: id, batch_code, grower_id, processing_status (raw→scoured→combed→ready) |
 | `grower_transactions` | Credit ledger for growers |
 | `promo_codes` | Dynamic promo codes (replaces hardcoded PROMO_CODES in Edge Function) |
 | `processed_webhook_events` | Idempotency log for Stripe webhooks |
-| `user_roles` | RBAC: roles are 'admin', 'grower', 'customer' |
+| `user_roles` | RBAC. The `app_role` DB enum has values `'admin', 'moderator', 'user'`. ⚠️ 'grower' is NOT in the enum — grower portal access is enforced by the dashboard's own DB lookup, not RBAC. |
 
 ### Critical field names (do NOT guess — check types.ts)
 
-- `orders.total` — NOT `orders.total_nzd`
-- `orders.shipping_name`, `orders.shipping_email` — NOT `customer_name`, `customer_email`
+- `orders.customer_email` — required NOT NULL; set to the shipping email at order creation
+- `orders.items` — JSONB array of `{ product_id, qty, name, price, variant }`. The `decrement_stock` trigger reads `product_id` and `qty` (NOT `productId`/`quantity`).
+- `orders.total`, `orders.subtotal`, `orders.discount`, `orders.shipping_cost` — the canonical financial columns. The older `_nzd` variants (`total_nzd`, `subtotal_nzd`, etc.) also exist from the original schema; ignore them for new code.
 - `products.stock_quantity` — NOT `stock`
 - `fiber_batches.processing_status` values: `'raw' | 'scoured' | 'combed' | 'ready'`
 
@@ -200,7 +202,9 @@ src/
 ```
 auth.users (Supabase managed)
     │
-    ├── user_roles (role: admin | grower | customer)
+    ├── user_roles (role: admin | moderator | user)
+    │
+    ├── checkout_sessions (user_id FK) — transient; deleted/marked completed after payment
     │
     └── orders (user_id FK, optional — guest checkout supported)
 
@@ -282,14 +286,28 @@ Use this for: Stripe payment confirmation → order fulfillment → notification
 **Broker Topology:** Each event processor does one job and emits a new event. No central orchestrator.
 
 ```
-stripe.checkout.session.completed
-  → ValidateWebhookProcessor  (verify Stripe signature)
-  → CreateOrderProcessor      (write to DB — atomic transaction with inventory)
-  → DeductInventoryProcessor  (part of same DB transaction as above)
-  → NotificationProcessor     (BullMQ async — send email, update grower credit)
+User clicks "Place Order"
+  → create-checkout Edge Function
+      • Authenticates user
+      • Calculates totals, validates promo code
+      • Inserts row into checkout_sessions (cart + shipping snapshot)
+      • Creates Stripe Checkout Session (metadata: checkout_session_id, order_number)
+      • Returns Stripe URL → browser redirects user to Stripe
+
+stripe.checkout.session.completed (webhook)
+  → ValidateWebhookProcessor  (verify stripe-signature header)
+  → IdempotencyCheckProcessor (processed_webhook_events table + checkout_sessions.status)
+  → CreateOrderProcessor      (reads checkout_sessions row, inserts orders row with status='paid')
+  → DeductInventoryProcessor  (fires automatically via on_order_paid DB trigger — same transaction)
+  → NotificationProcessor     (future: BullMQ async — send email, update grower credit)
+
+stripe.checkout.session.expired (webhook)
+  → marks checkout_sessions.status = 'abandoned'
 ```
 
-**Critical constraint:** Maintain a single transactional unit of work for steps that cannot be separated. Order creation + inventory deduction = one PostgreSQL transaction. Email sending = separate async event (BullMQ).
+**Critical constraint:** Maintain a single transactional unit of work for steps that cannot be separated. Order creation + inventory deduction = one PostgreSQL transaction (trigger fires on INSERT with status='paid'). Email sending = separate async event (BullMQ — not yet implemented).
+
+**Why orders are created in the webhook, not in create-checkout:** The `on_order_paid` trigger fires on INSERT when `status='paid'`, not on UPDATE. Creating the order as 'pending' then updating to 'paid' means the trigger **never fires** and stock is **never decremented**. Creating directly as 'paid' in the webhook is the correct pattern.
 
 ### 6.3 Microservices — service component boundaries
 
@@ -384,10 +402,16 @@ Exception: `src/repositories/` files are the ONLY place where supabase is import
 The Stripe webhook is the authoritative trigger for order creation — NOT the checkout button.
 
 Order creation flow:
-1. User clicks "Place Order" → Stripe Checkout session created (no order in DB yet)
-2. Stripe sends `checkout.session.completed` webhook
-3. Webhook handler creates order + deducts inventory in ONE PostgreSQL transaction
-4. Idempotency check: `processed_webhook_events` table prevents double-processing
+1. User clicks "Place Order" → `create-checkout` Edge Function stores cart in `checkout_sessions`, creates Stripe session (no `orders` row yet)
+2. User pays in Stripe → `stripe.checkout.session.completed` webhook fires
+3. Webhook verifies Stripe signature, then checks two idempotency guards:
+   - `processed_webhook_events` table (prevents duplicate event processing)
+   - `checkout_sessions.status = 'completed'` (prevents duplicate order creation from same session)
+4. Webhook inserts `orders` row with `status='paid'` — this atomically triggers `on_order_paid` which decrements stock
+5. Webhook inserts `order_items` rows
+6. Webhook marks `checkout_sessions.status = 'completed'`
+
+`OrderSuccess.tsx` polls the `orders` table for up to ~16 seconds to handle webhook latency. If the order is not found within that window it shows "processing" (not "not found") — the customer did pay; the webhook may just be slow.
 
 ### 7.7 Observability (Structured Logging)
 
@@ -863,70 +887,28 @@ const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard'));
 
 These are production-blocking issues. Do NOT work around them; fix the root cause.
 
+**All previously listed P0/P1 bugs have been resolved.** Current open issues:
+
 | # | Severity | File | Issue | Fix |
 |---|---|---|---|---|
-| 1 | P0 | `stripe-webhook` | No Stripe signature verification | Add `stripe.webhooks.constructEvent()` |
-| 2 | P0 | `create-checkout` | Order created before Stripe confirms | Move order creation to webhook handler |
-| 3 | P0 | `GrowerDashboard.tsx` | `.eq('owner_name', user.email)` — wrong field | Use `.eq('user_id', user.id)` |
-| 4 | P0 | `chat/index.ts` | Uses `LOVABLE_API_KEY` + Lovable gateway | Replace with direct Anthropic/OpenAI API call |
-| 5 | P1 | `AdminDashboard.tsx` | `o.total_nzd` — field doesn't exist | Use `o.total` |
-| 6 | P1 | `AdminDashboard.tsx` | Monthly chart uses only last 10 orders | Separate monthly query with date range |
-| 7 | P1 | `GrowerCredits.tsx` | `MOCK_TRANSACTIONS` + hardcoded balance | Replace with `useGrowerCredits(userId)` hook |
-| 8 | P1 | `useProducts.ts` | Hardcoded `nzd * 4.5` currency conversion | Use `useExchangeRates` hook |
-| 9 | P1 | `Index.tsx` | Homepage only renders HeroSection | Assemble all home/* section components |
-| 10 | P2 | `Traceability.tsx` | `STATUS_MAP` missing `felted` and `sterilized` | Add all 6 processing steps |
-| 11 | P2 | Multiple | Duplicate component files (root + subdirectory) | Remove root-level duplicates, use subdirectory versions |
+| 1 | P1 | `user_roles` DB enum | `app_role` enum is `('admin','moderator','user')` — 'grower' is not a valid value. `ProtectedRoute requiredRole="grower"` always fails with a DB error, so grower routes are protected only by the dashboard's own DB lookup (`.eq('user_id', user.id)`). | Add 'grower' and 'customer' to `app_role` enum via migration. |
+| 2 | P1 | `orders` DB schema | `payment_failed` is not a valid `status` enum value. `OrderSuccess.tsx` has a branch for it but it is dead code — the DB will never store that value. | Add 'payment_failed' to the status check constraint, or remove the dead branch. |
+| 3 | P2 | `src/integrations/supabase/types.ts` | Types are stale — missing `user_id` on `growers`, `checkout_sessions` table, and other recent schema additions. | Run `npx supabase gen types typescript --local > src/integrations/supabase/types.ts` after applying all migrations. |
+| 4 | P2 | Root directory | Duplicate TSX files at repo root (`AuthorityBanner.tsx`, `BrandHeritageSection.tsx`, `ChinaLanding.tsx`, `HeroSection.tsx`, `MediaCoverageSection.tsx`) — not imported anywhere, just clutter. | Delete root-level duplicates; canonical versions are in `src/components/home/` and `src/pages/`. |
 
 ---
 
 ## 19. Incomplete Features
 
-### 19.1 Homepage (Index.tsx) — PRIORITY
+All previously listed incomplete features are now complete:
 
-The homepage currently only renders `<HeroSection />`. All the other home section components exist but are not wired up.
+- **Homepage** — all 9 sections assembled in the correct order in `Index.tsx`
+- **Stripe Webhook Handler** — `stripe-webhook/index.ts` verifies signatures, uses idempotency guards, creates orders post-payment, and handles `checkout.session.expired`
+- **GrowerCredits** — `useGrowerCredits` hook fetches real balance + transaction history from `growers` and `grower_transactions`
 
-Correct assembly order:
-```tsx
-<HeroSection />           // video background, hero CTA
-<AuthorityBanner />       // CGTN, Hurun award, FernMark, IAA — trust signals FIRST
-<SleepScienceSection />   // 64.37% anti-mite, 32-34°C, 25% deep sleep — data-driven conversion
-<FiberSection />          // why alpaca fiber (6 properties)
-<ProcessSection />        // 6-step manufacturing process with traceability link
-<CertificationsSection /> // 5 certificates (NZ Made, NZ Grown, IAA, FernMark, CNAS)
-<BrandHeritageSection />  // 2001 founding, 800 farms, Eric Geng story
-<MediaCoverageSection />  // newspaper clippings, CGTN screenshot
-<GrowerNetworkSection />  // farm map, grower count
-```
-
-**Design principle:** Authority signals (CGTN, awards, certificates) must appear before product showcases. Chinese consumers validate brand legitimacy BEFORE looking at products.
-
-### 19.2 Stripe Webhook Handler
-
-Create `supabase/functions/stripe-webhook/index.ts` with:
-- Signature verification (P0 security fix)
-- Idempotency check against `processed_webhook_events`
-- Atomic transaction: `fulfill_order` PostgreSQL RPC that creates order + deducts stock in one transaction
-- Event emission to BullMQ (when migrated off Supabase) for email notification
-
-### 19.3 GrowerCredits Real Data
-
-Replace mock data with:
-```typescript
-// src/hooks/useGrowerCredits.ts
-export function useGrowerCredits(growerId: string) {
-  return useQuery({
-    queryKey: ['grower-credits', growerId],
-    queryFn: async () => {
-      const [balanceRes, txRes] = await Promise.all([
-        supabase.from('growers').select('credit_balance').eq('id', growerId).single(),
-        supabase.from('grower_transactions').select('*').eq('grower_id', growerId)
-          .order('created_at', { ascending: false }),
-      ]);
-      return { balance: balanceRes.data?.credit_balance ?? 0, transactions: txRes.data ?? [] };
-    },
-  });
-}
-```
+The next features to prioritise are the open bugs in §18, then:
+- Email notification on order creation (BullMQ / Supabase Edge Function + Resend)
+- Promo code validation moved to DB (`promo_codes` table) instead of the hardcoded constant in `create-checkout`
 
 ---
 
@@ -938,10 +920,12 @@ export function useGrowerCredits(growerId: string) {
 | Migrate `uiStore.ts` to AppContext | `src/stores/uiStore.ts` | Medium | Language and mobile menu state should live in AppContext |
 | Evaluate `cartStore.ts` vs `CartContext` | `src/stores/`, `src/contexts/CartContext.tsx` | **High** | ⚠️ `cartStore` stores actual per-currency DB prices; `CartContext` uses `Math.round(nzd * 4.5)`. **Do NOT remove `cartStore` until `CartContext` uses DB prices.** |
 | Phase out `dbToLegacyProduct` adapter | `src/lib/store.ts` | Medium | Components should consume Supabase DB types directly |
-| Move promo code validation server-side | `lib/store.ts` + Edge Function | High | Client-side `PROMO_CODES` constant is only for UI feedback; actual validation must be in `create-checkout` Edge Function |
+| Move promo code validation to DB | `create-checkout/index.ts` | Medium | Hardcoded `PROMO_CODES` constant should query `promo_codes` table for flexibility |
+| Regenerate Supabase types | `src/integrations/supabase/types.ts` | High | Stale — run `npx supabase gen types typescript --local > src/integrations/supabase/types.ts` after applying all migrations |
 | Add `.env.example` | repo root | Low | New developers need a template with placeholder values |
 | Playwright coverage for checkout flow | `supabase/functions/create-checkout` | Medium | No E2E tests cover the payment path |
 | Exchange rate staleness | `hooks/useExchangeRates.ts` | Low | Hardcoded fallback rates (CNY 4.5, USD 0.6) should be refreshed from a live API |
+| Stale `checkout_sessions` cleanup | `supabase/` | Low | Abandoned sessions accumulate; add a scheduled Edge Function or Supabase cron to delete sessions older than 24h with status='abandoned' |
 
 ---
 

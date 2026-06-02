@@ -1,35 +1,37 @@
-import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
-import heroImg from '@/assets/hero-comforter.jpg';
+import { ChevronDown, Play } from 'lucide-react';
+import { useState } from 'react';
+
+// 宣传视频.mp4 (65s, 5MB) — 放在 public/videos/promo.mp4
+// 备用封面图 — public/images/hero-comforter.jpg
+const VIDEO_SRC = '/videos/promo.mp4';
+const POSTER_SRC = '/images/hero-comforter.jpg';
 
 const HeroSection = () => {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language;
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoFailed, setVideoFailed] = useState(false);
+  const { t } = useTranslation();
+  const [videoError, setVideoError] = useState(false);
 
   return (
     <section className="relative h-screen w-full overflow-hidden">
-      {/* Video background — auto-degrades to static image if video fails to load */}
-      {!videoFailed ? (
+      {/* ── 背景：优先用视频，失败时降级为图片 ── */}
+      {!videoError ? (
         <video
-          ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
           muted
           loop
           playsInline
-          poster="/images/hero-comforter.jpg"
-          onError={() => setVideoFailed(true)}
+          poster={POSTER_SRC}
+          onError={() => setVideoError(true)}
+          aria-hidden="true"
         >
-          <source src="/videos/promo.mp4" type="video/mp4" />
+          <source src={VIDEO_SRC} type="video/mp4" />
         </video>
       ) : (
         <img
-          src={heroImg}
+          src={POSTER_SRC}
           alt="Pacific Alpaca Luxury Duvet"
           className="absolute inset-0 w-full h-full object-cover"
           fetchPriority="high"
@@ -37,20 +39,40 @@ const HeroSection = () => {
           height={1080}
         />
       )}
-      <div className="absolute inset-0 hero-overlay" />
 
-      {/* 消博会1号参展商 corner badge */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 1.5 }}
-        className="absolute top-24 right-6 z-20 bg-red-600 text-white text-[10px] font-body px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg"
-      >
-        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-        {lang === 'zh' ? '消博会1号参展商' : 'CIIE Booth #1'}
-      </motion.div>
+      {/* ── 渐变遮罩：底部更深，保持文字可读 ── */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/70" />
 
+      {/* ── 左下角：视频播放标识 ── */}
+      {!videoError && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-24 left-8 flex items-center gap-2 text-white/50 z-10"
+        >
+          <Play className="w-3 h-3 fill-current" />
+          <span className="text-xs font-body tracking-widest uppercase">
+            New Zealand Alpaca Farms
+          </span>
+        </motion.div>
+      )}
+
+      {/* ── 主内容 ── */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
+        {/* 消博会"1号参展商"徽章 — 最新动态，2025年7月 */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-6 inline-flex items-center gap-2 border border-pa-gold/40 px-4 py-1.5 rounded-full"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-pa-gold animate-pulse" />
+          <span className="text-xs font-body text-pa-gold tracking-widest uppercase">
+            第六届消博会 · 1号参展商
+          </span>
+        </motion.div>
+
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -82,7 +104,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="flex flex-col sm:flex-row gap-4 items-center"
+          className="flex flex-col sm:flex-row gap-4"
         >
           <Link
             to="/shop"
@@ -92,9 +114,9 @@ const HeroSection = () => {
           </Link>
           <Link
             to="/china"
-            className="inline-block px-8 py-4 border border-gold/60 text-gold font-body text-sm tracking-widest hover:bg-gold/10 transition-colors"
+            className="inline-block px-10 py-4 border border-pa-gold/50 text-pa-gold font-body text-sm tracking-widest uppercase hover:bg-pa-gold/10 transition-colors"
           >
-            {lang === 'zh' ? '中文官网入口' : 'Chinese Site'}
+            中文官网
           </Link>
         </motion.div>
 
