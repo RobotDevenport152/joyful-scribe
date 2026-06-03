@@ -1,0 +1,139 @@
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { motion, useInView } from 'framer-motion';
+import { MapPin, Scissors, Droplets, Sparkles, BedDouble, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const STEPS = [
+  { icon: MapPin,    key: 'farm' },
+  { icon: Scissors,  key: 'shearing' },
+  { icon: Droplets,  key: 'processing' },
+  { icon: Sparkles,  key: 'craftsmanship' },
+  { icon: BedDouble, key: 'luxury' },
+] as const;
+
+const FarmStorySection = () => {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-80px' });
+
+  return (
+    <section ref={ref} className="py-20 md:py-32 bg-pa-navy text-pa-ivory overflow-hidden">
+      <div className="container mx-auto px-6">
+
+        {/* Section header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <p className="text-xs tracking-[0.35em] uppercase text-pa-gold-lt mb-4 font-body">
+            {lang === 'zh' ? '供应链透明化' : 'Supply Chain'}
+          </p>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-light text-pa-ivory mb-4">
+            {lang === 'zh' ? '从新西兰牧场到您的卧室' : 'From NZ Farm to Your Bedroom'}
+          </h2>
+          <p className="font-body text-pa-ivory/60 text-sm">
+            {lang === 'zh' ? '每一件产品背后都有故事' : 'Every product tells a traceable story'}
+          </p>
+          <div className="w-16 h-px bg-pa-gold-lt mx-auto mt-6" />
+        </motion.div>
+
+        {/* Steps — vertical timeline */}
+        <div className="max-w-3xl mx-auto relative">
+          {/* Vertical connecting line */}
+          <div className="absolute left-6 md:left-8 top-6 bottom-6 w-px bg-pa-ivory/10 hidden md:block" />
+
+          {STEPS.map(({ icon: Icon, key }, idx) => {
+            const title = lang === 'zh'
+              ? (['新西兰牧场', '年度剪获', '专有加工工艺', '匠心制造', '奢华成品'] as const)[idx]
+              : (['NZ Farm', 'Annual Shearing', 'Proprietary Processing', 'Craftsmanship', 'Luxury Product'] as const)[idx];
+
+            const desc = lang === 'zh'
+              ? ([
+                '来自新西兰 800+ 合作牧场的优质羊驼纤维，可追溯至具体牧场主。',
+                '每头羊驼每年只剪一次，确保纤维在最佳长度与细度时采集。',
+                '独家"5缸6洗净洗工艺"，在去除杂质的同时保留天然柔软性。',
+                '物理高温 + 臭氧 + 环氧乙烷专业灭菌，每件产品均达母婴级标准。',
+                '您的成品羊驼被 — 可追溯、已认证，深度睡眠提升有保障。',
+              ] as const)[idx]
+              : ([
+                '800+ partner farms across New Zealand, every batch traceable to a named grower.',
+                'Each alpaca is sheared once per year to harvest fiber at optimal length and fineness.',
+                'Our exclusive 5-tank 6-wash process removes impurities while preserving natural softness.',
+                'Physical sterilization using heat, ozone and ethylene oxide — meeting maternal-grade standards.',
+                'Your finished duvet — traceable, certified, and guaranteed to elevate your sleep quality.',
+              ] as const)[idx];
+
+            const stat = lang === 'zh'
+              ? (['800+ 合作牧场', '每年一次', '5缸6洗', '母婴级标准', '深睡提升 25%'] as const)[idx]
+              : (['800+ Farms', 'Once a Year', '5-Tank 6-Wash', 'Maternal Grade', '+25% Deep Sleep'] as const)[idx];
+
+            const isLast = idx === STEPS.length - 1;
+
+            return (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, x: -24 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ duration: 0.55, delay: 0.15 + idx * 0.12 }}
+                className="flex gap-6 md:gap-10 mb-10 last:mb-0"
+              >
+                {/* Icon circle */}
+                <div className="flex-shrink-0 relative">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full border border-pa-gold-lt/40 bg-pa-ivory/5 flex items-center justify-center z-10 relative">
+                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-pa-gold-lt" />
+                  </div>
+                  {/* Step number */}
+                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-pa-gold-lt text-pa-navy text-[10px] font-body font-semibold flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 pt-3 md:pt-4">
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <h3 className="font-display text-lg md:text-xl text-pa-ivory">{title}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-pa-gold-lt/15 text-pa-gold-lt text-[10px] tracking-wider font-body uppercase">
+                      {stat}
+                    </span>
+                  </div>
+                  <p className="font-body text-sm text-pa-ivory/60 leading-relaxed">{desc}</p>
+
+                  {/* Arrow connector — only between steps */}
+                  {!isLast && (
+                    <div className="flex items-center gap-1 mt-4 text-pa-ivory/20 md:hidden">
+                      <div className="flex-1 h-px bg-pa-ivory/10" />
+                      <ArrowRight className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.9 }}
+          className="text-center mt-16"
+        >
+          <Link
+            to="/traceability"
+            className="inline-flex items-center gap-2 px-8 py-3.5 border border-pa-gold-lt/60 text-pa-gold-lt font-body text-sm tracking-widest uppercase hover:bg-pa-gold-lt/10 transition-colors"
+          >
+            {lang === 'zh' ? '追溯您的产品' : 'Trace Your Product'}
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+
+      </div>
+    </section>
+  );
+};
+
+export default FarmStorySection;

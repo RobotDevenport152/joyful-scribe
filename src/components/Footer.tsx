@@ -37,7 +37,7 @@ export default function Footer() {
           <div>
             <h4 className="font-body text-xs tracking-wider uppercase text-primary-foreground/60 mb-4">{t.footer.support}</h4>
             <div className="space-y-2">
-              <p className="text-sm font-body text-primary-foreground/50">info@pacificalpacas.com</p>
+              <a href="mailto:info@pacificalpacas.nz" className="text-sm font-body text-primary-foreground/50 hover:text-gold transition-colors">info@pacificalpacas.nz</a>
               <p className="text-sm font-body text-primary-foreground/50">+64 21 950 204</p>
               <button
                 onClick={() => setWechatOpen(true)}
@@ -46,14 +46,33 @@ export default function Footer() {
                 <MessageCircle className="w-3.5 h-3.5" />
                 {locale === 'zh' ? '微信客服（扫码添加）' : 'WeChat Support (scan QR)'}
               </button>
-              <p className="text-sm font-body text-primary-foreground/50">
-                1 Pigeon Rock Road, RD2, Cromwell,<br />Central Otago 9382, New Zealand
-              </p>
+              <div>
+                <p className="text-xs font-body text-primary-foreground/40 mb-0.5">{locale === 'zh' ? '南岛仓库' : 'South Island'}</p>
+                <p className="text-sm font-body text-primary-foreground/50">
+                  2 Pigeon Rock Road, R.D.3,<br />Cromwell, Central Otago 9383, NZ
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-body text-primary-foreground/40 mb-0.5">{locale === 'zh' ? '邮政地址' : 'Postal'}</p>
+                <p className="text-sm font-body text-primary-foreground/50">
+                  P.O. Box 34044, Birkenhead 0626,<br />Auckland, New Zealand
+                </p>
+              </div>
             </div>
           </div>
         </div>
         <div className="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-primary-foreground/30 text-xs font-body">{t.footer.rights}</p>
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <p className="text-primary-foreground/30 text-xs font-body">© Pacific Alpacas Limited 2019–2026 | All Right Reserved</p>
+            <a
+              href="https://www.foodsafety.govt.nz/registers-and-resources/registers/animal-product-register/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-body text-gold/60 hover:text-gold transition-colors underline underline-offset-2"
+            >
+              {locale === 'zh' ? '查看经营许可证' : 'View our Certificate of Licence'}
+            </a>
+          </div>
           <div className="flex items-center gap-4">
             <a href="https://www.facebook.com/pacificalpacas/" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/40 hover:text-gold transition-colors">
               <Facebook className="w-5 h-5" />

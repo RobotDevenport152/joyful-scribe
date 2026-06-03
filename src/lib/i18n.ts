@@ -137,7 +137,7 @@ export const translations = {
     },
     footer: {
       tagline: 'Luxury in Your Dreams',
-      rights: '© 2025 Pacific Alpacas. All rights reserved.',
+      rights: '© Pacific Alpacas Limited 2019–2026 | All Right Reserved',
       company: 'Company',
       support: 'Support',
       legal: 'Legal',
@@ -279,7 +279,7 @@ export const translations = {
     },
     footer: {
       tagline: 'Luxury in Your Dreams',
-      rights: '© 2025 太平洋羊驼。保留所有权利。',
+      rights: '© Pacific Alpacas Limited 2019–2026 | All Right Reserved',
       company: '公司',
       support: '客户服务',
       legal: '法律信息',

@@ -66,7 +66,7 @@ export default function ContactPage() {
                   <div className="flex items-start gap-3">
                     <Mail className="w-5 h-5 text-gold mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-body text-sm">info@pacificalpacas.com</p>
+                      <a href="mailto:info@pacificalpacas.nz" className="font-body text-sm hover:text-gold transition-colors">info@pacificalpacas.nz</a>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -77,9 +77,19 @@ export default function ContactPage() {
                   </div>
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-gold mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-body text-sm">1 Pigeon Rock Road, RD2, Cromwell,<br />Central Otago 9382, New Zealand</p>
-                      <p className="font-body text-xs text-muted-foreground mt-1">P.O. Box 28684, Remuera, Auckland 1541, New Zealand</p>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '北岛办公室 & 仓库' : 'North Island Office & Warehouse'}</p>
+                        <p className="font-body text-sm text-muted-foreground">Building 8, 18-32 Triton Drive,<br />Albany, 0632, New Zealand</p>
+                      </div>
+                      <div>
+                        <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '南岛仓库' : 'South Island Warehouse'}</p>
+                        <p className="font-body text-sm text-muted-foreground">2 Pigeon Rock Road, R.D.3, Cromwell,<br />Central Otago 9383, New Zealand</p>
+                      </div>
+                      <div>
+                        <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '邮政地址' : 'Postal Address'}</p>
+                        <p className="font-body text-sm text-muted-foreground">P.O. Box 34044, Birkenhead 0626,<br />Auckland, New Zealand</p>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import HeroSection from '@/components/home/HeroSection';
 import AuthorityBanner from '@/components/home/AuthorityBanner';
 import SleepScienceSection from '@/components/home/SleepScienceSection';
 import FiberSection from '@/components/home/FiberSection';
+import FarmStorySection from '@/components/home/FarmStorySection';
 import ProcessSection from '@/components/home/ProcessSection';
 import CertificationsSection from '@/components/home/CertificationsSection';
 import BrandHeritageSection from '@/components/home/BrandHeritageSection';
@@ -23,6 +24,7 @@ export default function Index() {
       <AuthorityBanner />
       <SleepScienceSection />
       <FiberSection />
+      <FarmStorySection />
       <ProcessSection />
       <CertificationsSection />
       <BrandHeritageSection />
