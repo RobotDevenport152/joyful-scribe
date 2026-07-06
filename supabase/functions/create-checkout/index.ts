@@ -21,21 +21,34 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-// Server-side promo validation — mirrors promo_codes table until DB-driven validation is built
-const PROMO_CODES: Record<string, { discount: number; type: "percent" | "fixed"; minAmount?: number }> = {
-  WELCOME10: { discount: 10, type: "percent" },
-  LUXURY20:  { discount: 20, type: "percent", minAmount: 500 },
-  ALPACA50:  { discount: 50, type: "fixed" },
-};
-
-function calculatePromoDiscount(code: string | null | undefined, subtotal: number): number {
+// Read-only preview of the discount for pricing the Stripe session — the
+// customer hasn't paid yet, so nothing gets consumed here. The actual
+// atomic redemption (incrementing used_count) happens in stripe-webhook
+// once payment is confirmed, via the claim_promo_code() DB function.
+// Previously this was a hardcoded PROMO_CODES constant that didn't read
+// promo_codes at all — codes created/edited in the admin panel had no
+// effect on checkout, and vice versa.
+async function previewPromoDiscount(
+  serviceClient: ReturnType<typeof createClient>,
+  code: string | null | undefined,
+  subtotalNZD: number,
+): Promise<number> {
   if (!code) return 0;
-  const promo = PROMO_CODES[code.toUpperCase()];
-  if (!promo) return 0;
-  if (promo.minAmount && subtotal < promo.minAmount) return 0;
-  return promo.type === "percent"
-    ? parseFloat((subtotal * promo.discount / 100).toFixed(2))
-    : promo.discount;
+  const { data } = await serviceClient
+    .from("promo_codes")
+    .select("*")
+    .eq("code", code.toUpperCase())
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!data) return 0;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return 0;
+  if (data.usage_limit && (data.used_count ?? 0) >= data.usage_limit) return 0;
+  if (data.min_order_nzd && subtotalNZD < Number(data.min_order_nzd)) return 0;
+
+  return data.discount_type === "percent"
+    ? parseFloat((subtotalNZD * Number(data.discount_value) / 100).toFixed(2))
+    : Number(data.discount_value);
 }
 
 serve(async (req) => {
@@ -88,17 +101,17 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-    const shippingCost = subtotal >= 500 ? 0 : 25;
-    const discount = calculatePromoDiscount(promoCode, subtotal);
-    const total = subtotal - discount + shippingCost;
-
-    const orderNumber = `PA-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
+
+    const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    const shippingCost = subtotal >= 500 ? 0 : 25;
+    const discount = await previewPromoDiscount(serviceClient, promoCode, subtotal);
+    const total = subtotal - discount + shippingCost;
+
+    const orderNumber = `PA-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
     // Store cart + shipping data so the webhook can create the real order after payment.
     // No orders row is written until Stripe confirms payment.

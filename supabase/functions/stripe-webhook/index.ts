@@ -140,6 +140,28 @@ serve(async (req) => {
 
       await serviceClient.from("order_items").insert(orderItemRows);
 
+      // Atomically redeem the promo code now that payment is confirmed —
+      // this is the only point in the whole flow that increments used_count,
+      // and it does so via a FOR UPDATE row lock (see claim_promo_code
+      // migration) so two concurrent successful payments for a
+      // limited-usage code can't both succeed once only one use is left.
+      // A failed claim here (code got exhausted between quote and payment,
+      // or was deactivated mid-flight) must not block order fulfillment —
+      // the customer already paid — so this is logged, not thrown.
+      if (checkoutData.promo_code) {
+        const { error: promoError } = await serviceClient.rpc("claim_promo_code", {
+          _code: checkoutData.promo_code,
+          _subtotal_nzd: checkoutData.subtotal,
+        });
+        if (promoError) {
+          console.error("webhook_promo_claim_failed", {
+            order_id: order.id,
+            promo_code: checkoutData.promo_code,
+            error: promoError.message,
+          });
+        }
+      }
+
       // Mark session complete — second-layer idempotency guard
       await serviceClient
         .from("checkout_sessions")

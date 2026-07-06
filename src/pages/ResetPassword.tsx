@@ -1,6 +1,7 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { motion } from 'framer-motion';
@@ -13,8 +14,23 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+  // The recovery link from the email lands here with a #access_token in the
+  // URL. supabase-js parses that automatically (detectSessionInUrl) and fires
+  // a PASSWORD_RECOVERY auth event once the session is ready. Until that
+  // fires (or a session already exists), there's nothing valid to update yet.
+  const [sessionReady, setSessionReady] = useState(false);
 
-  const handleReset = (e: React.FormEvent) => {
+  useEffect(() => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setSessionReady(true);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setSessionReady(true);
+    });
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) {
       toast.error(locale === 'zh' ? '两次密码不一致' : 'Passwords do not match');
@@ -24,13 +40,21 @@ export default function ResetPasswordPage() {
       toast.error(locale === 'zh' ? '密码至少6位' : 'Password must be at least 6 characters');
       return;
     }
+    if (!sessionReady) {
+      toast.error(locale === 'zh' ? '重置链接无效或已过期，请重新申请' : 'This reset link is invalid or has expired — please request a new one');
+      return;
+    }
     setLoading(true);
-    // TODO: supabase.auth.updateUser({ password })
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       toast.success(locale === 'zh' ? '密码已重置！' : 'Password has been reset!');
-      setLoading(false);
       navigate('/login');
-    }, 800);
+    } catch (err: any) {
+      toast.error(err.message || (locale === 'zh' ? '重置失败，请重试' : 'Reset failed — please try again'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
