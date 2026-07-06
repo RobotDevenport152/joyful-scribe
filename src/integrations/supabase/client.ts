@@ -8,10 +8,38 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Local stub to prevent runtime crashes in dev when Supabase isn't configured.
+class FakeQuery {
+  then(resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); }
+  maybeSingle() { return Promise.resolve({ data: null, error: null }); }
+  select() { return this; }
+  eq() { return this; }
+  order() { return this; }
+  limit() { return this; }
+}
+const STUB = {
+  from: () => new FakeQuery(),
   auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+    signIn: async () => ({ data: null, error: null }),
+    signOut: async () => ({ data: null, error: null }),
+    user: null,
+  },
+  functions: {
+    invoke: async () => ({ data: null }),
+  },
+  storage: {
+    from: () => ({
+      createSignedUrl: async () => ({ data: null, error: null }),
+    }),
+  },
+} as any;
+
+export const supabase = SUPABASE_URL
+  ? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    })
+  : (STUB as unknown as ReturnType<typeof createClient>);

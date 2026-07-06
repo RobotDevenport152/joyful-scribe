@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { products as LOCAL_PRODUCTS } from '@/lib/store';
 import type { Tables } from '@/integrations/supabase/types';
 import type { Currency } from '@/lib/store';
 import { useExchangeRates, type ExchangeRates } from '@/hooks/useExchangeRates';
@@ -48,6 +49,17 @@ export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_
 
 export function useProducts(category?: string) {
   const { rates } = useExchangeRates();
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  if (!SUPABASE_URL) {
+    return useQuery({
+      queryKey: ['products', category, rates, 'local-fallback'],
+      queryFn: async () => {
+        const list = LOCAL_PRODUCTS.slice();
+        if (category && category !== 'all') return list.filter(p => p.category === category);
+        return list;
+      },
+    });
+  }
   return useQuery({
     queryKey: ['products', category, rates],
     queryFn: async () => {
@@ -70,6 +82,18 @@ export function useProducts(category?: string) {
 
 export function useProduct(id: string) {
   const { rates } = useExchangeRates();
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  if (!SUPABASE_URL) {
+    return useQuery({
+      queryKey: ['product', id, rates, 'local-fallback'],
+      queryFn: async () => {
+        const found = LOCAL_PRODUCTS.find(p => p.id === id || p.slug === id);
+        if (!found) throw new Error('Product not found');
+        return found;
+      },
+      enabled: !!id,
+    });
+  }
   return useQuery({
     queryKey: ['product', id, rates],
     queryFn: async () => {
@@ -98,6 +122,13 @@ export function useProduct(id: string) {
 
 export function useFeaturedProducts() {
   const { rates } = useExchangeRates();
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  if (!SUPABASE_URL) {
+    return useQuery({
+      queryKey: ['products', 'featured', rates, 'local-fallback'],
+      queryFn: async () => LOCAL_PRODUCTS.filter(p => p.featured && p.stock > 0).slice(0, 6),
+    });
+  }
   return useQuery({
     queryKey: ['products', 'featured', rates],
     queryFn: async () => {

@@ -1,28 +1,26 @@
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Minus, Trash2 } from 'lucide-react';
-import { useCartStore, formatPrice, formatNZD } from '@/stores/cartStore';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
+import { EXCHANGE_RATES } from '@/lib/store';
 
 const CartDrawer = () => {
   const { i18n } = useTranslation();
   const lang = i18n.language;
   const {
-    items, currency, isOpen, setCartOpen,
-    removeItem, updateQuantity, subtotalNZD,
-    promoCode, discount, setPromoCode,
-  } = useCartStore();
+    cart, currency, cartOpen: isOpen, setCartOpen,
+    removeFromCart, updateQuantity, cartTotal,
+    promoCode, setPromoCode, promoDiscount, setPromoDiscount, fp,
+  } = useCart();
   const [promoInput, setPromoInput] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
 
-  const subtotal = subtotalNZD();
-  const discountAmount = !discount ? 0
-    : discount.type === 'fixed'
-      ? Math.min(discount.amountNZD, subtotal)
-      : subtotal * (discount.value / 100);
+  const subtotal = cartTotal;
+  const discountAmount = promoDiscount || 0;
   const total = subtotal - discountAmount;
 
   const handleApplyPromo = async () => {
@@ -51,17 +49,24 @@ const CartDrawer = () => {
         return;
       }
 
-      if (data.min_order_nzd && subtotal < data.min_order_nzd) {
-        toast.error(lang === 'zh' ? `最低消费 ${formatNZD(data.min_order_nzd, currency)}` : `Minimum order ${formatNZD(data.min_order_nzd, currency)}`);
+      // subtotalNZD for server-side promo rules (promo table stores NZD values)
+      const subtotalNZD = cart.reduce((s, it) => s + (it.product.prices.NZD || 0) * it.quantity, 0);
+      if (data.min_order_nzd && subtotalNZD < data.min_order_nzd) {
+        const converted = Math.round(data.min_order_nzd * EXCHANGE_RATES[currency]);
+        toast.error(lang === 'zh' ? `最低消费 ${fp(converted)}` : `Minimum order ${fp(converted)}`);
         return;
       }
 
-      const discountVal = data.discount_type === 'percent'
-        ? { type: 'percent' as const, value: data.discount_value || 0 }
-        : data.discount_type === 'fixed'
-          ? { type: 'fixed' as const, amountNZD: data.discount_value || 0 }
-          : null;
-      setPromoCode(data.code, discountVal);
+      let discountAmountCurrency = 0;
+      if (data.discount_type === 'percent') {
+        discountAmountCurrency = subtotal * ((data.discount_value || 0) / 100);
+      } else if (data.discount_type === 'fixed') {
+        // convert NZD fixed amount to current currency
+        const converted = (data.discount_value || 0) * EXCHANGE_RATES[currency];
+        discountAmountCurrency = Math.min(converted, subtotal);
+      }
+      setPromoCode(data.code);
+      setPromoDiscount(Number(discountAmountCurrency.toFixed(2)));
       toast.success(lang === 'zh' ? `已应用促销码：${data.code}` : `Applied: ${data.code}`);
     } catch {
       toast.error(lang === 'zh' ? '验证失败' : 'Verification failed');
@@ -103,7 +108,7 @@ const CartDrawer = () => {
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto p-6">
-              {items.length === 0 ? (
+              {cart.length === 0 ? (
                 <div className="text-center py-20">
                   <p className="text-muted-foreground font-body">
                     {lang === 'zh' ? '购物车为空' : 'Your cart is empty'}
@@ -118,45 +123,49 @@ const CartDrawer = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.size}`} className="flex gap-4 py-4 border-b border-border last:border-0">
-                      {item.image && (
-                        <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-sm flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-body text-sm text-foreground truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground font-body">{item.size} {item.color && `· ${item.color}`}</p>
-                        <p className="text-sm text-accent font-body mt-1">{formatPrice(item, currency)}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
-                            className="w-7 h-7 border border-border rounded-sm flex items-center justify-center text-foreground hover:bg-secondary"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="text-sm font-body w-6 text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
-                            className="w-7 h-7 border border-border rounded-sm flex items-center justify-center text-foreground hover:bg-secondary"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => removeItem(item.productId, item.size)}
-                            className="ml-auto text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                  {cart.map((item) => {
+                    const size = item.variant || '';
+                    const name = lang === 'zh' ? item.product.nameZh : item.product.nameEn;
+                    return (
+                      <div key={`${item.product.id}-${size}`} className="flex gap-4 py-4 border-b border-border last:border-0">
+                        {item.product.image && (
+                          <img src={item.product.image} alt={name} className="w-20 h-20 object-cover rounded-sm flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-body text-sm text-foreground truncate">{name}</p>
+                          <p className="text-xs text-muted-foreground font-body">{size}</p>
+                          <p className="text-sm text-accent font-body mt-1">{fp(item.product.prices[currency])}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <button
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variant)}
+                              className="w-7 h-7 border border-border rounded-sm flex items-center justify-center text-foreground hover:bg-secondary"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-sm font-body w-6 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variant)}
+                              className="w-7 h-7 border border-border rounded-sm flex items-center justify-center text-foreground hover:bg-secondary"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => removeFromCart(item.product.id, item.variant)}
+                              className="ml-auto text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            {items.length > 0 && (
+            {cart.length > 0 && (
               <div className="border-t border-border p-6 space-y-4">
                 {/* Promo code */}
                 {!promoCode ? (
@@ -165,7 +174,7 @@ const CartDrawer = () => {
                       value={promoInput}
                       onChange={(e) => setPromoInput(e.target.value)}
                       placeholder={lang === 'zh' ? '促销码' : 'Promo code'}
-                      className="flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body text-foreground placeholder:text-muted-foreground"
+                      className="灵flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body text-foreground placeholder:text-muted-foreground"
                     />
                     <button
                       onClick={handleApplyPromo}
@@ -178,7 +187,7 @@ const CartDrawer = () => {
                 ) : (
                   <div className="flex items-center justify-between text-sm font-body">
                     <span className="text-accent">✓ {promoCode}</span>
-                    <button onClick={() => setPromoCode(null, null)} className="text-muted-foreground text-xs underline">
+                    <button onClick={() => { setPromoCode(''); setPromoDiscount(0); }} className="text-muted-foreground text-xs underline">
                       {lang === 'zh' ? '移除' : 'Remove'}
                     </button>
                   </div>
@@ -188,17 +197,17 @@ const CartDrawer = () => {
                 <div className="space-y-2 text-sm font-body">
                   <div className="flex justify-between text-foreground">
                     <span>{lang === 'zh' ? '小计' : 'Subtotal'}</span>
-                    <span>{formatNZD(subtotal, currency)}</span>
+                    <span>{fp(subtotal)}</span>
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-accent">
                       <span>{lang === 'zh' ? '折扣' : 'Discount'}</span>
-                      <span>-{formatNZD(discountAmount, currency)}</span>
+                      <span>-{fp(discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-foreground font-medium text-base pt-2 border-t border-border">
                     <span>{lang === 'zh' ? '合计' : 'Total'}</span>
-                    <span>{formatNZD(total, currency)}</span>
+                    <span>{fp(total)}</span>
                   </div>
                 </div>
 
