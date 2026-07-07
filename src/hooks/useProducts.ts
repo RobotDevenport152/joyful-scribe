@@ -50,96 +50,89 @@ export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_
 export function useProducts(category?: string) {
   const { rates } = useExchangeRates();
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  if (!SUPABASE_URL) {
-    return useQuery({
-      queryKey: ['products', category, rates, 'local-fallback'],
-      queryFn: async () => {
-        const list = LOCAL_PRODUCTS.slice();
-        if (category && category !== 'all') return list.filter(p => p.category === category);
-        return list;
-      },
-    });
-  }
-  return useQuery({
-    queryKey: ['products', category, rates],
-    queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('is_featured', { ascending: false });
+  const useLocal = !SUPABASE_URL;
+  const queryKey = useLocal
+    ? ['products', category, rates, 'local-fallback']
+    : ['products', category, rates];
 
-      if (category && category !== 'all') {
-        query = query.eq('category', category);
-      }
+  const queryFn = async () => {
+    if (useLocal) {
+      const list = LOCAL_PRODUCTS.slice();
+      if (category && category !== 'all') return list.filter(p => p.category === category);
+      return list;
+    }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data ?? []).map(p => dbToLegacyProduct(p, rates));
-    },
-  });
+    let query = supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('is_featured', { ascending: false });
+
+    if (category && category !== 'all') {
+      query = query.eq('category', category);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map(p => dbToLegacyProduct(p, rates));
+  };
+
+  return useQuery({ queryKey, queryFn });
 }
 
 export function useProduct(id: string) {
   const { rates } = useExchangeRates();
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  if (!SUPABASE_URL) {
-    return useQuery({
-      queryKey: ['product', id, rates, 'local-fallback'],
-      queryFn: async () => {
-        const found = LOCAL_PRODUCTS.find(p => p.id === id || p.slug === id);
-        if (!found) throw new Error('Product not found');
-        return found;
-      },
-      enabled: !!id,
-    });
-  }
-  return useQuery({
-    queryKey: ['product', id, rates],
-    queryFn: async () => {
-      // Try by UUID first, then by slug
-      let result = await supabase
+  const useLocal = !SUPABASE_URL;
+  const queryKey = useLocal ? ['product', id, rates, 'local-fallback'] : ['product', id, rates];
+
+  const queryFn = async () => {
+    if (useLocal) {
+      const found = LOCAL_PRODUCTS.find(p => p.id === id || p.slug === id);
+      if (!found) throw new Error('Product not found');
+      return found;
+    }
+
+    // Try by UUID first, then by slug
+    let result = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!result.data) {
+      result = await supabase
         .from('products')
         .select('*')
-        .eq('id', id)
+        .eq('slug', id)
         .maybeSingle();
+    }
 
-      if (!result.data) {
-        result = await supabase
-          .from('products')
-          .select('*')
-          .eq('slug', id)
-          .maybeSingle();
-      }
+    if (result.error) throw result.error;
+    if (!result.data) throw new Error('Product not found');
+    return dbToLegacyProduct(result.data, rates);
+  };
 
-      if (result.error) throw result.error;
-      if (!result.data) throw new Error('Product not found');
-      return dbToLegacyProduct(result.data, rates);
-    },
-    enabled: !!id,
-  });
+  return useQuery({ queryKey, queryFn, enabled: !!id });
 }
 
 export function useFeaturedProducts() {
   const { rates } = useExchangeRates();
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  if (!SUPABASE_URL) {
-    return useQuery({
-      queryKey: ['products', 'featured', rates, 'local-fallback'],
-      queryFn: async () => LOCAL_PRODUCTS.filter(p => p.featured && p.stock > 0).slice(0, 6),
-    });
-  }
-  return useQuery({
-    queryKey: ['products', 'featured', rates],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_featured', true)
-        .eq('is_active', true)
-        .limit(6);
-      if (error) throw error;
-      return (data ?? []).map(p => dbToLegacyProduct(p, rates));
-    },
-  });
+  const useLocal = !SUPABASE_URL;
+  const queryKey = useLocal ? ['products', 'featured', rates, 'local-fallback'] : ['products', 'featured', rates];
+
+  const queryFn = async () => {
+    if (useLocal) return LOCAL_PRODUCTS.filter(p => p.featured && p.stock > 0).slice(0, 6);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_featured', true)
+      .eq('is_active', true)
+      .limit(6);
+    if (error) throw error;
+    return (data ?? []).map(p => dbToLegacyProduct(p, rates));
+  };
+
+  return useQuery({ queryKey, queryFn });
 }
