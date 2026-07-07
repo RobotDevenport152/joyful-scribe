@@ -128,6 +128,33 @@ npx vercel --prod
 
 ---
 
+## Current Status (2026-07-07)
+
+**Live deployment:** https://pacific-alpaca-website.vercel.app — connected to the production Supabase project. Stripe checkout is verified end-to-end (real orders and webhook events already exist in the database).
+
+**Not yet done:**
+- Custom domain `pacificalpacas.com` is not attached to this Vercel project — needs to be added in Vercel → Settings → Domains, then DNS updated at the registrar.
+- `products` table is empty — the Shop page has no items to display until real product data is imported.
+
+**Recently fixed:**
+- Desktop nav was missing a way to reach secondary pages (traceability, wholesale, compare, returns, China landing, my orders, admin) — added a "More" dropdown next to the primary nav links (`src/components/Navbar.tsx`).
+- The dev-mode Supabase stub client (used automatically when `VITE_SUPABASE_URL` isn't set) was missing `auth.onAuthStateChange`/`getSession` and several query builder methods (`ilike`, `gte`, etc.), which threw uncaught errors and rendered blank pages on `/my-orders`, `/admin`, and the traceability search. The stub now covers the methods the app actually calls (`src/integrations/supabase/client.ts`).
+
+### Gap analysis vs. the live pacificalpacas.com site
+
+A side-by-side review of the real production site (WordPress/WooCommerce) against this rebuild surfaced:
+
+- **Missing product line** — the live site sells 15+ handmade Suri alpaca carpets ($840–$10,286 each); this catalogue has no `carpet` category yet.
+- **Missing size variants** — live duvets offer 9 sizes (5 NZ standard + 4 Chinese standard: Single/Double/Queen/King); this rebuild only defines 2–3 generic sizes per product.
+- **Incorrect postal address** — footer shows `P.O. Box 34044, Birkenhead`; the real address is `P.O. Box 28684, Remuera, Auckland 1541`.
+- **Missing Albany office** — the live site lists a North Island office/warehouse (Building B, 14-22 Triton Drive, Albany) that isn't in the footer here.
+- **Missing Code of Welfare compliance text** — the live Growers page has a legally-worded attestation requirement (per the NZ Code of Welfare: Llamas and Alpacas) that isn't reproduced here.
+- **No visible "Grower Login" CTA** — the grower portal here is more capable (real credit ledger, auth-gated batches) but isn't surfaced with a prominent login button the way the live site does.
+- Confirmed correct: brand tagline, "Cloud of Dreams" product naming, and social media links all match the live site.
+- **Needs verification before launch** — CGTN media coverage and Hurun Report awards are referenced as required trust signals for the Chinese market, but do not appear anywhere on the current live site; get the actual source material from the client before publishing these claims.
+
+---
+
 ## Tests
 
 42 tests across 3 files:
