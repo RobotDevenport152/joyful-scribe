@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Globe, Menu, X, User } from 'lucide-react';
+import { ShoppingBag, Globe, Menu, X, User, ChevronDown } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Link, useLocation } from 'react-router-dom';
 import type { Currency } from '@/lib/store';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function Navbar() {
   const { locale, setLocale, t, currency, setCurrency, cartCount, setCartOpen } = useApp();
@@ -26,13 +32,20 @@ export default function Navbar() {
     { href: isHome ? '#credentials' : '/#credentials', label: t.nav.credentials },
   ];
 
+  const moreLinks = [
+    { href: '/traceability', label: locale === 'zh' ? '溯源查询' : 'Traceability' },
+    { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
+    { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
+    { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },
+    { href: '/china', label: locale === 'zh' ? '中国专区' : 'China' },
+    { href: '/my-orders', label: locale === 'zh' ? '我的订单' : 'My Orders' },
+    { href: '/admin', label: t.nav.admin },
+  ];
+
   const mobileLinks = [
     ...navLinks,
-    { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
-    { href: '/traceability', label: locale === 'zh' ? '溯源' : 'Trace' },
-    { href: '/my-orders', label: locale === 'zh' ? '我的订单' : 'My Orders' },
+    ...moreLinks,
     { href: '/login', label: locale === 'zh' ? '登录' : 'Login' },
-    { href: '/admin', label: t.nav.admin },
   ];
 
   const currencies: Currency[] = ['CNY', 'NZD', 'USD'];
@@ -63,6 +76,20 @@ export default function Navbar() {
               </Link>
             )
           ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground text-sm tracking-wider transition-colors font-body uppercase outline-none">
+              {locale === 'zh' ? '更多功能' : 'More'}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-primary border-primary-foreground/10">
+              {moreLinks.map(link => (
+                <DropdownMenuItem key={link.href} asChild className="text-primary-foreground/80 focus:text-primary-foreground focus:bg-primary-foreground/10 cursor-pointer">
+                  <Link to={link.href}>{link.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-4">
