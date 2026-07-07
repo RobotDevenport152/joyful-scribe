@@ -6,7 +6,7 @@ export interface Product {
   nameZh: string;
   descEn: string;
   descZh: string;
-  category: 'bedding' | 'outerwear' | 'accessories';
+  category: 'bedding' | 'outerwear' | 'accessories' | 'carpet';
   prices: Record<Currency, number>;
   image: string;
   badge?: string;
@@ -33,6 +33,19 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   USD: 'US$',
 };
 
+// NZ standard + Chinese standard bed sizes — matches the size matrix offered on pacificalpacas.com
+export const DUVET_SIZE_VARIANTS: { label: string; value: string }[] = [
+  { label: 'Single (140×210cm)', value: 'single-140x210' },
+  { label: 'King Single (180×210cm)', value: 'king-single-180x210' },
+  { label: 'Queen (210×210cm)', value: 'queen-210x210' },
+  { label: 'King (240×210cm)', value: 'king-240x210' },
+  { label: 'Super King (265×210cm)', value: 'super-king-265x210' },
+  { label: 'Chinese Single (150×200cm)', value: 'cn-single-150x200' },
+  { label: 'Chinese Double (180×200cm)', value: 'cn-double-180x200' },
+  { label: 'Chinese Queen (200×230cm)', value: 'cn-queen-200x230' },
+  { label: 'Chinese King (220×240cm)', value: 'cn-king-220x240' },
+];
+
 export const products: Product[] = [
   {
     id: 'duvet-classic',
@@ -46,10 +59,7 @@ export const products: Product[] = [
     badge: 'Bestseller',
     stock: 45,
     featured: true,
-    variants: [
-      { label: '200×230cm', value: '200x230' },
-      { label: '220×240cm', value: '220x240' },
-    ],
+    variants: DUVET_SIZE_VARIANTS,
   },
   {
     id: 'duvet-luxury',
@@ -62,11 +72,7 @@ export const products: Product[] = [
     image: '/images/product-luxury-duvet.jpg',
     stock: 20,
     featured: true,
-    variants: [
-      { label: '180×210cm', value: '180x210' },
-      { label: '200×230cm', value: '200x230' },
-      { label: '220×240cm', value: '220x240' },
-    ],
+    variants: DUVET_SIZE_VARIANTS,
   },
   {
     id: 'duvet-premium',
@@ -80,6 +86,7 @@ export const products: Product[] = [
     badge: 'Premium',
     stock: 8,
     featured: true,
+    variants: DUVET_SIZE_VARIANTS,
   },
   {
     id: 'coat-classic',

@@ -306,11 +306,25 @@ export default function GrowersInfoPage() {
             <h1 className="font-display text-4xl md:text-5xl mb-4">
               {locale === 'zh' ? '成为合作牧场主' : 'Become a Grower Partner'}
             </h1>
-            <p className="font-body text-primary-foreground/70 max-w-2xl mx-auto">
+            <p className="font-body text-primary-foreground/70 max-w-2xl mx-auto mb-8">
               {locale === 'zh'
                 ? '太平洋羊驼是新西兰最大的羊驼纤维池。我们与全国900多个牧场和种畜场合作。'
                 : "Pacific Alpacas is New Zealand's largest alpaca fibre pool. We partner with over 900 farms and studs across the country."}
             </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link to="/contact"
+                className="px-6 py-3 bg-accent text-accent-foreground font-body text-sm font-semibold tracking-wider rounded-sm hover:bg-accent/90 transition">
+                {locale === 'zh' ? '立即加入' : 'Join Now'}
+              </Link>
+              <Link to="/wholesale"
+                className="px-6 py-3 bg-primary-foreground/10 border border-primary-foreground/30 font-body text-sm font-semibold tracking-wider rounded-sm hover:bg-primary-foreground/20 transition">
+                {locale === 'zh' ? '收购纤维' : 'Buy Fibre'}
+              </Link>
+              <Link to="/login"
+                className="px-6 py-3 bg-primary-foreground/10 border border-primary-foreground/30 font-body text-sm font-semibold tracking-wider rounded-sm hover:bg-primary-foreground/20 transition">
+                {locale === 'zh' ? '养殖户登录' : 'Grower Login'}
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -441,6 +455,23 @@ export default function GrowersInfoPage() {
               <TabsContent value="collection">
                 {renderCollectionTable(COLLECTION_NORTH, '北岛', 'North Island')}
                 {renderCollectionTable(COLLECTION_SOUTH, '南岛', 'South Island')}
+
+                <div className="mt-8 bg-muted/50 border border-border rounded-lg p-6">
+                  <h3 className="font-display text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-gold" />
+                    {locale === 'zh' ? '动物福利守则合规要求' : 'Code of Welfare Compliance'}
+                  </h3>
+                  <p className="text-sm font-body text-muted-foreground mb-3">
+                    {locale === 'zh'
+                      ? '太平洋羊驼要求所有牧场主必须完全遵守新西兰农业部于2018年10月1日颁布的《羊驼与美洲驼动物福利守则》（Code of Welfare: Llamas and Alpacas）及其任何修订版本的相关规定。任何希望向太平洋羊驼纤维池供应纤维的牧场主，须填写并提交《动物福利守则合规声明》至 admin@pacificalpacas.nz。'
+                      : 'Pacific Alpacas requires all its growers to be fully compliant with the Code of Welfare requirements as detailed in the Code of Welfare: Llamas and Alpacas issued by the Minister of Agriculture dated 1 October 2018, and any amendments. Any grower wanting to supply fibre to the Pacific Alpacas fibre pool will be required to complete and send to admin@pacificalpacas.nz a Code of Welfare attestation.'}
+                  </p>
+                  <p className="text-sm font-body text-muted-foreground">
+                    {locale === 'zh'
+                      ? '若太平洋羊驼酌情认定任何人未能满足《羊驼与美洲驼动物福利守则》的相关要求，我们将拒绝收购其纤维。'
+                      : 'Pacific Alpacas will refuse to accept fibre from any person(s) who, in Pacific Alpacas’ sole discretion, fails to meet any of the requirements of the Code of Welfare: Llamas and Alpacas.'}
+                  </p>
+                </div>
               </TabsContent>
 
               <TabsContent value="shearers">

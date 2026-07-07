@@ -47,6 +47,12 @@ export default function Footer() {
                 {locale === 'zh' ? '微信客服（扫码添加）' : 'WeChat Support (scan QR)'}
               </button>
               <div>
+                <p className="text-xs font-body text-primary-foreground/40 mb-0.5">{locale === 'zh' ? '北岛办公室 & 仓库' : 'North Island'}</p>
+                <p className="text-sm font-body text-primary-foreground/50">
+                  Building B, 14-22 Triton Drive,<br />Albany, 0632, NZ
+                </p>
+              </div>
+              <div>
                 <p className="text-xs font-body text-primary-foreground/40 mb-0.5">{locale === 'zh' ? '南岛仓库' : 'South Island'}</p>
                 <p className="text-sm font-body text-primary-foreground/50">
                   2 Pigeon Rock Road, R.D.3,<br />Cromwell, Central Otago 9383, NZ
@@ -55,7 +61,7 @@ export default function Footer() {
               <div>
                 <p className="text-xs font-body text-primary-foreground/40 mb-0.5">{locale === 'zh' ? '邮政地址' : 'Postal'}</p>
                 <p className="text-sm font-body text-primary-foreground/50">
-                  P.O. Box 34044, Birkenhead 0626,<br />Auckland, New Zealand
+                  P.O. Box 28684, Remuera,<br />Auckland 1541, New Zealand
                 </p>
               </div>
             </div>
@@ -65,7 +71,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-center gap-3">
             <p className="text-primary-foreground/30 text-xs font-body">© Pacific Alpacas Limited 2019–2026 | All Right Reserved</p>
             <a
-              href="https://www.foodsafety.govt.nz/registers-and-resources/registers/animal-product-register/"
+              href="https://pacificalpacas.com/wp-content/uploads/2019/09/Certificate-of-license.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-body text-gold/60 hover:text-gold transition-colors underline underline-offset-2"

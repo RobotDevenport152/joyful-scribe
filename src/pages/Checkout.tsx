@@ -442,6 +442,11 @@ export default function CheckoutPage() {
                   <span>{t.checkout.total}</span>
                   <span className="text-gold">{fp(total)}</span>
                 </div>
+                <p className="text-muted-foreground/70 text-xs pt-1">
+                  {locale === 'zh'
+                    ? '所有价格均以新西兰元 (NZD) 计价，已含GST。'
+                    : 'All prices are in NZD and inclusive of GST.'}
+                </p>
               </div>
             </div>
           </div>

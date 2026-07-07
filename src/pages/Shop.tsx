@@ -9,7 +9,7 @@ import SEOHead from '@/components/SEOHead';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-type Category = 'all' | 'newborn' | 'duvet' | 'apparel' | 'vest' | 'scarf' | 'sweater';
+type Category = 'all' | 'newborn' | 'duvet' | 'apparel' | 'vest' | 'scarf' | 'sweater' | 'carpet';
 type SortKey = 'featured' | 'priceLow' | 'priceHigh' | 'name';
 
 export default function ShopPage() {
@@ -64,6 +64,7 @@ export default function ShopPage() {
     { key: 'vest', label: locale === 'zh' ? '马甲' : 'Vests' },
     { key: 'scarf', label: locale === 'zh' ? '围巾' : 'Scarves' },
     { key: 'sweater', label: locale === 'zh' ? '毛衣' : 'Sweaters' },
+    { key: 'carpet', label: locale === 'zh' ? '地毯' : 'Carpets' },
   ];
 
   const sorts: { key: SortKey; label: string }[] = [
