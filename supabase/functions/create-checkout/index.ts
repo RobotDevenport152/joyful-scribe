@@ -91,6 +91,11 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (items.some((item: any) => !item.productId || !(Number(item.quantity) > 0))) {
+      return new Response(JSON.stringify({ error: "Invalid item" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
     if (!stripeKey) {
@@ -106,9 +111,38 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-    const shippingCost = subtotal >= 500 ? 0 : 25;
-    const discount = await previewPromoDiscount(serviceClient, promoCode, subtotal);
+    // Prices are never trusted from the client — look up the authoritative
+    // NZD price for every item from the products table. Display-currency
+    // conversion also happens here with a fixed rate table (mirrors the
+    // useExchangeRates fallback), never with a client-supplied rate.
+    const productIds = [...new Set(items.map((item: any) => item.productId))];
+    const { data: products, error: productsError } = await serviceClient
+      .from("products")
+      .select("id, name_en, price_nzd")
+      .in("id", productIds)
+      .eq("is_active", true);
+
+    if (productsError || !products || products.length !== productIds.length) {
+      return new Response(JSON.stringify({ error: "One or more items are invalid or unavailable" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const priceByProductId = new Map(products.map((p: any) => [p.id, Number(p.price_nzd)]));
+    const CURRENCY_RATES: Record<string, number> = { NZD: 1, CNY: 4.5, USD: 0.6 };
+    const rate = CURRENCY_RATES[(currency || "NZD").toUpperCase()] ?? 1;
+
+    const pricedItems = items.map((item: any) => {
+      const unitPriceNZD = priceByProductId.get(item.productId)!;
+      const unitPriceCurrency = rate === 1 ? unitPriceNZD : Math.round(unitPriceNZD * rate);
+      return { ...item, price: unitPriceCurrency, priceNZD: unitPriceNZD };
+    });
+
+    const subtotal = pricedItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    const subtotalNZD = pricedItems.reduce((sum: number, item: any) => sum + item.priceNZD * item.quantity, 0);
+    const shippingCost = subtotalNZD >= 500 ? 0 : Math.round(25 * rate);
+    const discountNZD = await previewPromoDiscount(serviceClient, promoCode, subtotalNZD);
+    const discount = rate === 1 ? discountNZD : Math.round(discountNZD * rate * 100) / 100;
     const total = subtotal - discount + shippingCost;
 
     const orderNumber = `PA-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
@@ -120,7 +154,13 @@ serve(async (req) => {
       .insert({
         user_id: userData.user.id,
         order_number: orderNumber,
-        items,
+        items: pricedItems.map((item: any) => ({
+          productId: item.productId,
+          name: item.name,
+          variant: item.variant || null,
+          quantity: item.quantity,
+          price: item.price,
+        })),
         shipping_name: shippingInfo.name,
         shipping_email: shippingInfo.email,
         shipping_phone: shippingInfo.phone || null,
@@ -147,7 +187,7 @@ serve(async (req) => {
       });
     }
 
-    const lineItems: any[] = items.map((item: any) => ({
+    const lineItems: any[] = pricedItems.map((item: any) => ({
       price_data: {
         currency: (currency || "nzd").toLowerCase(),
         product_data: { name: item.name, description: item.variant || undefined },

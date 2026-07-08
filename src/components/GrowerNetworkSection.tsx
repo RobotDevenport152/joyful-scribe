@@ -3,22 +3,29 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
+// Each dot is a decorative marker (we don't have per-farm coordinates yet),
+// tagged with the nearest labeled region so it can link to that region on
+// Google Maps rather than a fabricated exact location.
 const GROWER_DOTS = [
-  { x: 116, y: 28 }, { x: 107, y: 46 },
-  { x: 111, y: 76 }, { x: 103, y: 98 },
-  { x: 113, y: 110 }, { x: 132, y: 104 },
-  { x: 124, y: 118 }, { x: 151, y: 126 },
-  { x: 142, y: 148 }, { x: 105, y: 155 },
-  { x: 115, y: 162 }, { x: 117, y: 194 },
-  { x: 131, y: 184 }, { x: 99, y: 242 },
-  { x: 116, y: 250 }, { x: 75, y: 294 },
-  { x: 71, y: 314 }, { x: 105, y: 286 },
-  { x: 97, y: 306 }, { x: 110, y: 298 },
-  { x: 91, y: 322 }, { x: 100, y: 332 },
-  { x: 88, y: 346 }, { x: 104, y: 356 },
-  { x: 56, y: 376 }, { x: 80, y: 390 },
-  { x: 68, y: 400 }, { x: 74, y: 416 },
+  { x: 116, y: 28, region: 'Northland' }, { x: 107, y: 46, region: 'Northland' },
+  { x: 111, y: 76, region: 'Waikato' }, { x: 103, y: 98, region: 'Waikato' },
+  { x: 113, y: 110, region: 'Waikato' }, { x: 132, y: 104, region: 'Waikato' },
+  { x: 124, y: 118, region: 'Waikato' }, { x: 151, y: 126, region: "Hawke's Bay" },
+  { x: 142, y: 148, region: "Hawke's Bay" }, { x: 105, y: 155, region: "Hawke's Bay" },
+  { x: 115, y: 162, region: "Hawke's Bay" }, { x: 117, y: 194, region: 'Wellington' },
+  { x: 131, y: 184, region: 'Wellington' }, { x: 99, y: 242, region: 'Wellington' },
+  { x: 116, y: 250, region: 'Wellington' }, { x: 75, y: 294, region: 'Canterbury' },
+  { x: 71, y: 314, region: 'Canterbury' }, { x: 105, y: 286, region: 'Canterbury' },
+  { x: 97, y: 306, region: 'Canterbury' }, { x: 110, y: 298, region: 'Canterbury' },
+  { x: 91, y: 322, region: 'Canterbury' }, { x: 100, y: 332, region: 'Central Otago' },
+  { x: 88, y: 346, region: 'Central Otago' }, { x: 104, y: 356, region: 'Central Otago' },
+  { x: 56, y: 376, region: 'Central Otago' }, { x: 80, y: 390, region: 'Southland' },
+  { x: 68, y: 400, region: 'Southland' }, { x: 74, y: 416, region: 'Southland' },
 ];
+
+function googleMapsUrl(region: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${region}, New Zealand`)}`;
+}
 
 export default function GrowerNetworkSection() {
   const { locale } = useApp();
@@ -67,18 +74,28 @@ export default function GrowerNetworkSection() {
                 <text key={label} x={x + 10} y={y} fill="hsl(var(--gold))" fontSize="5" opacity="0.5" fontFamily="Inter">{label}</text>
               ))}
 
-              {/* Farm dots */}
+              {/* Farm dots — link out to the dot's region on Google Maps */}
               {GROWER_DOTS.map((dot, idx) => (
-                <motion.circle
+                <a
                   key={idx}
-                  cx={dot.x}
-                  cy={dot.y}
-                  r="2.5"
-                  fill="hsl(var(--gold))"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={inView ? { opacity: 0.7, scale: 1 } : {}}
-                  transition={{ delay: idx * 0.03, duration: 0.3 }}
-                />
+                  href={googleMapsUrl(dot.region)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${dot.region} on Google Maps`}
+                >
+                  <title>{dot.region}</title>
+                  <motion.circle
+                    cx={dot.x}
+                    cy={dot.y}
+                    r="2.5"
+                    fill="hsl(var(--gold))"
+                    className="cursor-pointer"
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={inView ? { opacity: 0.7, scale: 1 } : {}}
+                    whileHover={{ scale: 1.8, opacity: 1 }}
+                    transition={{ delay: idx * 0.03, duration: 0.3 }}
+                  />
+                </a>
               ))}
             </svg>
           </div>
