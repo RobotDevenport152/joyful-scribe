@@ -33,6 +33,11 @@ export default function ProtectedRoute({
   const [hasRole, setHasRole] = useState(false);
 
   useEffect(() => {
+    // Wait for auth to finish resolving before deciding there's no user —
+    // otherwise the initial `user === null` (before session loads) gets
+    // mistaken for "not logged in" and the role check is skipped entirely.
+    if (loading) return;
+
     if (!requiredRole || !user) {
       setRoleChecked(true);
       return;
@@ -48,7 +53,7 @@ export default function ProtectedRoute({
         }
         setRoleChecked(true);
       });
-  }, [user, requiredRole]);
+  }, [user, requiredRole, loading]);
 
   // Show spinner while auth state is resolving (prevents redirect flash)
   if (loading || !roleChecked) {
