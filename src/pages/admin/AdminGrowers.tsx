@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -7,21 +8,70 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Search, Plus, Eye } from 'lucide-react';
+import { Search, Plus, Eye, Check, X } from 'lucide-react';
 
 const AdminGrowers = () => {
+  const { user } = useAuth();
   const [growers, setGrowers] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [creditForm, setCreditForm] = useState({ amount: '', description: '' });
   const [showCredit, setShowCredit] = useState(false);
 
-  useEffect(() => { loadGrowers(); }, []);
+  useEffect(() => { loadGrowers(); loadApplications(); }, []);
 
   const loadGrowers = async () => {
     const { data } = await supabase.from('growers').select('*').order('farm_name');
     setGrowers(data ?? []);
+  };
+
+  const loadApplications = async () => {
+    const { data } = await supabase
+      .from('grower_applications')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at');
+    setApplications(data ?? []);
+  };
+
+  const approveApplication = async (app: any) => {
+    if (!user) return;
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({ user_id: app.user_id, role: 'grower' });
+    if (roleError) { toast.error(roleError.message); return; }
+
+    const { error: growerError } = await supabase.from('growers').insert({
+      user_id: app.user_id,
+      farm_name: app.farm_name,
+      owner_name: app.owner_name,
+      region: app.region,
+      description: app.message,
+    });
+    if (growerError) { toast.error(growerError.message); return; }
+
+    const { error: statusError } = await supabase
+      .from('grower_applications')
+      .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+      .eq('id', app.id);
+    if (statusError) { toast.error(statusError.message); return; }
+
+    toast.success(`${app.farm_name} 已通过审核`);
+    loadApplications();
+    loadGrowers();
+  };
+
+  const rejectApplication = async (app: any) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('grower_applications')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+      .eq('id', app.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`已拒绝 ${app.farm_name} 的申请`);
+    loadApplications();
   };
 
   const viewGrower = async (g: any) => {
@@ -52,6 +102,31 @@ const AdminGrowers = () => {
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl">养殖户管理</h1>
+
+      {applications.length > 0 && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <h2 className="font-medium text-sm text-muted-foreground">待审核申请 ({applications.length})</h2>
+            {applications.map(app => (
+              <div key={app.id} className="flex items-center justify-between border-b border-border py-3 last:border-0">
+                <div className="text-sm">
+                  <div className="font-medium">{app.farm_name} · {app.owner_name}</div>
+                  <div className="text-muted-foreground">{app.region}{app.phone ? ` · ${app.phone}` : ''}</div>
+                  {app.message && <div className="text-xs text-muted-foreground mt-1">{app.message}</div>}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => approveApplication(app)}>
+                    <Check className="w-4 h-4 text-green-600" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => rejectApplication(app)}>
+                    <X className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

@@ -18,6 +18,7 @@ const OrderSuccess = React.lazy(() => import("./pages/OrderSuccess"));
 const Traceability = React.lazy(() => import("./pages/Traceability"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const GrowersInfo = React.lazy(() => import("./pages/GrowersInfo"));
+const ApplyGrower = React.lazy(() => import("./pages/ApplyGrower"));
 const Wholesale = React.lazy(() => import("./pages/Wholesale"));
 const ChinaLanding = React.lazy(() => import("./pages/ChinaLanding"));
 const Compare = React.lazy(() => import("./pages/Compare"));
@@ -123,6 +124,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <MyOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/apply-grower"
+                  element={
+                    <ProtectedRoute>
+                      <ApplyGrower />
                     </ProtectedRoute>
                   }
                 />

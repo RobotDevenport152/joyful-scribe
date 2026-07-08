@@ -124,6 +124,48 @@ export type Database = {
           },
         ]
       }
+      grower_applications: {
+        Row: {
+          created_at: string
+          farm_name: string
+          id: string
+          message: string | null
+          owner_name: string
+          phone: string | null
+          region: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          farm_name: string
+          id?: string
+          message?: string | null
+          owner_name: string
+          phone?: string | null
+          region: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          farm_name?: string
+          id?: string
+          message?: string | null
+          owner_name?: string
+          phone?: string | null
+          region?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       grower_transactions: {
         Row: {
           amount_nzd: number

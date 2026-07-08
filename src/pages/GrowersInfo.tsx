@@ -554,7 +554,7 @@ export default function GrowersInfoPage() {
 
           {/* CTA */}
           <div className="text-center">
-            <Link to="/contact"
+            <Link to="/apply-grower"
               className="inline-block px-10 py-4 bg-accent text-accent-foreground font-body font-semibold rounded-sm tracking-wider hover:bg-accent/90 transition">
               {locale === 'zh' ? '注册成为牧场主' : 'Register as a Grower'}
             </Link>
