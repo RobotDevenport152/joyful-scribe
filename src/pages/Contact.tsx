@@ -80,7 +80,7 @@ export default function ContactPage() {
                     <div className="space-y-2">
                       <div>
                         <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '北岛办公室 & 仓库' : 'North Island Office & Warehouse'}</p>
-                        <p className="font-body text-sm text-muted-foreground">Building 8, 18-32 Triton Drive,<br />Albany, 0632, New Zealand</p>
+                        <p className="font-body text-sm text-muted-foreground">Building B, 14-22 Triton Drive,<br />Albany, 0632, New Zealand</p>
                       </div>
                       <div>
                         <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '南岛仓库' : 'South Island Warehouse'}</p>
@@ -88,7 +88,7 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <p className="font-body text-xs font-semibold text-foreground mb-0.5">{locale === 'zh' ? '邮政地址' : 'Postal Address'}</p>
-                        <p className="font-body text-sm text-muted-foreground">P.O. Box 34044, Birkenhead 0626,<br />Auckland, New Zealand</p>
+                        <p className="font-body text-sm text-muted-foreground">P.O. Box 28684, Remuera,<br />Auckland 1541, New Zealand</p>
                       </div>
                     </div>
                   </div>

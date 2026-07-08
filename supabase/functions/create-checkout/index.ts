@@ -59,8 +59,8 @@ serve(async (req) => {
 
   try {
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY") ?? "",
     );
 
     const authHeader = req.headers.get("Authorization");
@@ -102,8 +102,8 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
     const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
@@ -176,9 +176,12 @@ serve(async (req) => {
       success_url: `${baseUrl}/order-success?number=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/checkout`,
       customer_email: userData.user.email,
-      // Webhook reads checkout_session_id to fetch stored cart data
+      // Webhook reads checkout_session_id to fetch stored cart data. order_id is
+      // included as a fallback for legacy Stripe sessions created before the
+      // metadata field was standardized.
       metadata: {
         checkout_session_id: checkoutSession.id,
+        order_id: checkoutSession.id,
         order_number: orderNumber,
       },
     };

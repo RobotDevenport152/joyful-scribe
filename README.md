@@ -128,6 +128,36 @@ npx vercel --prod
 
 ---
 
+## Current Status (2026-07-07)
+
+**Live deployment:** https://pacific-alpaca-website.vercel.app — connected to the production Supabase project. Stripe checkout is verified end-to-end (real orders and webhook events already exist in the database).
+
+**Not yet done:**
+- Custom domain `pacificalpacas.com` is not attached to this Vercel project — needs to be added in Vercel → Settings → Domains, then DNS updated at the registrar.
+- `products` table is empty — the Shop page has no items to display until real product data is imported.
+
+**Recently fixed:**
+- Desktop nav was missing a way to reach secondary pages (traceability, wholesale, compare, returns, China landing, my orders, admin) — added a "More" dropdown next to the primary nav links (`src/components/Navbar.tsx`).
+- The dev-mode Supabase stub client (used automatically when `VITE_SUPABASE_URL` isn't set) was missing `auth.onAuthStateChange`/`getSession` and several query builder methods (`ilike`, `gte`, etc.), which threw uncaught errors and rendered blank pages on `/my-orders`, `/admin`, and the traceability search. The stub now covers the methods the app actually calls (`src/integrations/supabase/client.ts`).
+- Closed 5 of the 6 gaps below found against the live site (carpet category, Chinese size variants, address correction, Grower Login CTA, Code of Welfare text, GST pricing note) — see "Gap analysis" for what's still open.
+
+### Gap analysis vs. the live pacificalpacas.com site
+
+A side-by-side review of the real production site (WordPress/WooCommerce) against this rebuild surfaced:
+
+- ~~**Missing product line** — the live site sells 15+ handmade Suri alpaca carpets ($840–$10,286 each)~~ Fixed: `carpet` is now a valid category in `store.ts`, the Shop filter, and the admin product editor. No carpet products have been added to the Supabase catalogue yet — this only unblocks creating them.
+- ~~**Missing size variants** — live duvets offer 9 sizes~~ Fixed: `DUVET_SIZE_VARIANTS` in `store.ts` now lists all 5 NZ standard + 4 Chinese standard sizes, applied to all three duvet tiers.
+- ~~**Incorrect postal address**~~ Fixed: Footer and Contact page now show `P.O. Box 28684, Remuera, Auckland 1541`, matching the live site.
+- ~~**Missing Albany office**~~ Fixed: Footer now lists the North Island office (Building B, 14-22 Triton Drive, Albany); Contact page's building/street number corrected to match.
+- ~~**Missing Code of Welfare compliance text**~~ Fixed: the attestation requirement is now reproduced on the Growers page collection-points tab.
+- ~~**No visible "Grower Login" CTA**~~ Fixed: added Join Now / Buy Fibre / Grower Login buttons to the growers page hero.
+- Also added the "prices are NZD, inclusive of GST" disclosure (not on the original gap list, but noticed on the live product page) to `ProductDetail.tsx` and the checkout summary.
+- Confirmed correct: brand tagline, "Cloud of Dreams" product naming, and social media links all match the live site.
+- **Still open — needs verification before launch:** CGTN media coverage and Hurun Report awards are referenced as required trust signals for the Chinese market, but do not appear anywhere on the current live site; get the actual source material from the client before publishing these claims.
+- **Still open:** the Certificate of Licence link now points to the real PDF hosted on the live site (`pacificalpacas.com/wp-content/uploads/...`) rather than hosting our own copy — fine short-term, but should be replaced with a copy we control if the live site's file ever moves.
+
+---
+
 ## Tests
 
 42 tests across 3 files:

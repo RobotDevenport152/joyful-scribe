@@ -167,7 +167,12 @@ export default function ProductDetailPage() {
               <p className="text-muted-foreground font-body text-sm mb-2">
                 {locale === 'zh' ? product.nameEn : product.nameZh}
               </p>
-              <p className="text-gold font-display text-3xl font-semibold mb-4">{fp(product.prices[currency])}</p>
+              <p className="text-gold font-display text-3xl font-semibold mb-1">{fp(product.prices[currency])}</p>
+              <p className="text-muted-foreground/70 font-body text-xs mb-4">
+                {locale === 'zh'
+                  ? '所有价格均以新西兰元 (NZD) 计价，已含GST。海外购买的货币兑换由您的信用卡机构负责。'
+                  : 'All prices are in NZD and inclusive of GST. For international purchases, your credit card company is responsible for the currency conversion.'}
+              </p>
               <p className="text-muted-foreground font-body leading-relaxed mb-6">
                 {locale === 'zh' ? product.descZh : product.descEn}
               </p>

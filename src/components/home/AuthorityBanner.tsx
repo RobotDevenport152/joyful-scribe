@@ -3,8 +3,20 @@ import { motion, useInView } from 'framer-motion';
 import { useRef, useState } from 'react';
 import { ShieldCheck, Leaf, Award, Tv, Star, Store, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import type { LucideIcon } from 'lucide-react';
 
-const BADGES = [
+interface Badge {
+  icon: LucideIcon;
+  titleZh: string;
+  titleEn: string;
+  detailZh: string;
+  detailEn: string;
+  color: string;
+  isNew: boolean;
+  image?: string;
+}
+
+const BADGES: Badge[] = [
   {
     icon: Leaf,
     titleZh: '银蕨认证',
@@ -13,6 +25,7 @@ const BADGES = [
     detailEn: 'NZ Government FernMark NZFM101008\nPassed rigorous NZ government review',
     color: 'text-emerald-400',
     isNew: false,
+    image: '/images/cert-fernmark.jpg',
   },
   {
     icon: ShieldCheck,
@@ -40,6 +53,7 @@ const BADGES = [
     detailEn: 'International Alpaca Association Cert. 02-041\nOnly NZ corporate member',
     color: 'text-amber-400',
     isNew: false,
+    image: '/images/cert-iaa-alpaca-mark.jpg',
   },
   {
     icon: Tv,
@@ -116,10 +130,18 @@ const AuthorityBanner = () => {
           {selected !== null && (
             <div className="py-4">
               <div className="flex justify-center mb-4 relative">
-                {(() => {
-                  const Icon = BADGES[selected].icon;
-                  return <Icon className={`w-16 h-16 ${BADGES[selected].color}`} />;
-                })()}
+                {BADGES[selected].image ? (
+                  <img
+                    src={BADGES[selected].image}
+                    alt={lang === 'zh' ? BADGES[selected].titleZh : BADGES[selected].titleEn}
+                    className="max-h-48 rounded-sm shadow-soft object-contain"
+                  />
+                ) : (
+                  (() => {
+                    const Icon = BADGES[selected].icon;
+                    return <Icon className={`w-16 h-16 ${BADGES[selected].color}`} />;
+                  })()
+                )}
                 {BADGES[selected].isNew && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-body px-1.5 py-0.5 rounded-full">
                     NEW

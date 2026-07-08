@@ -8,10 +8,63 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Local stub to prevent runtime crashes in dev when Supabase isn't configured.
+class FakeQuery {
+  then(resolve, reject) { return Promise.resolve({ data: [], error: null }).then(resolve, reject); }
+  single() { return Promise.resolve({ data: null, error: null }); }
+  maybeSingle() { return Promise.resolve({ data: null, error: null }); }
+  select() { return this; }
+  insert() { return this; }
+  update() { return this; }
+  upsert() { return this; }
+  delete() { return this; }
+  eq() { return this; }
+  neq() { return this; }
+  gt() { return this; }
+  gte() { return this; }
+  lt() { return this; }
+  lte() { return this; }
+  like() { return this; }
+  ilike() { return this; }
+  is() { return this; }
+  in() { return this; }
+  contains() { return this; }
+  match() { return this; }
+  order() { return this; }
+  limit() { return this; }
+  range() { return this; }
+}
+const STUB = {
+  from: () => new FakeQuery(),
+  rpc: () => Promise.resolve({ data: null, error: null }),
   auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+    getSession: async () => ({ data: { session: null }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithPassword: async () => ({ data: { user: null, session: null }, error: { message: 'Supabase is not configured' } }),
+    signUp: async () => ({ data: { user: null, session: null }, error: { message: 'Supabase is not configured' } }),
+    signOut: async () => ({ error: null }),
+    resetPasswordForEmail: async () => ({ data: {}, error: null }),
+    updateUser: async () => ({ data: { user: null }, error: null }),
+  },
+  functions: {
+    invoke: async () => ({ data: null, error: null }),
+  },
+  storage: {
+    from: () => ({
+      createSignedUrl: async () => ({ data: null, error: null }),
+      upload: async () => ({ data: null, error: null }),
+      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    }),
+  },
+} as any;
+
+export const supabase = SUPABASE_URL
+  ? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    })
+  : (STUB as unknown as ReturnType<typeof createClient>);

@@ -10,10 +10,70 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      checkout_sessions: {
+        Row: {
+          created_at: string
+          currency: string
+          discount: number
+          id: string
+          items: Json
+          order_number: string
+          promo_code: string | null
+          shipping_address: Json | null
+          shipping_cost: number
+          shipping_email: string
+          shipping_name: string
+          shipping_phone: string | null
+          status: string
+          stripe_session_id: string | null
+          subtotal: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          discount?: number
+          id?: string
+          items: Json
+          order_number: string
+          promo_code?: string | null
+          shipping_address?: Json | null
+          shipping_cost?: number
+          shipping_email: string
+          shipping_name: string
+          shipping_phone?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          subtotal: number
+          total: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          discount?: number
+          id?: string
+          items?: Json
+          order_number?: string
+          promo_code?: string | null
+          shipping_address?: Json | null
+          shipping_cost?: number
+          shipping_email?: string
+          shipping_name?: string
+          shipping_phone?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          subtotal?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       fiber_batches: {
         Row: {
           batch_code: string
@@ -125,6 +185,7 @@ export type Database = {
           is_featured: boolean | null
           owner_name: string
           region: string
+          user_id: string | null
         }
         Insert: {
           alpaca_count?: number | null
@@ -138,6 +199,7 @@ export type Database = {
           is_featured?: boolean | null
           owner_name: string
           region: string
+          user_id?: string | null
         }
         Update: {
           alpaca_count?: number | null
@@ -151,6 +213,7 @@ export type Database = {
           is_featured?: boolean | null
           owner_name?: string
           region?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -207,15 +270,11 @@ export type Database = {
       }
       orders: {
         Row: {
+          carrier: string | null
           created_at: string | null
           currency: string | null
-          customer_email: string
-          customer_name: string | null
           discount: number | null
-          discount_nzd: number | null
-          exchange_rate: number | null
           id: string
-          items: Json
           notes: string | null
           order_number: string
           payment_intent_id: string | null
@@ -225,27 +284,20 @@ export type Database = {
           shipping_cost: number | null
           shipping_email: string | null
           shipping_name: string | null
-          shipping_nzd: number | null
           shipping_phone: string | null
           status: string | null
           subtotal: number | null
-          subtotal_nzd: number | null
           total: number | null
-          total_nzd: number | null
           tracking_number: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          carrier?: string | null
           created_at?: string | null
           currency?: string | null
-          customer_email: string
-          customer_name?: string | null
           discount?: number | null
-          discount_nzd?: number | null
-          exchange_rate?: number | null
           id?: string
-          items: Json
           notes?: string | null
           order_number: string
           payment_intent_id?: string | null
@@ -255,27 +307,20 @@ export type Database = {
           shipping_cost?: number | null
           shipping_email?: string | null
           shipping_name?: string | null
-          shipping_nzd?: number | null
           shipping_phone?: string | null
           status?: string | null
           subtotal?: number | null
-          subtotal_nzd?: number | null
           total?: number | null
-          total_nzd?: number | null
           tracking_number?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          carrier?: string | null
           created_at?: string | null
           currency?: string | null
-          customer_email?: string
-          customer_name?: string | null
           discount?: number | null
-          discount_nzd?: number | null
-          exchange_rate?: number | null
           id?: string
-          items?: Json
           notes?: string | null
           order_number?: string
           payment_intent_id?: string | null
@@ -285,23 +330,35 @@ export type Database = {
           shipping_cost?: number | null
           shipping_email?: string | null
           shipping_name?: string | null
-          shipping_nzd?: number | null
           shipping_phone?: string | null
           status?: string | null
           subtotal?: number | null
-          subtotal_nzd?: number | null
           total?: number | null
-          total_nzd?: number | null
           tracking_number?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
       }
+      processed_webhook_events: {
+        Row: {
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
-          certifications: Json | null
+          certifications: string[] | null
           color_options: Json | null
           created_at: string | null
           description_en: string | null
@@ -309,24 +366,33 @@ export type Database = {
           fabric_material: string | null
           fiber_batch_id: string | null
           fill_material: string | null
+          fill_power: string | null
           id: string
+          image: string | null
           images: Json | null
           is_active: boolean | null
           is_featured: boolean | null
           name_en: string
           name_zh: string
+          price_cny: number
           price_nzd: number
+          price_usd: number
+          rating: number | null
+          review_count: number | null
           size_options: Json | null
+          sku: string | null
           slug: string
           sort_order: number | null
-          stock_quantity: number | null
+          stock: number
+          stock_quantity: number
           tier: string | null
           updated_at: string | null
+          weight: string | null
           weight_grams: number | null
         }
         Insert: {
           category: string
-          certifications?: Json | null
+          certifications?: string[] | null
           color_options?: Json | null
           created_at?: string | null
           description_en?: string | null
@@ -334,24 +400,33 @@ export type Database = {
           fabric_material?: string | null
           fiber_batch_id?: string | null
           fill_material?: string | null
+          fill_power?: string | null
           id?: string
+          image?: string | null
           images?: Json | null
           is_active?: boolean | null
           is_featured?: boolean | null
           name_en: string
           name_zh: string
+          price_cny?: number
           price_nzd: number
+          price_usd?: number
+          rating?: number | null
+          review_count?: number | null
           size_options?: Json | null
+          sku?: string | null
           slug: string
           sort_order?: number | null
-          stock_quantity?: number | null
+          stock?: number
+          stock_quantity?: number
           tier?: string | null
           updated_at?: string | null
+          weight?: string | null
           weight_grams?: number | null
         }
         Update: {
           category?: string
-          certifications?: Json | null
+          certifications?: string[] | null
           color_options?: Json | null
           created_at?: string | null
           description_en?: string | null
@@ -359,19 +434,28 @@ export type Database = {
           fabric_material?: string | null
           fiber_batch_id?: string | null
           fill_material?: string | null
+          fill_power?: string | null
           id?: string
+          image?: string | null
           images?: Json | null
           is_active?: boolean | null
           is_featured?: boolean | null
           name_en?: string
           name_zh?: string
+          price_cny?: number
           price_nzd?: number
+          price_usd?: number
+          rating?: number | null
+          review_count?: number | null
           size_options?: Json | null
+          sku?: string | null
           slug?: string
           sort_order?: number | null
-          stock_quantity?: number | null
+          stock?: number
+          stock_quantity?: number
           tier?: string | null
           updated_at?: string | null
+          weight?: string | null
           weight_grams?: number | null
         }
         Relationships: [
@@ -450,6 +534,38 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_notifications: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notified_at: string | null
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notified_at?: string | null
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -482,7 +598,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "grower" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -610,7 +726,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "grower", "customer"],
     },
   },
 } as const

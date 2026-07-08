@@ -28,8 +28,8 @@ serve(async (req) => {
   }
 
   const serviceClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
   // Idempotency: skip duplicate webhook deliveries from Stripe
@@ -49,32 +49,36 @@ serve(async (req) => {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const checkoutSessionId = session.metadata?.checkout_session_id;
+      const checkoutSessionId = session.metadata?.checkout_session_id ?? session.metadata?.order_id;
       const orderNumber      = session.metadata?.order_number;
 
-      if (!checkoutSessionId || !orderNumber) {
-        console.error("webhook_missing_metadata", { session_id: session.id });
+      if (!checkoutSessionId && !orderNumber) {
+        console.error("webhook_missing_metadata", { session_id: session.id, metadata: session.metadata });
         break;
       }
 
-      // Fetch the stored cart + shipping data
-      const { data: checkoutData, error: fetchError } = await serviceClient
-        .from("checkout_sessions")
-        .select("*")
-        .eq("id", checkoutSessionId)
-        .maybeSingle();
+      // Fetch the stored cart + shipping data. Use checkout_session_id when available,
+      // otherwise fall back to order_number for older metadata formats.
+      const checkoutQuery = checkoutSessionId
+        ? serviceClient.from("checkout_sessions").select("*").eq("id", checkoutSessionId).maybeSingle()
+        : serviceClient.from("checkout_sessions").select("*").eq("order_number", orderNumber).maybeSingle();
+
+      const { data: checkoutData, error: fetchError } = await checkoutQuery;
 
       if (fetchError || !checkoutData) {
         console.error("webhook_checkout_session_not_found", {
           checkout_session_id: checkoutSessionId,
+          order_number: orderNumber,
           error: fetchError?.message,
         });
         break;
       }
 
+      const checkoutSessionRowId = checkoutData.id;
+
       // Guard: don't create a second order if this session was already fulfilled
       if (checkoutData.status === "completed") {
-        console.log("webhook_order_already_created", { checkout_session_id: checkoutSessionId });
+        console.log("webhook_order_already_created", { checkout_session_id: checkoutSessionRowId });
         break;
       }
 
@@ -99,13 +103,10 @@ serve(async (req) => {
         .insert({
           order_number:     orderNumber,
           user_id:          checkoutData.user_id,
-          customer_email:   checkoutData.shipping_email,
-          customer_name:    checkoutData.shipping_name,
           shipping_name:    checkoutData.shipping_name,
           shipping_email:   checkoutData.shipping_email,
           shipping_phone:   checkoutData.shipping_phone || null,
           shipping_address: checkoutData.shipping_address,
-          items:            orderItemsSnapshot,
           subtotal:         checkoutData.subtotal,
           discount:         checkoutData.discount,
           shipping_cost:    checkoutData.shipping_cost,
@@ -166,7 +167,7 @@ serve(async (req) => {
       await serviceClient
         .from("checkout_sessions")
         .update({ status: "completed" })
-        .eq("id", checkoutSessionId);
+        .eq("id", checkoutSessionRowId);
 
       console.log("webhook_order_created", {
         order_id:     order.id,

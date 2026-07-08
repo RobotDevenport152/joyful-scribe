@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, Pencil, Search } from 'lucide-react';
 
-const CATEGORIES = ['duvet', 'coat', 'vest', 'scarf', 'blanket', 'pillow'];
+const CATEGORIES = ['duvet', 'coat', 'vest', 'scarf', 'blanket', 'pillow', 'carpet'];
 const TIERS = ['classic', 'luxury', 'premium', 'cloud_of_dreams'];
 
 const AdminProducts = () => {
