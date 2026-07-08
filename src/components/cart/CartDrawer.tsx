@@ -174,7 +174,7 @@ const CartDrawer = () => {
                       value={promoInput}
                       onChange={(e) => setPromoInput(e.target.value)}
                       placeholder={lang === 'zh' ? '促销码' : 'Promo code'}
-                      className="灵flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body text-foreground placeholder:text-muted-foreground"
+                      className="flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body text-foreground placeholder:text-muted-foreground"
                     />
                     <button
                       onClick={handleApplyPromo}

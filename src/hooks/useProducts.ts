@@ -9,6 +9,10 @@ type DbProduct = Tables<'products'>;
 
 const FALLBACK_RATES: ExchangeRates = { NZD: 1, CNY: 4.5, USD: 0.6 };
 
+function isSupabaseConfigured() {
+  return !!import.meta.env.VITE_SUPABASE_URL;
+}
+
 // Convert DB product to legacy Product format for compatibility
 export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_RATES) {
   // images is jsonb [{url,alt,is_primary}] or text[] of URL strings — handle both
@@ -49,8 +53,7 @@ export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_
 
 export function useProducts(category?: string) {
   const { rates } = useExchangeRates();
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const useLocal = !SUPABASE_URL;
+  const useLocal = !isSupabaseConfigured();
   const queryKey = useLocal
     ? ['products', category, rates, 'local-fallback']
     : ['products', category, rates];
@@ -82,8 +85,7 @@ export function useProducts(category?: string) {
 
 export function useProduct(id: string) {
   const { rates } = useExchangeRates();
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const useLocal = !SUPABASE_URL;
+  const useLocal = !isSupabaseConfigured();
   const queryKey = useLocal ? ['product', id, rates, 'local-fallback'] : ['product', id, rates];
 
   const queryFn = async () => {
@@ -118,8 +120,7 @@ export function useProduct(id: string) {
 
 export function useFeaturedProducts() {
   const { rates } = useExchangeRates();
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const useLocal = !SUPABASE_URL;
+  const useLocal = !isSupabaseConfigured();
   const queryKey = useLocal ? ['products', 'featured', rates, 'local-fallback'] : ['products', 'featured', rates];
 
   const queryFn = async () => {

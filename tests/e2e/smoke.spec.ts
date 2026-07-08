@@ -16,8 +16,19 @@ test('smoke: browse, add to cart, checkout', async ({ page }) => {
   const checkoutLink = page.getByRole('link', { name: /Checkout|去结账|去结算/ });
   await checkoutLink.waitFor({ state: 'visible', timeout: 5000 });
 
-  // Click checkout and assert navigation
+  // Click checkout — the route is protected, so we may land on /checkout
+  // directly or get redirected to /login first.
   await checkoutLink.click();
-  await page.waitForURL(/.*\/checkout/, { timeout: 5000 });
-  expect(page.url()).toMatch(/\/checkout$/);
+  await page.waitForURL(/\/(checkout|login)/, { timeout: 5000 });
+
+  if (page.url().includes('/login')) {
+    const LOGIN_EMAIL = process.env.TEST_EMAIL || 'xwy16923@163.com';
+    const LOGIN_PW = process.env.TEST_PASSWORD || '123456';
+    await page.fill('input[type="email"]', LOGIN_EMAIL);
+    await page.fill('input[type="password"]', LOGIN_PW);
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/\/(checkout|order-success)/, { timeout: 8000 });
+  }
+
+  expect(page.url()).toMatch(/\/(checkout|order-success)/);
 });
