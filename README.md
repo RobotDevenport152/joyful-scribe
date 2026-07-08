@@ -134,13 +134,14 @@ npx vercel --prod
 
 **Blocking cutover:**
 - Custom domain `pacificalpacas.com` is still not attached to this Vercel project (currently only `pacific-alpaca-website.vercel.app` and its team alias) — needs to be added in Vercel → Settings → Domains, then DNS repointed at the registrar. **The live domain is still serving the old WordPress/WooCommerce site**, entirely unrelated to this codebase — until the domain is moved, nothing deployed here is publicly reachable at pacificalpacas.com.
-- **Carpets are still missing from the catalogue.** The live WordPress site sells 20 handmade Suri alpaca carpets ($840–$10,286, e.g. "Akaroa", "Balclutha", "Fairlie", ...) under `/product-category/carpets/`. The `carpet` category exists in the rebuild's code (`store.ts`, Shop filter, admin product editor) but zero carpet rows exist in Supabase — this is real lost revenue if cutover happens before they're added.
+- **No per-variant pricing anywhere in the app.** Confirmed across every product, not specific to carpets: selecting a size in `ProductDetail.tsx` never changes `product.prices[currency]` or what gets charged — `size_options` is display-only. This was tolerable while size differences were minor, but it is now a real financial exposure for carpets (see below) and should be fixed — schema (`size_options` needs a price per entry), `dbToLegacyProduct`, `ProductDetail.tsx`, cart, and `create-checkout`'s price lookup all need updating together.
 - Conversely, the live site's only two WooCommerce categories are `duvets` and `carpets` — the rebuild's Supabase catalogue also has `coat`, `vest`, `sweater`, and `scarf`/baby products that don't exist on the live site at all. Confirm with the client whether these are an intentional new product expansion before launch, since customers won't recognize them from the current site.
 
 **Recently fixed:**
 - `create-checkout` no longer trusts client-supplied prices/exchange rates — looks up `products.price_nzd` server-side (price-tampering fix).
 - Homepage grower-network map dots now link out to their nearest NZ region on Google Maps (previously inert decoration).
 - 3 duvet products (`all-seasons`, `spring-autumn-duvet`, `summer-duvets`) had an empty `images` array — fixed directly in the live DB.
+- **All 20 Suri alpaca carpets added to the catalogue** (`carpet-akaroa` … `carpet-waikato`, real SKUs `RUG01`–`RUG20`, matching names/descriptions/photos from the live WordPress Store API). **Not yet sale-ready**: `price_nzd` is seeded at each carpet's entry-level (70cm×140cm) price of $840 because of the missing variant-pricing support above — every size currently sells at that same $840 regardless of the real $840–$10,286 range. Do not promote these for sale until variant pricing is fixed, or a customer could buy the largest 300cm×400cm rug for $840.
 - Desktop nav was missing a way to reach secondary pages (traceability, wholesale, compare, returns, China landing, my orders, admin) — added a "More" dropdown next to the primary nav links (`src/components/Navbar.tsx`).
 - The dev-mode Supabase stub client (used automatically when `VITE_SUPABASE_URL` isn't set) was missing `auth.onAuthStateChange`/`getSession` and several query builder methods (`ilike`, `gte`, etc.), which threw uncaught errors and rendered blank pages on `/my-orders`, `/admin`, and the traceability search. The stub now covers the methods the app actually calls (`src/integrations/supabase/client.ts`).
 - Closed 5 of the 6 gaps below found against the live site (carpet category scaffolding, Chinese size variants, address correction, Grower Login CTA, Code of Welfare text, GST pricing note) — see "Gap analysis" for what's still open.
@@ -149,7 +150,7 @@ npx vercel --prod
 
 A side-by-side review of the real production site (WordPress/WooCommerce) against this rebuild surfaced:
 
-- **Still open — blocks cutover:** the live site sells 20 handmade Suri alpaca carpets ($840–$10,286 each) under `/product-category/carpets/`; the `carpet` category is wired up in code but no carpet products have been added to the Supabase catalogue yet.
+- ~~**Missing product line** — the live site sells 20 handmade Suri alpaca carpets ($840–$10,286 each)~~ Fixed: all 20 added to Supabase with real names/SKUs/photos from the live site. **Still open:** they're seeded at the $840 base price because the app has no per-variant pricing — see "Blocking cutover" above.
 - ~~**Missing size variants** — live duvets offer 9 sizes~~ Fixed: `DUVET_SIZE_VARIANTS` in `store.ts` now lists all 5 NZ standard + 4 Chinese standard sizes, applied to all three duvet tiers.
 - ~~**Incorrect postal address**~~ Fixed: Footer and Contact page now show `P.O. Box 28684, Remuera, Auckland 1541`, matching the live site.
 - ~~**Missing Albany office**~~ Fixed: Footer now lists the North Island office (Building B, 14-22 Triton Drive, Albany); Contact page's building/street number corrected to match.
