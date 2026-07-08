@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Check, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { checkoutSchema, type CheckoutFormData } from '@/lib/schemas';
+import { getItemPrices } from '@/lib/store';
 import { logger } from '@/lib/logger';
 
 type Step = 'info' | 'payment' | 'confirm';
@@ -78,7 +79,7 @@ export default function CheckoutPage() {
             items: cart.map(item => ({
               productId: item.product.id,
               name: locale === 'zh' ? item.product.nameZh : item.product.nameEn,
-              price: item.product.prices[currency],
+              price: getItemPrices(item)[currency],
               quantity: item.quantity,
               variant: item.variant,
             })),
@@ -371,7 +372,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       <p className="text-gold font-body font-semibold">
-                        {fp(item.product.prices[currency] * item.quantity)}
+                        {fp(getItemPrices(item)[currency] * item.quantity)}
                       </p>
                     </div>
                   ))}
@@ -414,7 +415,7 @@ export default function CheckoutPage() {
                     {locale === 'zh' ? item.product.nameZh : item.product.nameEn} ×
                     {item.quantity}
                   </span>
-                  <span>{fp(item.product.prices[currency] * item.quantity)}</span>
+                  <span>{fp(getItemPrices(item)[currency] * item.quantity)}</span>
                 </div>
               ))}
               <div className="border-t border-border mt-3 pt-3 space-y-1 text-sm font-body">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, CURRENCY_SYMBOLS, EXCHANGE_RATES } from '@/lib/store';
+import { formatPrice, CURRENCY_SYMBOLS, EXCHANGE_RATES, getItemPrices, type CartItem } from '@/lib/store';
 import { checkoutSchema, contactSchema, batchCodeSchema } from '@/lib/schemas';
 import { dbToLegacyProduct } from '@/hooks/useProducts';
 import type { Tables } from '@/integrations/supabase/types';
@@ -131,6 +131,60 @@ describe('dbToLegacyProduct', () => {
   it('stock defaults to 0 when null', () => {
     const p = dbToLegacyProduct({ ...mockDbProduct, stock_quantity: null });
     expect(p.stock).toBe(0);
+  });
+
+  it('variants without a price_nzd override inherit the base product price', () => {
+    const p = dbToLegacyProduct(mockDbProduct);
+    expect(p.variants?.[0].prices.NZD).toBe(500);
+  });
+
+  it('variants with a price_nzd override price independently of the base product', () => {
+    const p = dbToLegacyProduct({
+      ...mockDbProduct,
+      size_options: [
+        { label: 'Small', price_nzd: 840 },
+        { label: 'Large', price_nzd: 10286 },
+      ],
+    });
+    expect(p.variants?.[0].prices.NZD).toBe(840);
+    expect(p.variants?.[1].prices.NZD).toBe(10286);
+    // Base product price is unaffected by variant overrides
+    expect(p.prices.NZD).toBe(500);
+  });
+
+  it('handles legacy plain-string size_options (no per-size price)', () => {
+    const p = dbToLegacyProduct({ ...mockDbProduct, size_options: ['Queen', 'King'] });
+    expect(p.variants).toEqual([
+      { label: 'Queen', value: 'Queen', prices: p.prices },
+      { label: 'King', value: 'King', prices: p.prices },
+    ]);
+  });
+});
+
+// ── getItemPrices ──────────────────────────────────────────────────────────────
+
+describe('getItemPrices', () => {
+  const product = dbToLegacyProduct({
+    ...mockDbProduct,
+    size_options: [
+      { label: 'Small', price_nzd: 840 },
+      { label: 'Large', price_nzd: 10286 },
+    ],
+  });
+
+  it('returns the base product price when no variant is selected', () => {
+    const item: CartItem = { product, quantity: 1 };
+    expect(getItemPrices(item).NZD).toBe(500);
+  });
+
+  it("returns the selected variant's own price, not the base product price", () => {
+    const item: CartItem = { product, quantity: 1, variant: 'Large' };
+    expect(getItemPrices(item).NZD).toBe(10286);
+  });
+
+  it('falls back to the base price if the variant string does not match any known variant', () => {
+    const item: CartItem = { product, quantity: 1, variant: 'Nonexistent Size' };
+    expect(getItemPrices(item).NZD).toBe(500);
   });
 });
 

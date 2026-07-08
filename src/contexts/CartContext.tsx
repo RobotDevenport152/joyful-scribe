@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { type Currency, type CartItem, type Product, formatPrice, PROMO_CODES } from '@/lib/store';
+import { type Currency, type CartItem, type Product, formatPrice, getItemPrices, PROMO_CODES } from '@/lib/store';
 
 // PROMO_CODES is imported from store.ts — single source of truth for the client.
 // The authoritative server-side calculation lives in create-checkout/index.ts.
@@ -118,7 +118,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const cartTotal = cart.reduce(
-    (sum, item) => sum + item.product.prices[currency] * item.quantity,
+    (sum, item) => sum + getItemPrices(item)[currency] * item.quantity,
     0,
   );
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);

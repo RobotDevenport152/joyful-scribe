@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { X, Plus, Minus, Tag, Truck } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { type Currency } from '@/lib/store';
+import { type Currency, getItemPrices } from '@/lib/store';
 
 const FREE_SHIPPING_THRESHOLD: Record<Currency, number> = { NZD: 500, CNY: 2250, USD: 300 };
 
@@ -75,7 +75,7 @@ export default function CartDrawer() {
                     {locale === 'zh' ? item.product.nameZh : item.product.nameEn}
                   </h3>
                   {item.variant && <p className="text-xs text-muted-foreground font-body">{item.variant}</p>}
-                  <p className="text-gold font-body font-semibold text-sm mt-1">{fp(item.product.prices[currency])}</p>
+                  <p className="text-gold font-body font-semibold text-sm mt-1">{fp(getItemPrices(item)[currency])}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variant)} className="w-7 h-7 rounded border border-border flex items-center justify-center hover:bg-muted">
                       <Minus className="w-3 h-3" />

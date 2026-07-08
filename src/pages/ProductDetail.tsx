@@ -79,6 +79,21 @@ export default function ProductDetailPage() {
     ? (product as any).images
     : [product.image];
 
+  // A selected size can cost far more than the base price (a carpet's largest
+  // size is ~12x its smallest) — always price off the selected variant, and
+  // show a range rather than a single (misleadingly low) price when none is
+  // selected yet and sizes aren't all priced the same.
+  const selectedVariantObj = selectedVariant
+    ? product.variants?.find(v => v.value === selectedVariant)
+    : undefined;
+  const displayPrices = selectedVariantObj?.prices ?? product.prices;
+  const variantPrices = product.variants?.map(v => v.prices[currency]) ?? [];
+  const hasVariablePricing = variantPrices.length > 0 && new Set(variantPrices).size > 1;
+  const showPriceRange = !selectedVariantObj && hasVariablePricing;
+  const priceRange = showPriceRange
+    ? { min: Math.min(...variantPrices), max: Math.max(...variantPrices) }
+    : null;
+
   const careTipsZh = [
     '手洗或洗衣机轻柔模式，30°C 以下冷水',
     '使用羊毛专用洗涤剂，避免含酶洗涤剂',
@@ -167,7 +182,9 @@ export default function ProductDetailPage() {
               <p className="text-muted-foreground font-body text-sm mb-2">
                 {locale === 'zh' ? product.nameEn : product.nameZh}
               </p>
-              <p className="text-gold font-display text-3xl font-semibold mb-1">{fp(product.prices[currency])}</p>
+              <p className="text-gold font-display text-3xl font-semibold mb-1">
+                {priceRange ? `${fp(priceRange.min)} – ${fp(priceRange.max)}` : fp(displayPrices[currency])}
+              </p>
               <p className="text-muted-foreground/70 font-body text-xs mb-4">
                 {locale === 'zh'
                   ? '所有价格均以新西兰元 (NZD) 计价，已含GST。海外购买的货币兑换由您的信用卡机构负责。'
@@ -536,7 +553,9 @@ export default function ProductDetailPage() {
 
       {/* P2 FIX: Mobile sticky add-to-cart bar with variant guard */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 pt-4 safe-bottom flex items-center gap-4 z-40">
-        <span className="text-gold font-display text-xl font-semibold">{fp(product.prices[currency])}</span>
+        <span className="text-gold font-display text-xl font-semibold">
+          {priceRange ? `${fp(priceRange.min)}+` : fp(displayPrices[currency])}
+        </span>
         <button
           onClick={() => {
             if (product.variants && product.variants.length > 0 && !selectedVariant) {

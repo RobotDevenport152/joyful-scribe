@@ -1,5 +1,11 @@
 export type Currency = 'NZD' | 'CNY' | 'USD';
 
+export interface ProductVariant {
+  label: string;
+  value: string;
+  prices: Record<Currency, number>;
+}
+
 export interface Product {
   id: string;
   nameEn: string;
@@ -10,7 +16,7 @@ export interface Product {
   prices: Record<Currency, number>;
   image: string;
   badge?: string;
-  variants?: { label: string; value: string }[];
+  variants?: ProductVariant[];
   stock: number;
   featured: boolean;
 }
@@ -19,6 +25,18 @@ export interface CartItem {
   product: Product;
   quantity: number;
   variant?: string;
+}
+
+// A cart item's price depends on which variant was selected — a carpet's
+// 300x400cm size costs ~12x its 70x140cm size. Always read prices through
+// this helper rather than item.product.prices directly, or every size will
+// silently charge the same (base/cheapest) price.
+export function getItemPrices(item: CartItem): Record<Currency, number> {
+  if (item.variant) {
+    const variant = item.product.variants?.find(v => v.value === item.variant);
+    if (variant) return variant.prices;
+  }
+  return item.product.prices;
 }
 
 export const EXCHANGE_RATES: Record<Currency, number> = {
@@ -33,8 +51,10 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   USD: 'US$',
 };
 
-// NZ standard + Chinese standard bed sizes — matches the size matrix offered on pacificalpacas.com
-export const DUVET_SIZE_VARIANTS: { label: string; value: string }[] = [
+// NZ standard + Chinese standard bed sizes — matches the size matrix offered on pacificalpacas.com.
+// This local fallback catalogue has no per-size pricing data of its own, so every
+// size is priced the same as the base product (matches its historical behavior).
+const DUVET_SIZE_LABELS = [
   { label: 'Single (140×210cm)', value: 'single-140x210' },
   { label: 'King Single (180×210cm)', value: 'king-single-180x210' },
   { label: 'Queen (210×210cm)', value: 'queen-210x210' },
@@ -45,6 +65,10 @@ export const DUVET_SIZE_VARIANTS: { label: string; value: string }[] = [
   { label: 'Chinese Queen (200×230cm)', value: 'cn-queen-200x230' },
   { label: 'Chinese King (220×240cm)', value: 'cn-king-220x240' },
 ];
+
+function sameSizeVariants(labels: { label: string; value: string }[], prices: Record<Currency, number>): ProductVariant[] {
+  return labels.map(l => ({ ...l, prices }));
+}
 
 export const products: Product[] = [
   {
@@ -59,7 +83,7 @@ export const products: Product[] = [
     badge: 'Bestseller',
     stock: 45,
     featured: true,
-    variants: DUVET_SIZE_VARIANTS,
+    variants: sameSizeVariants(DUVET_SIZE_LABELS, { NZD: 579, CNY: 2880, USD: 349 }),
   },
   {
     id: 'duvet-luxury',
@@ -72,7 +96,7 @@ export const products: Product[] = [
     image: '/images/product-luxury-duvet.jpg',
     stock: 20,
     featured: true,
-    variants: DUVET_SIZE_VARIANTS,
+    variants: sameSizeVariants(DUVET_SIZE_LABELS, { NZD: 1280, CNY: 5880, USD: 768 }),
   },
   {
     id: 'duvet-premium',
@@ -86,7 +110,7 @@ export const products: Product[] = [
     badge: 'Premium',
     stock: 8,
     featured: true,
-    variants: DUVET_SIZE_VARIANTS,
+    variants: sameSizeVariants(DUVET_SIZE_LABELS, { NZD: 2680, CNY: 12800, USD: 1608 }),
   },
   {
     id: 'coat-classic',
@@ -99,11 +123,10 @@ export const products: Product[] = [
     image: '/images/product-coat-main.jpg',
     stock: 30,
     featured: true,
-    variants: [
-      { label: 'S', value: 'S' },
-      { label: 'M', value: 'M' },
-      { label: 'L', value: 'L' },
-    ],
+    variants: sameSizeVariants(
+      [{ label: 'S', value: 'S' }, { label: 'M', value: 'M' }, { label: 'L', value: 'L' }],
+      { NZD: 980, CNY: 5980, USD: 588 },
+    ),
   },
   {
     id: 'vest-x6',
@@ -116,12 +139,10 @@ export const products: Product[] = [
     image: '/images/product-vest-x6.jpg',
     stock: 50,
     featured: true,
-    variants: [
-      { label: 'S', value: 'S' },
-      { label: 'M', value: 'M' },
-      { label: 'L', value: 'L' },
-      { label: 'XL', value: 'XL' },
-    ],
+    variants: sameSizeVariants(
+      [{ label: 'S', value: 'S' }, { label: 'M', value: 'M' }, { label: 'L', value: 'L' }, { label: 'XL', value: 'XL' }],
+      { NZD: 380, CNY: 1980, USD: 228 },
+    ),
   },
   {
     id: 'sweater-alpaca',

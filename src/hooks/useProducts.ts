@@ -13,6 +13,14 @@ function isSupabaseConfigured() {
   return !!import.meta.env.VITE_SUPABASE_URL;
 }
 
+function toDisplayPrices(nzd: number, rates: ExchangeRates): Record<Currency, number> {
+  return {
+    NZD: nzd,
+    CNY: Math.round(nzd * rates.CNY),
+    USD: Math.round(nzd * rates.USD),
+  };
+}
+
 // Convert DB product to legacy Product format for compatibility
 export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_RATES) {
   // images is jsonb [{url,alt,is_primary}] or text[] of URL strings — handle both
@@ -29,16 +37,19 @@ export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_
     descEn: p.description_en || '',
     descZh: p.description_zh || '',
     category: p.category as any,
-    prices: {
-      NZD: nzd,
-      CNY: Math.round(nzd * rates.CNY),
-      USD: Math.round(nzd * rates.USD),
-    } as Record<Currency, number>,
+    prices: toDisplayPrices(nzd, rates),
     image: images[0] || '/placeholder.svg',
     images: images,
     badge: p.is_featured ? 'Featured' : undefined,
+    // size_options is either legacy plain strings/labels (no price of their
+    // own — priced same as the base product) or { label, price_nzd } objects
+    // for products where size changes the price (e.g. carpets).
     variants: Array.isArray(p.size_options)
-      ? (p.size_options as any[]).map((v: any) => ({ label: v.name || v.label || v, value: v.name || v.value || v }))
+      ? (p.size_options as any[]).map((v: any) => {
+          const label = typeof v === 'string' ? v : (v.name || v.label || String(v.value ?? v));
+          const variantNzd = typeof v === 'object' && v.price_nzd != null ? Number(v.price_nzd) : nzd;
+          return { label, value: label, prices: toDisplayPrices(variantNzd, rates) };
+        })
       : undefined,
     stock: p.stock_quantity ?? 0,
     featured: p.is_featured ?? false,

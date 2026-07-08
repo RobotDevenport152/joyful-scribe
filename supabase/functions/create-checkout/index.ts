@@ -112,13 +112,15 @@ serve(async (req) => {
     );
 
     // Prices are never trusted from the client — look up the authoritative
-    // NZD price for every item from the products table. Display-currency
-    // conversion also happens here with a fixed rate table (mirrors the
-    // useExchangeRates fallback), never with a client-supplied rate.
+    // NZD price for every item (and, if a size/variant was selected, that
+    // variant's own price — a carpet's largest size is ~12x its smallest,
+    // so the base price alone isn't enough) from the products table.
+    // Display-currency conversion also happens here with a fixed rate table
+    // (mirrors the useExchangeRates fallback), never with a client-supplied rate.
     const productIds = [...new Set(items.map((item: any) => item.productId))];
     const { data: products, error: productsError } = await serviceClient
       .from("products")
-      .select("id, name_en, price_nzd")
+      .select("id, name_en, price_nzd, size_options")
       .in("id", productIds)
       .eq("is_active", true);
 
@@ -128,12 +130,33 @@ serve(async (req) => {
       });
     }
 
-    const priceByProductId = new Map(products.map((p: any) => [p.id, Number(p.price_nzd)]));
+    const productsById = new Map(products.map((p: any) => [p.id, p]));
     const CURRENCY_RATES: Record<string, number> = { NZD: 1, CNY: 4.5, USD: 0.6 };
     const rate = CURRENCY_RATES[(currency || "NZD").toUpperCase()] ?? 1;
 
+    // Resolve the authoritative NZD price for one item: base price_nzd, unless
+    // a variant was selected and that exact size_options entry carries its own
+    // price_nzd override. A variant that doesn't match any real size is rejected
+    // outright rather than silently falling back to the base price.
+    function resolveUnitPriceNZD(item: any): number | null {
+      const product = productsById.get(item.productId);
+      if (!item.variant) return Number(product.price_nzd);
+
+      const sizeOptions = Array.isArray(product.size_options) ? product.size_options : [];
+      const match = sizeOptions.find((v: any) => (typeof v === "string" ? v : v?.label) === item.variant);
+      if (!match) return null;
+      if (typeof match === "object" && match.price_nzd != null) return Number(match.price_nzd);
+      return Number(product.price_nzd);
+    }
+
+    if (items.some((item: any) => resolveUnitPriceNZD(item) === null)) {
+      return new Response(JSON.stringify({ error: "One or more items have an invalid size/variant" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const pricedItems = items.map((item: any) => {
-      const unitPriceNZD = priceByProductId.get(item.productId)!;
+      const unitPriceNZD = resolveUnitPriceNZD(item)!;
       const unitPriceCurrency = rate === 1 ? unitPriceNZD : Math.round(unitPriceNZD * rate);
       return { ...item, price: unitPriceCurrency, priceNZD: unitPriceNZD };
     });
