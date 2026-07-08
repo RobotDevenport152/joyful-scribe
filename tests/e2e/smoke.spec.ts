@@ -22,8 +22,11 @@ test('smoke: browse, add to cart, checkout', async ({ page }) => {
   await page.waitForURL(/\/(checkout|login)/, { timeout: 5000 });
 
   if (page.url().includes('/login')) {
-    const LOGIN_EMAIL = process.env.TEST_EMAIL || 'xwy16923@163.com';
-    const LOGIN_PW = process.env.TEST_PASSWORD || '123456';
+    const LOGIN_EMAIL = process.env.TEST_EMAIL;
+    const LOGIN_PW = process.env.TEST_PASSWORD;
+    if (!LOGIN_EMAIL || !LOGIN_PW) {
+      test.skip(true, 'TEST_EMAIL/TEST_PASSWORD env vars required to exercise the login redirect');
+    }
     await page.fill('input[type="email"]', LOGIN_EMAIL);
     await page.fill('input[type="password"]', LOGIN_PW);
     await page.click('button[type="submit"]');

@@ -54,24 +54,28 @@ async function run() {
     await page.waitForURL(/.*\/(checkout|login)/, { timeout: 5000 });
     console.log('SMOKE: navigated to', page.url());
 
-    // If redirected to login, perform login with provided test credentials
-    const LOGIN_EMAIL = process.env.TEST_EMAIL || 'xwy16923@163.com';
-    const LOGIN_PW = process.env.TEST_PASSWORD || '123456';
+    // If redirected to login, perform login with test credentials from the environment
     if (page.url().includes('/login')) {
-      console.log('SMOKE: performing login');
-      await page.fill('input[type="email"]', LOGIN_EMAIL);
-      await page.fill('input[type="password"]', LOGIN_PW);
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }).catch(() => {}),
-        page.click('button[type="submit"]'),
-      ]);
-      // Wait for either checkout or order-success or fallback
-      try {
-        await page.waitForURL(/.*\/(checkout|order-success)/, { timeout: 8000 });
-      } catch {
-        // proceed anyway — report current URL
+      const LOGIN_EMAIL = process.env.TEST_EMAIL;
+      const LOGIN_PW = process.env.TEST_PASSWORD;
+      if (!LOGIN_EMAIL || !LOGIN_PW) {
+        console.warn('SMOKE: redirected to /login but TEST_EMAIL/TEST_PASSWORD are not set — skipping login step');
+      } else {
+        console.log('SMOKE: performing login');
+        await page.fill('input[type="email"]', LOGIN_EMAIL);
+        await page.fill('input[type="password"]', LOGIN_PW);
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }).catch(() => {}),
+          page.click('button[type="submit"]'),
+        ]);
+        // Wait for either checkout or order-success or fallback
+        try {
+          await page.waitForURL(/.*\/(checkout|order-success)/, { timeout: 8000 });
+        } catch {
+          // proceed anyway — report current URL
+        }
+        console.log('SMOKE: post-login URL', page.url());
       }
-      console.log('SMOKE: post-login URL', page.url());
     }
     await browser.close();
     process.exit(0);
