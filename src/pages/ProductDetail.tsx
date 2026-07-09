@@ -1,11 +1,13 @@
 ﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
+import type { Locale } from '@/lib/i18n';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import Footer from '@/components/Footer';
 import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import StockNotifyForm from '@/components/StockNotifyForm';
@@ -32,7 +34,36 @@ const MOCK_REVIEWS = [
   { id: '1', author: '张女士 / Ms. Zhang', rating: 5, date: '2025-03-10', textZh: '非常轻盈，比想象中更柔软。温控效果很好，不像羽绒被那样感觉闷热。强烈推荐！', textEn: 'Incredibly light and softer than expected. Temperature regulation is excellent — no stuffy feeling like down. Highly recommend!', verified: true, productVariant: '220×240cm' },
   { id: '2', author: '王先生 / Mr. Wang', rating: 5, date: '2025-02-28', textZh: '作为礼物送给父母，他们用了一周就说"终于睡好了"。包装精美，有溯源证书，仪式感很强。', textEn: 'Bought as a gift for my parents. One week in and they said "finally sleeping well." Beautiful packaging with the traceability certificate.', verified: true, productVariant: '200×230cm' },
   { id: '3', author: '李女士 / Ms. Li', rating: 4, date: '2025-01-15', textZh: '质量很好，填充均匀，面料很细腻。唯一美中不足是颜色比图片略偏米白。', textEn: 'Great quality, even fill, fine fabric. Only minor note: the color is slightly more off-white than in the photos.', verified: true, productVariant: '200×230cm' },
+  { id: '4', author: '陈先生 / Mr. Chen', rating: 5, date: '2025-01-02', textZh: '溯源二维码扫了之后能看到具体牧场信息，这个细节很打动我，感觉钱花得值。', textEn: 'Scanned the traceability QR code and could see the exact farm details — that detail really won me over. Felt worth every dollar.', verified: true, productVariant: '220×240cm' },
+  { id: '5', author: '刘女士 / Ms. Liu', rating: 5, date: '2024-12-20', textZh: '冬天盖着一点都不重，也不会像羽绒被一样过敏，孩子皮肤敏感也能用。', textEn: 'Doesn\'t feel heavy at all in winter, and unlike down it doesn\'t trigger allergies — safe even for my child\'s sensitive skin.', verified: true, productVariant: '200×230cm' },
+  { id: '6', author: '赵先生 / Mr. Zhao', rating: 4, date: '2024-12-05', textZh: '物流稍微慢了几天，但客服态度很好，被子本身没得挑。', textEn: 'Shipping was a few days slower than expected, but customer service was great and the duvet itself is flawless.', verified: true, productVariant: '220×240cm' },
 ];
+
+interface ReviewCardProps {
+  review: typeof MOCK_REVIEWS[number];
+  locale: Locale;
+}
+
+function ReviewCard({ review, locale }: ReviewCardProps) {
+  return (
+    <div className="border border-border rounded-sm p-4">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <span className="font-body font-semibold text-sm">{review.author}</span>
+          {review.verified && (
+            <span className="ml-2 text-xs text-green-600 font-body">✓ 已验证购买 / Verified Purchase</span>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground font-body">{review.date}</span>
+      </div>
+      <div className="text-gold text-sm mb-1">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+      <div className="text-xs text-muted-foreground font-body mb-2">{locale === 'zh' ? '购买规格' : 'Variant'}: {review.productVariant}</div>
+      <p className="text-sm font-body text-muted-foreground">
+        {locale === 'zh' ? review.textZh : review.textEn}
+      </p>
+    </div>
+  );
+}
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +73,7 @@ export default function ProductDetailPage() {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [careOpen, setCareOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'care' | 'reviews'>('description');
+  const [allReviewsOpen, setAllReviewsOpen] = useState(false);
   const { data: product, isLoading } = useProduct(id || '');
   const { data: allProducts } = useProducts();
 
@@ -487,29 +519,35 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="space-y-4 mb-6">
-                  {MOCK_REVIEWS.map(review => (
-                    <div key={review.id} className="border border-border rounded-sm p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <span className="font-body font-semibold text-sm">{review.author}</span>
-                          {review.verified && (
-                            <span className="ml-2 text-xs text-green-600 font-body">✓ 已验证购买 / Verified Purchase</span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground font-body">{review.date}</span>
-                      </div>
-                      <div className="text-gold text-sm mb-1">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-                      <div className="text-xs text-muted-foreground font-body mb-2">{locale === 'zh' ? '购买规格' : 'Variant'}: {review.productVariant}</div>
-                      <p className="text-sm font-body text-muted-foreground">
-                        {locale === 'zh' ? review.textZh : review.textEn}
-                      </p>
-                    </div>
+                  {MOCK_REVIEWS.slice(0, 3).map(review => (
+                    <ReviewCard key={review.id} review={review} locale={locale} />
                   ))}
                 </div>
 
                 <div className="text-center">
-                  <span className="text-sm font-body text-gold cursor-default">查看全部评价 →</span>
+                  <button
+                    type="button"
+                    onClick={() => setAllReviewsOpen(true)}
+                    className="text-sm font-body text-gold hover:underline"
+                  >
+                    {locale === 'zh' ? '查看全部评价' : 'View all reviews'} →
+                  </button>
                 </div>
+
+                <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
+                  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle className="font-display">
+                        {locale === 'zh' ? '全部评价' : 'All Reviews'} · 127
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 overflow-y-auto pr-1">
+                      {MOCK_REVIEWS.map(review => (
+                        <ReviewCard key={review.id} review={review} locale={locale} />
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>

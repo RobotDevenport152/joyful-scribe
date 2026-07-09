@@ -86,13 +86,13 @@ const HeroSection = () => {
         >
           <Link
             to="/shop"
-            className="inline-block px-10 py-4 bg-pa-green text-pa-ivory font-body text-sm tracking-widest uppercase hover:bg-pa-green-md transition-colors"
+            className="inline-block px-10 py-4 bg-navy text-cream font-body text-sm tracking-widest uppercase hover:bg-navy-light transition-colors"
           >
             {t('hero.cta')}
           </Link>
           <Link
             to="/china"
-            className="inline-block px-8 py-4 border border-gold/60 text-gold font-body text-sm tracking-widest hover:bg-gold/10 transition-colors"
+            className="inline-block px-8 py-4 bg-navy/40 backdrop-blur-sm border border-gold text-gold-light font-body text-sm tracking-widest hover:bg-navy/60 transition-colors"
           >
             {lang === 'zh' ? '中文官网入口' : 'Chinese Site'}
           </Link>
