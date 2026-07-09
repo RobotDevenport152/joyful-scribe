@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Calendar, Ruler, Award } from 'lucide-react';
+import { MapPin, Calendar, Ruler, Award, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CertificationBadges } from './CertificationBadges';
 
 interface Props {
-  batchId: string;
+  batchId: string | null | undefined;
 }
 
 const GRADE_LABELS: Record<string, { zh: string; en: string }> = {
@@ -29,17 +30,20 @@ export function ProductTraceability({ batchId }: Props) {
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['fiber-batch', batchId],
+    enabled: Boolean(batchId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('fiber_batches')
         .select(`*, grower:growers(farm_name, region, cover_image_url, description, alpaca_count)`)
-        .eq('id', batchId)
+        .eq('id', batchId as string)
         .single();
       if (error) throw error;
       return data;
     },
     staleTime: 10 * 60 * 1000,
   });
+
+  if (!batchId) return null;
 
   if (isLoading) {
     return (
@@ -123,8 +127,15 @@ export function ProductTraceability({ batchId }: Props) {
           )}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-border">
+        <div className="mt-6 pt-4 border-t border-border flex items-center justify-between flex-wrap gap-3">
           <CertificationBadges certifications={['NZ Made', 'FernMark', 'IAA Alpaca Mark', 'NZ Grown']} />
+          <Link
+            to={`/traceability?code=${encodeURIComponent(batch.batch_code)}`}
+            className="inline-flex items-center gap-1.5 text-xs font-body text-gold hover:underline"
+          >
+            <Search className="w-3.5 h-3.5" />
+            {lang === 'zh' ? '查看完整加工链' : 'View Full Processing Chain'}
+          </Link>
         </div>
       </div>
     </div>

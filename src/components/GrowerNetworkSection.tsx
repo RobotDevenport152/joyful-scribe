@@ -3,28 +3,58 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-// Each dot is a decorative marker (we don't have per-farm coordinates yet),
-// tagged with the nearest labeled region so it can link to that region on
-// Google Maps rather than a fabricated exact location.
+// Each dot is a real Pacific Alpacas collection point (from pacificalpacas.com/growers),
+// placed at an approximate position within its labeled region on the schematic map and
+// linked out to that specific town on Google Maps.
 const GROWER_DOTS = [
-  { x: 116, y: 28, region: 'Northland' }, { x: 107, y: 46, region: 'Northland' },
-  { x: 111, y: 76, region: 'Waikato' }, { x: 103, y: 98, region: 'Waikato' },
-  { x: 113, y: 110, region: 'Waikato' }, { x: 132, y: 104, region: 'Waikato' },
-  { x: 124, y: 118, region: 'Waikato' }, { x: 151, y: 126, region: "Hawke's Bay" },
-  { x: 142, y: 148, region: "Hawke's Bay" }, { x: 105, y: 155, region: "Hawke's Bay" },
-  { x: 115, y: 162, region: "Hawke's Bay" }, { x: 117, y: 194, region: 'Wellington' },
-  { x: 131, y: 184, region: 'Wellington' }, { x: 99, y: 242, region: 'Wellington' },
-  { x: 116, y: 250, region: 'Wellington' }, { x: 75, y: 294, region: 'Canterbury' },
-  { x: 71, y: 314, region: 'Canterbury' }, { x: 105, y: 286, region: 'Canterbury' },
-  { x: 97, y: 306, region: 'Canterbury' }, { x: 110, y: 298, region: 'Canterbury' },
-  { x: 91, y: 322, region: 'Canterbury' }, { x: 100, y: 332, region: 'Central Otago' },
-  { x: 88, y: 346, region: 'Central Otago' }, { x: 104, y: 356, region: 'Central Otago' },
-  { x: 56, y: 376, region: 'Central Otago' }, { x: 80, y: 390, region: 'Southland' },
-  { x: 68, y: 400, region: 'Southland' }, { x: 74, y: 416, region: 'Southland' },
+  // Northland
+  { x: 118, y: 20, name: 'Matakana Alpacas', place: 'Maungatapere, Northland' },
+  { x: 109, y: 40, name: 'Silverhill', place: 'Matakohe, Northland' },
+  { x: 113, y: 58, name: 'Gumtree Gully', place: 'Warkworth, Northland' },
+  { x: 106, y: 68, name: 'Pacific Alpacas Head Office No 2', place: 'Albany, Auckland' },
+  // Waikato / Bay of Plenty
+  { x: 111, y: 76, name: 'Jan White', place: 'Te Kauwhata, Waikato' },
+  { x: 103, y: 98, name: 'Kisimul Farm Alpacas', place: 'Te Ranga, Bay of Plenty' },
+  { x: 113, y: 110, name: 'Q Taz Alpacas', place: 'Paeroa, Waikato' },
+  { x: 132, y: 104, name: 'Nevalea Alpacas', place: 'Taumarunui, Waikato' },
+  { x: 124, y: 118, name: 'Hill Country Alpacas', place: 'Katikati, Bay of Plenty' },
+  { x: 129, y: 122, name: 'Cynthia Ogilvy', place: 'Katikati, Bay of Plenty' },
+  { x: 138, y: 114, name: 'Lisa, Reeves', place: 'Ohauiti, Tauranga' },
+  { x: 140, y: 108, name: 'Bruden Alpacas', place: 'Ngongotaha, Rotorua' },
+  { x: 143, y: 111, name: 'Brenor Alpacas', place: 'Ngongotaha, Rotorua' },
+  // Hawke's Bay / Manawatu / Taranaki
+  { x: 151, y: 126, name: 'Bonnack Grove Alpacas', place: 'Feilding, Manawatu' },
+  { x: 96, y: 132, name: 'West Peak Alpacas', place: 'New Plymouth, Taranaki' },
+  { x: 142, y: 148, name: 'Raydene', place: 'Waipawa, Hawke’s Bay' },
+  { x: 100, y: 140, name: 'Silverleigh Alpacas', place: 'Waitara, Taranaki' },
+  { x: 105, y: 155, name: 'Te Korito Alpacas', place: 'Wanganui' },
+  // Wellington / Wairarapa
+  { x: 115, y: 162, name: 'Legacy Alpacas', place: 'Carterton, Wairarapa' },
+  { x: 117, y: 194, name: 'Nohoroa Farming Partnership', place: 'Masterton, Wairarapa' },
+  { x: 131, y: 184, name: 'Koroki Alpacas', place: 'Carterton, Wairarapa' },
+  // Nelson / North Canterbury
+  { x: 99, y: 242, name: 'Chris Kempthorne', place: 'Brightwater, Nelson' },
+  { x: 116, y: 250, name: 'Alpaca Gully', place: 'Greta Valley, North Canterbury' },
+  { x: 108, y: 258, name: 'Chris Dahlberg', place: 'North Canterbury' },
+  // Canterbury
+  { x: 75, y: 294, name: 'Farmers Corner', place: 'Ashburton, Canterbury' },
+  { x: 71, y: 314, name: 'Otaio Bridge Alpacas', place: 'Waimate, Canterbury' },
+  { x: 105, y: 286, name: 'Sunstone Alpacas', place: 'Timaru, Canterbury' },
+  { x: 97, y: 306, name: 'The Wool Shed & More', place: 'Waikouaiti, Otago' },
+  { x: 110, y: 298, name: 'Cornish Point Development Ltd (Head Office No 1)', place: 'Cromwell, Central Otago' },
+  { x: 91, y: 322, name: 'Karaka Alpacas', place: 'Dunedin' },
+  // Central Otago / Southland
+  { x: 100, y: 332, name: 'Drysdale Alpaca', place: 'Alexandra, Central Otago' },
+  { x: 88, y: 346, name: 'Little Oaks Alpacas', place: 'Oamaru' },
+  { x: 104, y: 356, name: 'Bruce Farm Alpacas', place: 'Hillend, Southland' },
+  { x: 56, y: 376, name: 'Kepler Mountain', place: 'Manapouri, Southland' },
+  { x: 80, y: 390, name: 'Geardale Alpacas', place: 'Gore, Southland' },
+  { x: 68, y: 400, name: 'Pak Co Limited', place: 'Milton, Otago' },
+  { x: 74, y: 416, name: 'Chainey', place: 'Makarewa, Invercargill' },
 ];
 
-function googleMapsUrl(region: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${region}, New Zealand`)}`;
+function googleMapsUrl(place: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, New Zealand`)}`;
 }
 
 export default function GrowerNetworkSection() {
@@ -74,16 +104,16 @@ export default function GrowerNetworkSection() {
                 <text key={label} x={x + 10} y={y} fill="hsl(var(--gold))" fontSize="5" opacity="0.5" fontFamily="Inter">{label}</text>
               ))}
 
-              {/* Farm dots — link out to the dot's region on Google Maps */}
+              {/* Farm dots — link out to the collection point's real location on Google Maps */}
               {GROWER_DOTS.map((dot, idx) => (
                 <a
                   key={idx}
-                  href={googleMapsUrl(dot.region)}
+                  href={googleMapsUrl(dot.place)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${dot.region} on Google Maps`}
+                  aria-label={`${dot.name} — ${dot.place} on Google Maps`}
                 >
-                  <title>{dot.region}</title>
+                  <title>{`${dot.name} — ${dot.place}`}</title>
                   <motion.circle
                     cx={dot.x}
                     cy={dot.y}

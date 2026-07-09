@@ -59,6 +59,7 @@ export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_
     weight: p.weight_grams ? `${p.weight_grams}g` : null,
     fillPower: p.fill_material || null,
     certifications: Array.isArray(p.certifications) ? (p.certifications as string[]) : [],
+    fiberBatchId: p.fiber_batch_id,
   };
 }
 

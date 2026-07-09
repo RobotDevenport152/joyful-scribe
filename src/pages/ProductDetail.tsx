@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import StockNotifyForm from '@/components/StockNotifyForm';
+import { ProductTraceability } from '@/components/traceability/ProductTraceability';
 
 const BENEFITS = [
   { icon: ShieldCheck, labelZh: '保暖', labelEn: 'Warmth', descZh: '3倍于羊毛', descEn: '3× warmer than wool' },
@@ -308,13 +309,17 @@ export default function ProductDetailPage() {
               )}
 
               <div className="mt-4">
-                <Link
-                  to="/traceability"
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gold/40 text-gold-dark rounded-sm text-sm font-body hover:bg-gold/10 transition-colors"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  {locale === 'zh' ? '验证产品真实性' : 'Verify Product Authenticity'}
-                </Link>
+                {product.fiberBatchId ? (
+                  <ProductTraceability batchId={product.fiberBatchId} />
+                ) : (
+                  <Link
+                    to="/traceability"
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-gold/40 text-gold-dark rounded-sm text-sm font-body hover:bg-gold/10 transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {locale === 'zh' ? '验证产品真实性' : 'Verify Product Authenticity'}
+                  </Link>
+                )}
               </div>
 
               <div className="grid grid-cols-5 gap-3 mt-8">

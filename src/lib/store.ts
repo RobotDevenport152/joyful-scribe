@@ -19,6 +19,7 @@ export interface Product {
   variants?: ProductVariant[];
   stock: number;
   featured: boolean;
+  fiberBatchId?: string | null;
 }
 
 export interface CartItem {
