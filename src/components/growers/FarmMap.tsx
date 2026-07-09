@@ -22,6 +22,10 @@ const COLORS = {
   farm: { fill: '#c9972b', stroke: '#9e7520' },
 } as const;
 
+function googleMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
+
 const FarmMap = ({ points, locale }: FarmMapProps) => {
   return (
     <div className="relative rounded-lg overflow-hidden border border-border shadow-sm">
@@ -71,6 +75,14 @@ const FarmMap = ({ points, locale }: FarmMapProps) => {
                   </a>
                 )}
                 {pt.feature && <p className="text-xs text-gray-600 mt-1">{pt.feature}</p>}
+                <a
+                  href={googleMapsUrl(pt.lat, pt.lng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs text-[#4a7c59] hover:underline mt-1.5 font-medium"
+                >
+                  {locale === 'zh' ? '在 Google 地图中导航 →' : 'Get directions →'}
+                </a>
               </div>
             </Popup>
           </CircleMarker>
