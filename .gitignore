@@ -46,3 +46,6 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Untracked local-only k8s experiment (contains hardcoded dev credentials)
+k8s/

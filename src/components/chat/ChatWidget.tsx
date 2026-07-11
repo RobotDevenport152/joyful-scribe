@@ -1,11 +1,43 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import { MessageCircle, X, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
+
+// Renders assistant replies, turning [Product Name](/product/slug) into clickable links.
+// Only same-site, single-leading-slash paths are linkified — anything else (protocol-relative
+// "//evil.com", "javascript:", absolute URLs, etc.) is rendered as plain text.
+const MARKDOWN_LINK = /\[([^\]]+)\]\((\/[^)]+)\)/g;
+const SAFE_INTERNAL_PATH = /^\/(?![/\\])[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$/;
+
+const renderMessageContent = (content: string) => {
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = MARKDOWN_LINK.exec(content)) !== null) {
+    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index));
+    const [full, label, path] = match;
+    if (SAFE_INTERNAL_PATH.test(path)) {
+      parts.push(
+        <Link key={key++} to={path} className="underline font-medium text-accent-foreground hover:opacity-80">
+          {label}
+        </Link>
+      );
+    } else {
+      parts.push(full);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) parts.push(content.slice(lastIndex));
+
+  return parts.map((part, i) => <Fragment key={i}>{part}</Fragment>);
+};
 
 const QUICK_REPLIES = [
   { zh: '推荐适合我的被子',         en: 'Recommend a duvet for me' },
@@ -42,15 +74,26 @@ const ChatWidget = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('chat', {
-        body: { messages: newMsgs.map(m => ({ role: m.role, content: m.content })) },
+        body: { messages: newMsgs.map(m => ({ role: m.role, content: m.content })), locale: lang },
       });
 
       if (error) throw error;
-      const reply = data?.choices?.[0]?.message?.content || data?.content || data?.text || '抱歉，我暂时无法回答，请稍后再试。';
+      const reply = data?.choices?.[0]?.message?.content || data?.content || data?.text
+        || (lang === 'zh' ? '抱歉，我暂时无法回答，请稍后再试。' : "Sorry, I can't answer that right now — please try again.");
       setMessages([...newMsgs, { role: 'assistant', content: reply }]);
     } catch (e: any) {
       console.error('Chat error:', e);
-      setMessages([...newMsgs, { role: 'assistant', content: '网络异常，请稍后重试或联系微信客服。' }]);
+      let message = lang === 'zh'
+        ? '网络异常，请稍后重试或联系微信客服。'
+        : 'Network error — please try again or contact us via WeChat.';
+      // Edge function returns a descriptive { error: string } body on 4xx/5xx — surface it if present
+      try {
+        const body = await e?.context?.json?.();
+        if (typeof body?.error === 'string' && body.error) message = body.error;
+      } catch {
+        // response body wasn't JSON — fall back to the generic message above
+      }
+      setMessages([...newMsgs, { role: 'assistant', content: message }]);
     } finally {
       setLoading(false);
     }
@@ -102,7 +145,7 @@ const ChatWidget = () => {
                       ? 'bg-accent text-accent-foreground rounded-br-sm'
                       : 'bg-muted text-foreground rounded-bl-sm'
                   }`}>
-                    {msg.content}
+                    {msg.role === 'assistant' ? renderMessageContent(msg.content) : msg.content}
                   </div>
                 </div>
               ))}
