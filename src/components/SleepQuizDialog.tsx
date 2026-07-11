@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useApp } from '@/contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useProducts } from '@/hooks/useProducts';
 
 interface Props {
   open: boolean;
@@ -49,17 +51,71 @@ const STEPS = [
   },
 ];
 
+// Local, rule-based fallback used when the AI recommendation call is
+// unavailable or fails — the quiz should never dead-end for the customer.
 const PRODUCT_MAP: Record<string, { zh: string; en: string; id: string }> = {
   premium: { zh: '高奢款羊驼被', en: 'Premium Luxury Duvet', id: 'duvet-premium' },
   mid: { zh: '轻奢款羊驼被', en: 'Luxury Alpaca Duvet', id: 'duvet-luxury' },
   budget: { zh: '经典款羊驼被', en: 'Classic Alpaca Duvet', id: 'duvet-classic' },
 };
 
+interface Recommendation {
+  id: string;
+  name: string;
+  reason?: string;
+}
+
 export function SleepQuizDialog({ open, onOpenChange }: Props) {
   const { locale } = useApp();
+  const { data: dbProducts } = useProducts();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+
+  const fallbackRecommendation = (): Recommendation => {
+    const budget = answers[2];
+    const p = PRODUCT_MAP[budget] || PRODUCT_MAP.mid;
+    return { id: p.id, name: locale === 'zh' ? p.zh : p.en };
+  };
+
+  const fetchRecommendation = async (finalAnswers: string[]) => {
+    setLoading(true);
+    try {
+      const products = (dbProducts ?? []).map((p) => ({
+        id: p.id,
+        name_en: p.nameEn,
+        name_zh: p.nameZh,
+        category: p.category,
+      }));
+
+      if (products.length === 0) {
+        setRecommendation(fallbackRecommendation());
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('recommend', {
+        body: { answers: finalAnswers, products },
+      });
+
+      if (error || !data?.product_id) {
+        setRecommendation(fallbackRecommendation());
+        return;
+      }
+
+      const matched = dbProducts?.find((p) => p.id === data.product_id);
+      setRecommendation({
+        id: data.product_id,
+        name: matched ? (locale === 'zh' ? matched.nameZh : matched.nameEn) : data.product_id,
+        reason: locale === 'zh' ? data.reason_zh : data.reason_en,
+      });
+    } catch {
+      setRecommendation(fallbackRecommendation());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelect = (value: string) => {
     const newAnswers = [...answers, value];
@@ -68,15 +124,11 @@ export function SleepQuizDialog({ open, onOpenChange }: Props) {
       setStep(step + 1);
     } else {
       setDone(true);
+      fetchRecommendation(newAnswers);
     }
   };
 
-  const reset = () => { setStep(0); setAnswers([]); setDone(false); };
-
-  const getRecommendation = () => {
-    const budget = answers[2];
-    return PRODUCT_MAP[budget] || PRODUCT_MAP.mid;
-  };
+  const reset = () => { setStep(0); setAnswers([]); setDone(false); setRecommendation(null); };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
@@ -117,16 +169,25 @@ export function SleepQuizDialog({ open, onOpenChange }: Props) {
             <p className="text-muted-foreground font-body text-sm mb-2">
               {locale === 'zh' ? '为您推荐' : 'Recommended for You'}
             </p>
-            <p className="font-display text-2xl font-semibold mb-4">
-              {locale === 'zh' ? getRecommendation().zh : getRecommendation().en}
-            </p>
-            <Link
-              to={`/product/${getRecommendation().id}`}
-              onClick={() => onOpenChange(false)}
-              className="inline-block px-6 py-2 bg-accent text-accent-foreground rounded-sm font-body hover:bg-accent/90 transition-colors"
-            >
-              {locale === 'zh' ? '查看产品' : 'View Product'}
-            </Link>
+            {loading || !recommendation ? (
+              <div className="h-8 flex items-center justify-center">
+                <div className="h-5 w-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <>
+                <p className="font-display text-2xl font-semibold mb-2">{recommendation.name}</p>
+                {recommendation.reason && (
+                  <p className="text-muted-foreground font-body text-xs mb-4 px-2">{recommendation.reason}</p>
+                )}
+                <Link
+                  to={`/product/${recommendation.id}`}
+                  onClick={() => onOpenChange(false)}
+                  className="inline-block px-6 py-2 bg-accent text-accent-foreground rounded-sm font-body hover:bg-accent/90 transition-colors"
+                >
+                  {locale === 'zh' ? '查看产品' : 'View Product'}
+                </Link>
+              </>
+            )}
           </motion.div>
         )}
       </DialogContent>

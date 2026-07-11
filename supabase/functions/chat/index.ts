@@ -1,10 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (origin === "https://pacificalpacas.com") return true;
+  if (origin.startsWith("http://localhost")) return true;
+  if (origin.endsWith(".lovable.app")) return true;
+  if (origin.endsWith(".lovableproject.com")) return true;
+  return false;
+}
+
+function getCorsHeaders(origin: string | null) {
+  const allowed = isAllowedOrigin(origin) ? origin! : "https://pacificalpacas.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+const CHAT_RATE_LIMIT = 20; // requests
+const CHAT_RATE_WINDOW_SECONDS = 60;
 
 const BRAND_FACTS = `公司背景：新西兰最大羊驼纤维供应商，成立于2001年，与800家农场合作，占新西兰市场70%份额。
 获奖：2023胡润至尚优品金奖、新西兰政府银蕨认证、总理签名溯源证书。
@@ -60,7 +77,28 @@ ${BRAND_FACTS}
 ${catalogText}`;
 }
 
+// Guards against the model breaking character (disclosing it's an AI,
+// claiming it can't access something) and against degenerate output
+// (empty / truncated / runaway length). Falls back to a safe, on-brand
+// message that points the customer to a human channel instead.
+function validateOutput(content: string, locale: "zh" | "en"): { valid: boolean; fallback?: string } {
+  const genericFallback = locale === "en"
+    ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpacas.com."
+    : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpacas.com。";
+
+  if (!content || content.length < 2) return { valid: false, fallback: genericFallback };
+  if (content.length > 1500) return { valid: false, fallback: genericFallback };
+
+  const aiSelfDisclosure = ["As an AI", "I'm an AI", "I cannot access", "I don't have access", "作为一个AI", "作为AI"];
+  if (aiSelfDisclosure.some((s) => content.includes(s))) return { valid: false, fallback: genericFallback };
+
+  return { valid: true };
+}
+
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let lang: "zh" | "en" = "zh";
@@ -71,6 +109,27 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { data: allowed, error: rateLimitError } = await serviceClient.rpc("check_rate_limit", {
+      _key: `chat:${clientIp}`,
+      _limit: CHAT_RATE_LIMIT,
+      _window_seconds: CHAT_RATE_WINDOW_SECONDS,
+    });
+    if (rateLimitError) console.error("rate_limit_check_failed", { message: rateLimitError.message });
+    if (rateLimitError === null && allowed === false) {
+      return new Response(JSON.stringify({
+        error: lang === "en"
+          ? "Too many requests right now — please try again in a moment."
+          : "请求过于频繁，请稍后再试。",
+      }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -131,7 +190,10 @@ serve(async (req) => {
 
     const data = await response.json();
     // Transform Gemini response to OpenAI format so ChatWidget needs no changes
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const check = validateOutput(text, lang);
+    if (!check.valid) text = check.fallback!;
+
     const openAiFormat = {
       choices: [{ message: { role: "assistant", content: text } }],
     };
