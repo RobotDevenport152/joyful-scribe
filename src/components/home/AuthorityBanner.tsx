@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { ShieldCheck, Leaf, Award, Tv, Star, Store, MapPin } from 'lucide-react';
+import { ShieldCheck, Leaf, Award, Tv, Star, Store, MapPin, Radio, Crown } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { LucideIcon } from 'lucide-react';
 
@@ -81,6 +81,26 @@ const BADGES: Badge[] = [
     detailEn: 'Now available at Sanya International Duty-Free City\nFirst NZ alpaca fiber brand in duty-free retail',
     color: 'text-pink-400',
     isNew: true,
+  },
+  {
+    icon: Crown,
+    titleZh: 'Miss Rotorua 代言',
+    titleEn: 'Miss Rotorua Ambassador',
+    detailZh: 'Miss Rotorua 佩戴太平洋羊驼系列产品\n出席品牌推广活动',
+    detailEn: 'Miss Rotorua wore and endorsed Pacific Alpacas\nproducts at a brand promotional event',
+    color: 'text-rose-300',
+    isNew: true,
+    image: '/images/endorsement-miss-rotorua.jpg',
+  },
+  {
+    icon: Radio,
+    titleZh: '电台专访',
+    titleEn: 'Radio Feature',
+    detailZh: 'Te Arawa FM（iHeartRadio）\n品牌故事电台专访',
+    detailEn: 'Featured interview on Te Arawa FM (iHeartRadio)\nsharing the Pacific Alpacas brand story',
+    color: 'text-sky-400',
+    isNew: true,
+    image: '/images/endorsement-radio-te-arawa-fm.jpg',
   },
 ];
 
