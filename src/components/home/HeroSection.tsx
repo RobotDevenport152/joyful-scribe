@@ -4,14 +4,17 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import heroImg from '@/assets/hero-comforter.jpg';
+import { SleepQuizDialog } from '@/components/SleepQuizDialog';
 
 const HeroSection = () => {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
 
   return (
+    <>
     <section className="relative h-screen w-full overflow-hidden">
       {/* Video background — auto-degrades to static image if video fails to load */}
       {!videoFailed ? (
@@ -96,6 +99,12 @@ const HeroSection = () => {
           >
             {lang === 'zh' ? '中文官网入口' : 'Chinese Site'}
           </Link>
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="inline-block px-8 py-4 border border-gold/40 text-gold-light font-body text-sm tracking-widest uppercase hover:bg-gold/10 transition-colors"
+          >
+            {lang === 'zh' ? '睡眠测试' : 'Sleep Quiz'}
+          </button>
         </motion.div>
 
         <motion.div
@@ -109,6 +118,8 @@ const HeroSection = () => {
         </motion.div>
       </div>
     </section>
+    <SleepQuizDialog open={quizOpen} onOpenChange={setQuizOpen} />
+    </>
   );
 };
 
