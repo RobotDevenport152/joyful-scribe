@@ -95,13 +95,13 @@ const HeroSection = () => {
           </Link>
           <Link
             to="/china"
-            className="inline-block px-8 py-4 bg-navy/40 backdrop-blur-sm border border-gold text-gold-light font-body text-sm tracking-widest hover:bg-navy/60 transition-colors"
+            className="inline-block px-8 py-4 bg-navy text-cream font-body text-sm tracking-widest uppercase hover:bg-navy-light transition-colors"
           >
             {lang === 'zh' ? '中文官网入口' : 'Chinese Site'}
           </Link>
           <button
             onClick={() => setQuizOpen(true)}
-            className="inline-block px-8 py-4 border border-gold/40 text-gold-light font-body text-sm tracking-widest uppercase hover:bg-gold/10 transition-colors"
+            className="inline-block px-8 py-4 bg-navy text-cream font-body text-sm tracking-widest uppercase hover:bg-navy-light transition-colors"
           >
             {lang === 'zh' ? '睡眠测试' : 'Sleep Quiz'}
           </button>
