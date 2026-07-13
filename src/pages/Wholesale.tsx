@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Scissors, Droplets, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const OFFERINGS = [
   { icon: Scissors, titleEn: 'Raw Fibre', titleZh: '原始纤维', descEn: 'Unsorted alpaca fleece direct from our collection pool', descZh: '来自我们收集池的未分类羊驼毛' },
@@ -24,15 +25,22 @@ export default function WholesalePage() {
     { value: 'Mixed Order', label: locale === 'zh' ? '混合订单' : 'Mixed Order' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.companyName || !form.contactName || !form.email) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.functions.invoke('send-form-email', {
+        body: { formType: 'wholesale', locale, ...form },
+      });
+      if (error) throw error;
       toast.success(locale === 'zh' ? '批发询价已提交！我们会尽快联系您。' : 'Wholesale enquiry submitted! We\'ll contact you soon.');
       setForm({ companyName: '', contactName: '', email: '', country: '', productInterest: 'Raw Fibre', volume: '', message: '' });
+    } catch {
+      toast.error(locale === 'zh' ? '提交失败，请稍后重试或直接联系 info@pacificalpacas.nz' : 'Submission failed — please try again or email info@pacificalpacas.nz');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

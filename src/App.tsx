@@ -43,6 +43,7 @@ const AdminGrowers = React.lazy(() => import("./pages/admin/AdminGrowers"));
 const AdminFiberBatches = React.lazy(() => import("./pages/admin/AdminFiberBatches"));
 const AdminPromos = React.lazy(() => import("./pages/admin/AdminPromos"));
 const AdminCertificates = React.lazy(() => import("./pages/admin/AdminCertificates"));
+const AdminReviews = React.lazy(() => import("./pages/admin/AdminReviews"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,6 +87,7 @@ const App = () => (
                 <Route path="growers" element={<AdminGrowers />} />
                 <Route path="fiber-batches" element={<AdminFiberBatches />} />
                 <Route path="certificates" element={<AdminCertificates />} />
+                <Route path="reviews" element={<AdminReviews />} />
                 <Route path="promos" element={<AdminPromos />} />
               </Route>
 

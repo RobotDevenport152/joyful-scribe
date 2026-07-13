@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Phone, Mail, MessageCircle, MapPin, Facebook, Youtube, Instagram } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function ContactPage() {
   const { locale } = useApp();
@@ -17,15 +18,22 @@ export default function ContactPage() {
     { value: 'Other', label: locale === 'zh' ? '其他' : 'Other' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.functions.invoke('send-form-email', {
+        body: { formType: 'contact', locale, ...form },
+      });
+      if (error) throw error;
       toast.success(locale === 'zh' ? '消息已发送！我们会尽快回复。' : 'Message sent! We\'ll get back to you soon.');
       setForm({ name: '', email: '', enquiryType: 'Product Question', message: '' });
+    } catch {
+      toast.error(locale === 'zh' ? '发送失败，请稍后重试或直接联系 info@pacificalpacas.nz' : 'Failed to send — please try again or email info@pacificalpacas.nz');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

@@ -458,6 +458,60 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          author_name: string
+          comment: string
+          created_at: string | null
+          id: string
+          order_id: string
+          product_id: string
+          rating: number
+          status: string
+          user_id: string
+          variant: string | null
+        }
+        Insert: {
+          author_name: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          order_id: string
+          product_id: string
+          rating: number
+          status?: string
+          user_id: string
+          variant?: string | null
+        }
+        Update: {
+          author_name?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          product_id?: string
+          rating?: number
+          status?: string
+          user_id?: string
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -692,6 +746,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_review_product: {
+        Args: {
+          _order_id: string
+          _product_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

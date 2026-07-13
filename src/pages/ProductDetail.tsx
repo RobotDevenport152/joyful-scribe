@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import type { Locale } from '@/lib/i18n';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import Footer from '@/components/Footer';
-import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X } from 'lucide-react';
+import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,6 +12,15 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import StockNotifyForm from '@/components/StockNotifyForm';
 import { ProductTraceability } from '@/components/traceability/ProductTraceability';
+import { useAuth } from '@/hooks/useAuth';
+import { useProductReviews, type ProductReview } from '@/hooks/useProductReviews';
+import { useReviewEligibility } from '@/hooks/useReviewEligibility';
+import { useSubmitReview } from '@/hooks/useSubmitReview';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Star } from 'lucide-react';
 
 const BENEFITS = [
   { icon: ShieldCheck, labelZh: '保暖', labelEn: 'Warmth', descZh: '3倍于羊毛', descEn: '3× warmer than wool' },
@@ -30,25 +39,8 @@ const COMPARISON = [
   { key: '抗静电', keyEn: 'Anti-static', alpaca: '★★★★★', wool: '★☆☆☆☆', silk: '★★★☆☆' },
 ];
 
-const MOCK_REVIEWS = [
-  { id: '1', author: '张女士 / Ms. Zhang', rating: 5, date: '2025-03-10', textZh: '非常轻盈，比想象中更柔软。温控效果很好，不像羽绒被那样感觉闷热。强烈推荐！', textEn: 'Incredibly light and softer than expected. Temperature regulation is excellent — no stuffy feeling like down. Highly recommend!', verified: true, productVariant: '220×240cm' },
-  { id: '2', author: '王先生 / Mr. Wang', rating: 5, date: '2025-02-28', textZh: '作为礼物送给父母，他们用了一周就说"终于睡好了"。包装精美，有溯源证书，仪式感很强。', textEn: 'Bought as a gift for my parents. One week in and they said "finally sleeping well." Beautiful packaging with the traceability certificate.', verified: true, productVariant: '200×230cm' },
-  { id: '3', author: '李女士 / Ms. Li', rating: 4, date: '2025-01-15', textZh: '质量很好，填充均匀，面料很细腻。唯一美中不足是颜色比图片略偏米白。', textEn: 'Great quality, even fill, fine fabric. Only minor note: the color is slightly more off-white than in the photos.', verified: true, productVariant: '200×230cm' },
-  { id: '4', author: '陈先生 / Mr. Chen', rating: 5, date: '2025-01-02', textZh: '溯源二维码扫了之后能看到具体牧场信息，这个细节很打动我，感觉钱花得值。', textEn: 'Scanned the traceability QR code and could see the exact farm details — that detail really won me over. Felt worth every dollar.', verified: true, productVariant: '220×240cm' },
-  { id: '5', author: '刘女士 / Ms. Liu', rating: 5, date: '2024-12-20', textZh: '冬天盖着一点都不重，也不会像羽绒被一样过敏，孩子皮肤敏感也能用。', textEn: 'Doesn\'t feel heavy at all in winter, and unlike down it doesn\'t trigger allergies — safe even for my child\'s sensitive skin.', verified: true, productVariant: '200×230cm' },
-  { id: '6', author: '赵先生 / Mr. Zhao', rating: 4, date: '2024-12-05', textZh: '物流稍微慢了几天，但客服态度很好，被子本身没得挑。', textEn: 'Shipping was a few days slower than expected, but customer service was great and the duvet itself is flawless.', verified: true, productVariant: '220×240cm' },
-];
-
-const RATING_DISTRIBUTION = [
-  { stars: 5, label: '5★', pct: 78 },
-  { stars: 4, label: '4★', pct: 16 },
-  { stars: 3, label: '3★', pct: 5 },
-  { stars: 2, label: '2★', pct: 1 },
-  { stars: 1, label: '1★', pct: 0 },
-];
-
 interface ReviewCardProps {
-  review: typeof MOCK_REVIEWS[number];
+  review: ProductReview;
   locale: Locale;
 }
 
@@ -57,18 +49,18 @@ function ReviewCard({ review, locale }: ReviewCardProps) {
     <div className="border border-border rounded-sm p-4">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <span className="font-body font-semibold text-sm">{review.author}</span>
-          {review.verified && (
-            <span className="ml-2 text-xs text-green-600 font-body">✓ 已验证购买 / Verified Purchase</span>
-          )}
+          <span className="font-body font-semibold text-sm">{review.author_name}</span>
+          <span className="ml-2 text-xs text-green-600 font-body">✓ 已验证购买 / Verified Purchase</span>
         </div>
-        <span className="text-xs text-muted-foreground font-body">{review.date}</span>
+        <span className="text-xs text-muted-foreground font-body">
+          {review.created_at ? new Date(review.created_at).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-NZ') : ''}
+        </span>
       </div>
       <div className="text-gold text-sm mb-1">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-      <div className="text-xs text-muted-foreground font-body mb-2">{locale === 'zh' ? '购买规格' : 'Variant'}: {review.productVariant}</div>
-      <p className="text-sm font-body text-muted-foreground">
-        {locale === 'zh' ? review.textZh : review.textEn}
-      </p>
+      {review.variant && (
+        <div className="text-xs text-muted-foreground font-body mb-2">{locale === 'zh' ? '购买规格' : 'Variant'}: {review.variant}</div>
+      )}
+      <p className="text-sm font-body text-muted-foreground">{review.comment}</p>
     </div>
   );
 }
@@ -86,6 +78,11 @@ export default function ProductDetailPage() {
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
   const { data: product, isLoading } = useProduct(id || '');
   const { data: allProducts } = useProducts();
+  const { user } = useAuth();
+  const { data: reviews } = useProductReviews(product?.id);
+  const { data: eligibility } = useReviewEligibility(product?.id, user?.id);
+  const submitReview = useSubmitReview();
+  const [reviewForm, setReviewForm] = useState({ authorName: '', rating: 5, comment: '' });
 
   useEffect(() => {
     if (product) {
@@ -160,11 +157,44 @@ export default function ProductDetailPage() {
     : [];
   const alsoBought = [...sameCategoryProducts, ...featuredFill].slice(0, 3);
 
-  const sortedReviews = [...MOCK_REVIEWS].sort((a, b) => {
+  const approvedReviews = reviews ?? [];
+  const sortedReviews = [...approvedReviews].sort((a, b) => {
     if (reviewSort === 'highest') return b.rating - a.rating;
     if (reviewSort === 'lowest') return a.rating - b.rating;
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
   });
+  const reviewCount = approvedReviews.length;
+  const avgRating = reviewCount > 0
+    ? approvedReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+    : 0;
+  const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
+    stars,
+    label: `${stars}★`,
+    pct: reviewCount > 0 ? Math.round((approvedReviews.filter(r => r.rating === stars).length / reviewCount) * 100) : 0,
+  }));
+
+  const handleSubmitReview = async () => {
+    if (!user || !eligibility?.eligible || !eligibility.orderId || !product) return;
+    if (!reviewForm.authorName.trim() || !reviewForm.comment.trim()) {
+      toast.error(locale === 'zh' ? '请填写姓名和评价内容' : 'Please fill in your name and comment');
+      return;
+    }
+    try {
+      await submitReview.mutateAsync({
+        productId: product.id,
+        orderId: eligibility.orderId,
+        userId: user.id,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim(),
+        authorName: reviewForm.authorName.trim(),
+        variant: eligibility.variant,
+      });
+      toast.success(locale === 'zh' ? '评价已提交，审核通过后将展示给其他客户' : 'Review submitted — it will appear once approved');
+      setReviewForm({ authorName: '', rating: 5, comment: '' });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : (locale === 'zh' ? '提交失败' : 'Submission failed'));
+    }
+  };
 
   const recentIds = recentlyViewed.filter(rid => rid !== id);
   const recentProducts = allProducts
@@ -559,45 +589,105 @@ export default function ProductDetailPage() {
 
             {activeTab === 'reviews' && (
               <div className="max-w-2xl mx-auto">
-                <div className="mb-8 text-center">
-                  <div className="text-4xl font-display font-semibold mb-1">4.8</div>
-                  <div className="text-gold text-xl mb-1">★★★★★</div>
-                  <div className="text-sm text-muted-foreground font-body">127条评价 / 127 reviews</div>
-                </div>
-
-                <div className="space-y-2 mb-8 max-w-xs mx-auto">
-                  {RATING_DISTRIBUTION.map(row => (
-                    <div key={row.stars} className="flex items-center gap-3 text-sm font-body">
-                      <span className="w-6 text-muted-foreground">{row.label}</span>
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-gold rounded-full" style={{ width: `${row.pct}%` }} />
+                {reviewCount > 0 ? (
+                  <>
+                    <div className="mb-8 text-center">
+                      <div className="text-4xl font-display font-semibold mb-1">{avgRating.toFixed(1)}</div>
+                      <div className="text-gold text-xl mb-1">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</div>
+                      <div className="text-sm text-muted-foreground font-body">
+                        {locale === 'zh' ? `${reviewCount}条评价` : `${reviewCount} review${reviewCount === 1 ? '' : 's'}`}
                       </div>
-                      <span className="w-8 text-right text-muted-foreground">{row.pct}%</span>
                     </div>
-                  ))}
-                </div>
 
-                <div className="space-y-4 mb-6">
-                  {MOCK_REVIEWS.slice(0, 3).map(review => (
-                    <ReviewCard key={review.id} review={review} locale={locale} />
-                  ))}
-                </div>
+                    <div className="space-y-2 mb-8 max-w-xs mx-auto">
+                      {ratingDistribution.map(row => (
+                        <div key={row.stars} className="flex items-center gap-3 text-sm font-body">
+                          <span className="w-6 text-muted-foreground">{row.label}</span>
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-gold rounded-full" style={{ width: `${row.pct}%` }} />
+                          </div>
+                          <span className="w-8 text-right text-muted-foreground">{row.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
 
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setAllReviewsOpen(true)}
-                    className="text-sm font-body text-gold hover:underline"
-                  >
-                    {locale === 'zh' ? '查看全部评价' : 'View all reviews'} →
-                  </button>
-                </div>
+                    <div className="space-y-4 mb-6">
+                      {sortedReviews.slice(0, 3).map(review => (
+                        <ReviewCard key={review.id} review={review} locale={locale} />
+                      ))}
+                    </div>
+
+                    {sortedReviews.length > 3 && (
+                      <div className="text-center mb-8">
+                        <button
+                          type="button"
+                          onClick={() => setAllReviewsOpen(true)}
+                          className="text-sm font-body text-gold hover:underline"
+                        >
+                          {locale === 'zh' ? '查看全部评价' : 'View all reviews'} →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground font-body mb-8">
+                    {locale === 'zh' ? '暂无评价，欢迎成为第一位分享体验的顾客。' : 'No reviews yet — be the first to share your experience.'}
+                  </p>
+                )}
+
+                {eligibility?.eligible && (
+                  <div className="border border-border rounded-sm p-4 mb-6">
+                    <h3 className="font-body font-semibold text-sm mb-3">
+                      {locale === 'zh' ? '写一条评价' : 'Write a Review'}
+                    </h3>
+                    <div className="flex gap-1 mb-3">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewForm(p => ({ ...p, rating: star }))}
+                          aria-label={`${star} star`}
+                        >
+                          <Star
+                            className={`w-5 h-5 ${star <= reviewForm.rating ? 'fill-gold text-gold' : 'text-muted-foreground'}`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2 mb-3">
+                      <Label className="text-xs">{locale === 'zh' ? '显示名称' : 'Display name'}</Label>
+                      <Input
+                        value={reviewForm.authorName}
+                        onChange={e => setReviewForm(p => ({ ...p, authorName: e.target.value }))}
+                        placeholder={locale === 'zh' ? '例如：张女士' : 'e.g. J. Smith'}
+                      />
+                    </div>
+                    <div className="space-y-2 mb-3">
+                      <Label className="text-xs">{locale === 'zh' ? '评价内容' : 'Comment'}</Label>
+                      <Textarea
+                        value={reviewForm.comment}
+                        onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+                    <Button onClick={handleSubmitReview} disabled={submitReview.isPending} size="sm">
+                      {submitReview.isPending
+                        ? (locale === 'zh' ? '提交中…' : 'Submitting…')
+                        : (locale === 'zh' ? '提交评价' : 'Submit Review')}
+                    </Button>
+                  </div>
+                )}
+                {eligibility?.alreadyReviewed && (
+                  <p className="text-center text-xs text-muted-foreground font-body mb-6">
+                    {locale === 'zh' ? '感谢您的评价！' : 'Thanks for your review!'}
+                  </p>
+                )}
 
                 <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
                   <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
                     <DialogHeader>
                       <DialogTitle className="font-display">
-                        {locale === 'zh' ? '全部评价' : 'All Reviews'} · 127
+                        {locale === 'zh' ? '全部评价' : 'All Reviews'} · {reviewCount}
                       </DialogTitle>
                     </DialogHeader>
 
@@ -605,11 +695,11 @@ export default function ProductDetailPage() {
                         not just a longer list appended to what's already shown */}
                     <div className="flex items-center gap-6 pb-4 border-b border-border flex-shrink-0">
                       <div className="text-center flex-shrink-0">
-                        <div className="text-3xl font-display font-semibold">4.8</div>
-                        <div className="text-gold text-sm">★★★★★</div>
+                        <div className="text-3xl font-display font-semibold">{avgRating.toFixed(1)}</div>
+                        <div className="text-gold text-sm">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</div>
                       </div>
                       <div className="flex-1 space-y-1">
-                        {RATING_DISTRIBUTION.map(row => (
+                        {ratingDistribution.map(row => (
                           <div key={row.stars} className="flex items-center gap-2 text-xs font-body">
                             <span className="w-5 text-muted-foreground">{row.label}</span>
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
