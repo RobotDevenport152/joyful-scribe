@@ -71,7 +71,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-center gap-3">
             <p className="text-primary-foreground/30 text-xs font-body">© Pacific Alpacas Limited 2019–2026 | All Right Reserved</p>
             <a
-              href="https://pacificalpacas.com/wp-content/uploads/2019/09/Certificate-of-license.pdf"
+              href="/docs/certificate-of-licence.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-body text-gold/60 hover:text-gold transition-colors underline underline-offset-2"
