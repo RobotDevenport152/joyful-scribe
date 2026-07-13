@@ -85,6 +85,12 @@ const BrandHeritageSection = () => {
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
+            <img
+              src="/images/brand-logo-mark.jpg"
+              alt="Pacific Alpacas — Luxury for Generations"
+              className="h-10 md:h-12 w-auto mb-6 object-contain"
+              loading="lazy"
+            />
             <p className="text-sm tracking-[0.2em] uppercase text-gold mb-3 font-body">
               {t('brand.sectionLabel')}
             </p>
