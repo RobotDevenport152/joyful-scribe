@@ -23,6 +23,7 @@ const Wholesale = React.lazy(() => import("./pages/Wholesale"));
 const ChinaLanding = React.lazy(() => import("./pages/ChinaLanding"));
 const Compare = React.lazy(() => import("./pages/Compare"));
 const Returns = React.lazy(() => import("./pages/Returns"));
+const Lookbook = React.lazy(() => import("./pages/Lookbook"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/china" element={<ChinaLanding />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/returns" element={<Returns />} />
+                <Route path="/lookbook" element={<Lookbook />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />

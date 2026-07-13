@@ -34,6 +34,7 @@ export default function Navbar() {
 
   const moreLinks = [
     { href: '/traceability', label: locale === 'zh' ? '溯源查询' : 'Traceability' },
+    { href: '/lookbook', label: locale === 'zh' ? '造型集' : 'Lookbook' },
     { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
     { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
     { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },
