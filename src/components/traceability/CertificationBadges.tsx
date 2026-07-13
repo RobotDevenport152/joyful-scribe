@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Leaf, Award, Globe } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const CERT_CONFIG: Record<string, {
   icon: typeof ShieldCheck;
@@ -55,17 +54,18 @@ export function CertificationBadges({ certifications }: Props) {
         }
         const Icon = config.icon;
         return (
-          <Tooltip key={cert}>
-            <TooltipTrigger asChild>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-sm border font-body cursor-default ${config.color}`}>
-                <Icon className="w-3.5 h-3.5" />
-                {cert}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{lang === 'zh' ? config.descZh : config.descEn}</p>
-            </TooltipContent>
-          </Tooltip>
+          <span
+            key={cert}
+            className={`inline-flex flex-col gap-0.5 px-3 py-1.5 text-xs rounded-sm border font-body ${config.color}`}
+          >
+            <span className="inline-flex items-center gap-1.5 font-semibold">
+              <Icon className="w-3.5 h-3.5" />
+              {cert}
+            </span>
+            <span className="text-[10px] opacity-80 font-normal leading-tight">
+              {lang === 'zh' ? config.descZh : config.descEn}
+            </span>
+          </span>
         );
       })}
     </div>

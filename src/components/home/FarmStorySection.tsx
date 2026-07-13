@@ -36,7 +36,7 @@ const FarmStorySection = () => {
             {lang === 'zh' ? '从新西兰牧场到您的卧室' : 'From NZ Farm to Your Bedroom'}
           </h2>
           <p className="font-body text-pa-ivory/60 text-sm">
-            {lang === 'zh' ? '每一件产品背后都有故事' : 'Every product tells a traceable story'}
+            {lang === 'zh' ? '每一件产品，都有自己的故事' : 'Every product has its own story to tell'}
           </p>
           <div className="w-16 h-px bg-pa-gold-lt mx-auto mt-6" />
         </motion.div>
@@ -70,18 +70,18 @@ const FarmStorySection = () => {
 
             const desc = lang === 'zh'
               ? ([
-                '来自新西兰 800+ 合作牧场的优质羊驼纤维，可追溯至具体牧场主。',
-                '每头羊驼每年只剪一次，确保纤维在最佳长度与细度时采集。',
+                '我们的纤维来自新西兰 800 多位牧场主，每一批都能追溯到具体的人。',
+                '每头羊驼一年只剪一次毛，就为等到纤维最合适的长度和细度。',
                 '独家"5缸6洗净洗工艺"，在去除杂质的同时保留天然柔软性。',
                 '物理高温 + 臭氧 + 环氧乙烷专业灭菌，每件产品均达母婴级标准。',
-                '您的成品羊驼被 — 可追溯、已认证，深度睡眠提升有保障。',
+                '这就是您手中的羊驼被——从牧场到卧室，每一步都可追溯、已认证。',
               ] as const)[idx]
               : ([
-                '800+ partner farms across New Zealand, every batch traceable to a named grower.',
-                'Each alpaca is sheared once per year to harvest fiber at optimal length and fineness.',
+                'Our fiber comes from 800+ New Zealand farming families — every batch traceable back to a real person.',
+                'Each alpaca is sheared just once a year, timed for exactly the right fiber length and fineness.',
                 'Our exclusive 5-tank 6-wash process removes impurities while preserving natural softness.',
                 'Physical sterilization using heat, ozone and ethylene oxide — meeting maternal-grade standards.',
-                'Your finished duvet — traceable, certified, and guaranteed to elevate your sleep quality.',
+                'This is the duvet in your hands — traceable and certified, every step from paddock to bedroom.',
               ] as const)[idx];
 
             const stat = lang === 'zh'

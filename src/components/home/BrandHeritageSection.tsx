@@ -133,13 +133,13 @@ const BrandHeritageSection = () => {
             <div className="gold-line w-12 mb-5" />
             <p className="font-body text-muted-foreground text-sm leading-relaxed mb-4">
               {lang === 'zh'
-                ? '每一床太平洋羊驼被上都绣有我们的注册商标"云之梦"图案。该图案由新西兰丰盛湾 Arawan 部落的毛利艺术家 Patricia Erueti 专为 Pacific Alpacas 独家设计。'
-                : "Each Pacific Alpacas duvet features our trademarked 'Cloud of Dreams' pattern, designed exclusively by Māori artist Patricia Erueti of the Arawan tribe from New Zealand's Bay of Plenty."}
+                ? '"云之梦"图案，绣在每一床太平洋羊驼被上——它出自新西兰丰盛湾 Arawan 部落毛利艺术家 Patricia Erueti 之手，专为我们设计。'
+                : "The \"Cloud of Dreams\" pattern on every Pacific Alpacas duvet comes from the hands of Māori artist Patricia Erueti, of the Arawan tribe in New Zealand's Bay of Plenty — designed just for us."}
             </p>
             <p className="font-body text-muted-foreground text-sm leading-relaxed">
               {lang === 'zh'
-                ? '购买一床太平洋羊驼被，不仅是拥有顶级品质寝具，更是将一件新西兰毛利文化遗产带回家中。每件图案均经版权保护，全球唯一。'
-                : 'Every purchase carries a piece of New Zealand Māori heritage. The pattern is copyright-protected and found nowhere else in the world.'}
+                ? '带回家的，不只是一床好被子，还有一段新西兰毛利文化的心意。这个图案受版权保护，世界上独一无二。'
+                : "What you bring home is more than a duvet — it's a piece of Māori heritage, made with care. The pattern is copyright-protected, and you won't find it anywhere else."}
             </p>
           </div>
           <div className="relative">

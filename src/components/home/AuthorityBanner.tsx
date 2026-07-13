@@ -118,6 +118,9 @@ const AuthorityBanner = () => {
   return (
     <section ref={ref} className="bg-foreground py-8 overflow-hidden">
       <div className="container mx-auto px-4">
+        <p className="text-center text-[11px] tracking-[0.3em] uppercase text-primary-foreground/50 font-body mb-5">
+          {lang === 'zh' ? '官方认证 · 权威背书 · 点击查看详情' : 'Certified & Recognized — Tap Any Badge for Details'}
+        </p>
         <div className="flex items-center gap-6 md:gap-10 overflow-x-auto pb-2 md:justify-center scrollbar-hide">
           {BADGES.map((badge, idx) => {
             const Icon = badge.icon;
