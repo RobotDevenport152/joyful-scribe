@@ -24,7 +24,7 @@ const CountUp = ({ end }: { end: string }) => {
 const GALLERY = [
   { src: '/images/product-coat-women.jpg', captionZh: '女款大衣', captionEn: "Women's Coat" },
   { src: '/images/product-coat-men.jpg', captionZh: '男款大衣', captionEn: "Men's Coat" },
-  { src: '/images/product-vest-x6-front.jpg', captionZh: 'X6羊驼马甲', captionEn: 'X6 Alpaca Vest' },
+  { src: '/images/product-vest-color-black.jpg', captionZh: 'X6羊驼马甲', captionEn: 'X6 Alpaca Vest' },
   { src: '/images/product-scarf-maori.jpg', captionZh: '毛利图案围巾', captionEn: 'Māori Design Scarf' },
 ];
 
@@ -144,7 +144,7 @@ const BrandHeritageSection = () => {
           </div>
           <div className="relative">
             <img
-              src="/images/product-luxury-duvet.jpg"
+              src="/images/product-duvet-texture.jpg"
               alt={lang === 'zh' ? 'Cloud of Dreams 图案' : 'Cloud of Dreams Pattern'}
               className="w-full rounded-sm shadow-soft"
               loading="lazy"

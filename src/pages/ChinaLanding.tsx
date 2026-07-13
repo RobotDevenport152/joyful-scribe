@@ -42,7 +42,7 @@ const WHY_ALPACA = [
 
 const PRODUCTS = [
   {
-    img: '/images/product-luxury-duvet.jpg',
+    img: '/images/product-duvet-giftbox.jpg',
     nameZh: '轻奢款羊驼被',
     nameEn: 'Luxury Alpaca Duvet',
     priceZh: '¥5,880 起',
@@ -50,7 +50,7 @@ const PRODUCTS = [
     slug: 'duvet-luxury',
   },
   {
-    img: '/images/product-classic-duvet.jpg',
+    img: '/images/product-duvet-rolled.jpg',
     nameZh: '经典款羊驼被',
     nameEn: 'Classic Alpaca Duvet',
     priceZh: '¥2,880 起',
@@ -66,7 +66,7 @@ const PRODUCTS = [
     slug: 'coat-classic',
   },
   {
-    img: '/images/product-premium-duvet.jpg',
+    img: '/images/product-duvet-bed-lifestyle.jpg',
     nameZh: '羊驼顶垫',
     nameEn: 'Alpaca Topper',
     priceZh: '即将发售',
@@ -241,7 +241,7 @@ export default function ChinaLandingPage() {
             </div>
             <div className="relative">
               <img
-                src="/images/product-luxury-duvet.jpg"
+                src="/images/product-duvet-texture.jpg"
                 alt="Cloud of Dreams 图案"
                 className="w-full rounded-sm shadow-lg"
                 loading="lazy"
