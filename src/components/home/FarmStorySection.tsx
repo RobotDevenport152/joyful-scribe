@@ -5,11 +5,11 @@ import { MapPin, Scissors, Droplets, Sparkles, BedDouble, ArrowRight } from 'luc
 import { Link } from 'react-router-dom';
 
 const STEPS = [
-  { icon: MapPin,    key: 'farm' },
-  { icon: Scissors,  key: 'shearing' },
-  { icon: Droplets,  key: 'processing' },
-  { icon: Sparkles,  key: 'craftsmanship' },
-  { icon: BedDouble, key: 'luxury' },
+  { icon: MapPin,    key: 'farm',          image: '/images/farmstory-farm.jpg' },
+  { icon: Scissors,  key: 'shearing',      image: '/images/farmstory-shearing.jpg' },
+  { icon: Droplets,  key: 'processing',    image: '/images/farmstory-processing.jpg' },
+  { icon: Sparkles,  key: 'craftsmanship', image: '/images/farmstory-craftsmanship.jpg' },
+  { icon: BedDouble, key: 'luxury',        image: '/images/farmstory-luxury.jpg' },
 ] as const;
 
 const FarmStorySection = () => {
@@ -41,12 +41,27 @@ const FarmStorySection = () => {
           <div className="w-16 h-px bg-pa-gold-lt mx-auto mt-6" />
         </motion.div>
 
+        {/* Banner photo */}
+        <motion.div
+          initial={{ opacity: 0, scale: 1.02 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ duration: 0.9 }}
+          className="max-w-4xl mx-auto mb-16 rounded-sm overflow-hidden"
+        >
+          <img
+            src="/images/hero-alpacas.jpg"
+            alt="Pacific Alpacas duvet with grazing alpaca herd, New Zealand coastline"
+            className="w-full h-auto"
+            loading="lazy"
+          />
+        </motion.div>
+
         {/* Steps — vertical timeline */}
         <div className="max-w-3xl mx-auto relative">
           {/* Vertical connecting line */}
           <div className="absolute left-6 md:left-8 top-6 bottom-6 w-px bg-pa-ivory/10 hidden md:block" />
 
-          {STEPS.map(({ icon: Icon, key }, idx) => {
+          {STEPS.map(({ icon: Icon, key, image }, idx) => {
             const title = lang === 'zh'
               ? (['新西兰牧场', '年度剪获', '专有加工工艺', '匠心制造', '奢华成品'] as const)[idx]
               : (['NZ Farm', 'Annual Shearing', 'Proprietary Processing', 'Craftsmanship', 'Luxury Product'] as const)[idx];
@@ -94,13 +109,23 @@ const FarmStorySection = () => {
 
                 {/* Content */}
                 <div className="flex-1 pt-3 md:pt-4">
-                  <div className="flex flex-wrap items-center gap-3 mb-2">
-                    <h3 className="font-display text-lg md:text-xl text-pa-ivory">{title}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full bg-pa-gold-lt/15 text-pa-gold-lt text-[10px] tracking-wider font-body uppercase">
-                      {stat}
-                    </span>
+                  <div className="flex flex-col sm:flex-row gap-5">
+                    <img
+                      src={image}
+                      alt={title}
+                      className="w-full sm:w-28 md:w-32 h-28 md:h-32 object-cover rounded-sm flex-shrink-0 order-first sm:order-last"
+                      loading="lazy"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <h3 className="font-display text-lg md:text-xl text-pa-ivory">{title}</h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-pa-gold-lt/15 text-pa-gold-lt text-[10px] tracking-wider font-body uppercase">
+                          {stat}
+                        </span>
+                      </div>
+                      <p className="font-body text-sm text-pa-ivory/60 leading-relaxed">{desc}</p>
+                    </div>
                   </div>
-                  <p className="font-body text-sm text-pa-ivory/60 leading-relaxed">{desc}</p>
 
                   {/* Arrow connector — only between steps */}
                   {!isLast && (
