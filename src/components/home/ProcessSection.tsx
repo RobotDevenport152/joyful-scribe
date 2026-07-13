@@ -8,12 +8,12 @@ const ProcessSection = () => {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   const steps = [
-    { num: '01', key: 'shear' },
-    { num: '02', key: 'wash' },
-    { num: '03', key: 'comb' },
-    { num: '04', key: 'felt' },
-    { num: '05', key: 'sterilize' },
-    { num: '06', key: 'finish' },
+    { num: '01', key: 'shear', image: '/images/process-shear.jpg' },
+    { num: '02', key: 'wash', image: '/images/process-wash.jpg' },
+    { num: '03', key: 'comb', image: '/images/process-comb.jpg' },
+    { num: '04', key: 'felt', image: '/images/process-felt.jpg' },
+    { num: '05', key: 'sterilize', image: '/images/process-sterilize.jpg' },
+    { num: '06', key: 'finish', image: '/images/process-finish.jpg' },
   ] as const;
 
   return (
@@ -41,19 +41,29 @@ const ProcessSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-              className="text-center p-6 rounded-sm border"
+              className="text-center rounded-sm border overflow-hidden"
               style={{
                 borderColor: 'hsl(43 85% 38% / 0.2)',
                 backgroundColor: 'hsl(30 30% 12%)',
               }}
             >
-              <span className="text-3xl font-display font-bold text-gold">{step.num}</span>
-              <h3 className="font-display text-lg mt-3 mb-2" style={{ color: 'hsl(40 33% 96%)' }}>
-                {t(`process.steps.${step.key}.title`)}
-              </h3>
-              <p className="text-xs font-body leading-relaxed" style={{ color: 'hsl(30 15% 65%)' }}>
-                {t(`process.steps.${step.key}.desc`)}
-              </p>
+              <div className="aspect-[4/3] overflow-hidden">
+                <img
+                  src={step.image}
+                  alt={t(`process.steps.${step.key}.title`)}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-6">
+                <span className="text-3xl font-display font-bold text-gold">{step.num}</span>
+                <h3 className="font-display text-lg mt-3 mb-2" style={{ color: 'hsl(40 33% 96%)' }}>
+                  {t(`process.steps.${step.key}.title`)}
+                </h3>
+                <p className="text-xs font-body leading-relaxed" style={{ color: 'hsl(30 15% 65%)' }}>
+                  {t(`process.steps.${step.key}.desc`)}
+                </p>
+              </div>
             </motion.div>
           ))}
         </div>

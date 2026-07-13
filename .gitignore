@@ -17,6 +17,9 @@ dist-ssr
 *.webm
 *.mkv
 
+# Curated production video assets (small, intentionally committed — see public/videos/README.md)
+!public/videos/*.mp4
+
 # Logs
 logs
 *.log

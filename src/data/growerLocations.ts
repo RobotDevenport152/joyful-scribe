@@ -18,6 +18,23 @@ export interface VisitableFarm {
   lng: number;
 }
 
+// "Pacifica Alpacas Growers Club" member roster (source: internal 2025 brand handbook, p.4).
+// No region/contact/coordinates were published alongside these names, so they are NOT
+// plotted on the map (fabricating coordinates would misrepresent real farm locations) —
+// shown instead as a plain member list. A handful overlap with COLLECTION_*/FARMS_* above
+// under slightly different names (e.g. "Raydene", "Nevalea" / "Nevalea Alpacas"); left as-is
+// since the handbook gives no way to confirm they're the same legal entity.
+export const GROWERS_CLUB_ROSTER: string[] = [
+  'Allandale', 'Alkmaar', 'Acapella', 'Buttsbury', 'Bellarose', 'Betron Stud', 'Brianne',
+  'Brumbal', 'Bruce Farm', 'Chimboya', 'Cavelands', 'Double M', 'Tui Ridge', 'Draco',
+  'Eden Farm', 'Smithfield', 'Finchdene', 'Eldercroft', 'Tanglewood', 'Midnight Farming',
+  'Young, Madeleine', 'May, J & D', 'Kennards', 'Nadalea', 'Olde Oaks', 'Pruden', 'Sandstorm',
+  'Spellbound', 'Underhill', 'Yadeno', 'Goldrush', 'Zetland', 'Gilead', 'Lochanside',
+  'Raydene', 'Paca Ridge', 'Honeyfields', 'Kerdon', 'Wedderburn', 'Wilderness', 'Riverdale',
+  'Valle de Tuki', 'Honeyfields', 'Kooinda', 'Thistledown', 'Hazelfield',
+  'Goldmore', 'Nevalea', 'Cornerstone',
+];
+
 // Real Pacific Alpacas collection points (source: pacificalpacas.com/growers)
 export const COLLECTION_NORTH: CollectionPoint[] = [
   { name: 'Matakana Alpacas', contact: 'Cushla de Clare', phone: '027 850 0295', region: 'Maungatapere, Northland', lat: -35.85, lng: 174.07 },

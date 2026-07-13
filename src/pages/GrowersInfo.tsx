@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, CreditCard, MapPin, Scale, Scissors, TreePine, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { COLLECTION_NORTH, COLLECTION_SOUTH, FARMS_NORTH, FARMS_SOUTH, buildMapPoints } from '@/data/growerLocations';
+import { COLLECTION_NORTH, COLLECTION_SOUTH, FARMS_NORTH, FARMS_SOUTH, GROWERS_CLUB_ROSTER, buildMapPoints } from '@/data/growerLocations';
 
 const FarmMap = lazy(() => import('@/components/growers/FarmMap'));
 
@@ -392,6 +392,27 @@ export default function GrowersInfoPage() {
                       ? '若太平洋羊驼酌情认定任何人未能满足《羊驼与美洲驼动物福利守则》的相关要求，我们将拒绝收购其纤维。'
                       : 'Pacific Alpacas will refuse to accept fibre from any person(s) who, in Pacific Alpacas’ sole discretion, fails to meet any of the requirements of the Code of Welfare: Llamas and Alpacas.'}
                   </p>
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="font-display text-lg font-semibold mb-1">
+                    {locale === 'zh' ? 'Pacifica Alpacas Growers Club 成员牧场' : 'Pacifica Alpacas Growers Club Members'}
+                  </h3>
+                  <p className="text-sm font-body text-muted-foreground mb-4">
+                    {locale === 'zh'
+                      ? `${GROWERS_CLUB_ROSTER.length} 家已列名成员牧场（完整合作网络达800+家，此处为品牌手册收录的部分成员名录，暂无坐标信息，故不在地图上标注）`
+                      : `${GROWERS_CLUB_ROSTER.length} named member farms (part of our 800+ farm network — listed here from the brand handbook; not plotted on the map above as no coordinates were published for them)`}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {GROWERS_CLUB_ROSTER.map((name, i) => (
+                      <span
+                        key={`${name}-${i}`}
+                        className="text-xs font-body px-3 py-1.5 rounded-full bg-muted/60 border border-border text-muted-foreground"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
 

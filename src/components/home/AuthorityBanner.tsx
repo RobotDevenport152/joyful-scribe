@@ -35,6 +35,7 @@ const BADGES: Badge[] = [
     detailEn: 'NZ Made & Grown Certification\nLicence #803724, 100% Made in NZ',
     color: 'text-green-400',
     isNew: false,
+    image: '/images/cert-nz-made.jpg',
   },
   {
     icon: Star,
@@ -44,6 +45,7 @@ const BADGES: Badge[] = [
     detailEn: '19th Hurun Best of the Best 2023 Gold Award\n"Soft Furnishing" New Arrival Award',
     color: 'text-yellow-400',
     isNew: false,
+    image: '/images/cert-hurun-2023.jpg',
   },
   {
     icon: Award,
@@ -63,6 +65,7 @@ const BADGES: Badge[] = [
     detailEn: 'Featured on CCTV13\nCovered by 30+ mainstream media',
     color: 'text-red-400',
     isNew: false,
+    image: '/images/media-cctv13-still.jpg',
   },
   {
     icon: Store,
@@ -72,6 +75,7 @@ const BADGES: Badge[] = [
     detailEn: 'Hainan CIIE 2025–2026\nBooth #1, 6 consecutive shows\nGlobal launch of 2026 Alpaca Topper',
     color: 'text-red-500',
     isNew: true,
+    image: '/images/media-ciie-still.jpg',
   },
   {
     icon: MapPin,
