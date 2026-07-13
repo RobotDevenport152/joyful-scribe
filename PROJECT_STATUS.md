@@ -97,4 +97,4 @@
   exact purpose. Also added a real `.hero-overlay` CSS rule (it too was
   referenced in `HeroSection.tsx` but never defined, so no scrim was ever
   actually applied) as defence-in-depth for legibility against bright frames.
-  (commit `<pending>`)
+  (commit `7106ce0`)
