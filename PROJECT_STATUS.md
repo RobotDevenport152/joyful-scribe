@@ -67,11 +67,11 @@
   below the search box until a batch number was entered. Added an always-visible
   "How Traceability Works" section (the real 6-step process data that already
   existed but was previously only shown after a successful search) so the
-  empty state has substantive content instead of whitespace. (commit `<pending>`)
+  empty state has substantive content instead of whitespace. (commit `322a40d`)
 
 - [x] **Untranslated enum leaks into UI**: `处理状态: ready` and `等级: royal`
   were rendering the raw DB enum value instead of a translated label — found
   in both `ProductTraceability.tsx` (product detail / cart traceability block)
   and `Traceability.tsx` (the dedicated lookup page, which had the same leak
   for `grade` in addition to `processing_status`). Added zh/en label maps and
-  used them in both places. (commit `<pending>`)
+  used them in both places. (commit `322a40d`)
