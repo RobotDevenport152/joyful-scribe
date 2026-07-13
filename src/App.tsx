@@ -16,6 +16,7 @@ const ProductDetail = React.lazy(() => import("./pages/ProductDetail"));
 const Checkout = React.lazy(() => import("./pages/Checkout"));
 const OrderSuccess = React.lazy(() => import("./pages/OrderSuccess"));
 const Traceability = React.lazy(() => import("./pages/Traceability"));
+const Verify = React.lazy(() => import("./pages/Verify"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const GrowersInfo = React.lazy(() => import("./pages/GrowersInfo"));
 const ApplyGrower = React.lazy(() => import("./pages/ApplyGrower"));
@@ -41,6 +42,7 @@ const AdminProducts = React.lazy(() => import("./pages/admin/AdminProducts"));
 const AdminGrowers = React.lazy(() => import("./pages/admin/AdminGrowers"));
 const AdminFiberBatches = React.lazy(() => import("./pages/admin/AdminFiberBatches"));
 const AdminPromos = React.lazy(() => import("./pages/admin/AdminPromos"));
+const AdminCertificates = React.lazy(() => import("./pages/admin/AdminCertificates"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +85,7 @@ const App = () => (
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="growers" element={<AdminGrowers />} />
                 <Route path="fiber-batches" element={<AdminFiberBatches />} />
+                <Route path="certificates" element={<AdminCertificates />} />
                 <Route path="promos" element={<AdminPromos />} />
               </Route>
 
@@ -92,6 +95,8 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/traceability" element={<Traceability />} />
+                <Route path="/verify" element={<Verify />} />
+                <Route path="/verify/:code" element={<Verify />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/growers-info" element={<GrowersInfo />} />
                 <Route path="/wholesale" element={<Wholesale />} />

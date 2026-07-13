@@ -397,6 +397,67 @@ export type Database = {
         }
         Relationships: []
       }
+      product_certificates: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          first_verified_at: string | null
+          fiber_batch_id: string | null
+          id: string
+          issued_at: string | null
+          order_id: string | null
+          product_id: string
+          verification_count: number
+        }
+        Insert: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          first_verified_at?: string | null
+          fiber_batch_id?: string | null
+          id?: string
+          issued_at?: string | null
+          order_id?: string | null
+          product_id: string
+          verification_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          first_verified_at?: string | null
+          fiber_batch_id?: string | null
+          id?: string
+          issued_at?: string | null
+          order_id?: string | null
+          product_id?: string
+          verification_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_certificates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_certificates_fiber_batch_id_fkey"
+            columns: ["fiber_batch_id"]
+            isOneToOne: false
+            referencedRelation: "fiber_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_certificates_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -637,6 +698,29 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      verify_certificate: {
+        Args: {
+          _code: string
+        }
+        Returns: {
+          is_valid: boolean
+          product_id: string | null
+          product_name_zh: string | null
+          product_name_en: string | null
+          product_slug: string | null
+          product_images: Json | null
+          fiber_batch_id: string | null
+          batch_code: string | null
+          grower_farm_name: string | null
+          region: string | null
+          harvest_date: string | null
+          grade: string | null
+          processing_status: string | null
+          issued_at: string | null
+          first_verified_at: string | null
+          verification_count: number | null
+        }[]
       }
     }
     Enums: {

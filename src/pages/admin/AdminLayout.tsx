@@ -4,7 +4,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, Layers, Tag, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { title: '订单管理', url: '/admin/orders', icon: ShoppingCart },
   { title: '养殖户管理', url: '/admin/growers', icon: Users },
   { title: '纤维批次', url: '/admin/fiber-batches', icon: Layers },
+  { title: '防伪证书', url: '/admin/certificates', icon: ShieldCheck },
   { title: '促销码', url: '/admin/promos', icon: Tag },
 ];
 

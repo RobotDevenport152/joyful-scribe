@@ -29,6 +29,7 @@ export default function Footer() {
               <Link to="/shop" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{t.nav.products}</Link>
               <Link to="/compare" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '系列对比' : 'Compare Tiers'}</Link>
               <Link to="/traceability" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '溯源查询' : 'Traceability'}</Link>
+              <Link to="/verify" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '正品验证' : 'Verify Authenticity'}</Link>
               <Link to="/returns" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '退换货政策' : 'Return Policy'}</Link>
               <Link to="/growers-info" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '牧场合作' : 'Growers'}</Link>
               <Link to="/wholesale" className="block text-sm font-body text-primary-foreground/50 hover:text-primary-foreground transition-colors">{locale === 'zh' ? '批发询价' : 'Wholesale'}</Link>
