@@ -39,6 +39,14 @@ const MOCK_REVIEWS = [
   { id: '6', author: '赵先生 / Mr. Zhao', rating: 4, date: '2024-12-05', textZh: '物流稍微慢了几天，但客服态度很好，被子本身没得挑。', textEn: 'Shipping was a few days slower than expected, but customer service was great and the duvet itself is flawless.', verified: true, productVariant: '220×240cm' },
 ];
 
+const RATING_DISTRIBUTION = [
+  { stars: 5, label: '5★', pct: 78 },
+  { stars: 4, label: '4★', pct: 16 },
+  { stars: 3, label: '3★', pct: 5 },
+  { stars: 2, label: '2★', pct: 1 },
+  { stars: 1, label: '1★', pct: 0 },
+];
+
 interface ReviewCardProps {
   review: typeof MOCK_REVIEWS[number];
   locale: Locale;
@@ -74,6 +82,7 @@ export default function ProductDetailPage() {
   const [careOpen, setCareOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'care' | 'reviews'>('description');
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
+  const [reviewSort, setReviewSort] = useState<'newest' | 'highest' | 'lowest'>('newest');
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
   const { data: product, isLoading } = useProduct(id || '');
   const { data: allProducts } = useProducts();
@@ -150,6 +159,12 @@ export default function ProductDetailPage() {
     ? allProducts.filter(p => p.featured && p.id !== product.id && !sameCategoryProducts.find(s => s.id === p.id))
     : [];
   const alsoBought = [...sameCategoryProducts, ...featuredFill].slice(0, 3);
+
+  const sortedReviews = [...MOCK_REVIEWS].sort((a, b) => {
+    if (reviewSort === 'highest') return b.rating - a.rating;
+    if (reviewSort === 'lowest') return a.rating - b.rating;
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
 
   const recentIds = recentlyViewed.filter(rid => rid !== id);
   const recentProducts = allProducts
@@ -551,13 +566,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="space-y-2 mb-8 max-w-xs mx-auto">
-                  {[
-                    { stars: 5, label: '5★', pct: 78 },
-                    { stars: 4, label: '4★', pct: 16 },
-                    { stars: 3, label: '3★', pct: 5 },
-                    { stars: 2, label: '2★', pct: 1 },
-                    { stars: 1, label: '1★', pct: 0 },
-                  ].map(row => (
+                  {RATING_DISTRIBUTION.map(row => (
                     <div key={row.stars} className="flex items-center gap-3 text-sm font-body">
                       <span className="w-6 text-muted-foreground">{row.label}</span>
                       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
@@ -585,14 +594,60 @@ export default function ProductDetailPage() {
                 </div>
 
                 <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
-                  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                  <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
                     <DialogHeader>
                       <DialogTitle className="font-display">
                         {locale === 'zh' ? '全部评价' : 'All Reviews'} · 127
                       </DialogTitle>
                     </DialogHeader>
+
+                    {/* Summary recap — so this reads as a complete reviews view,
+                        not just a longer list appended to what's already shown */}
+                    <div className="flex items-center gap-6 pb-4 border-b border-border flex-shrink-0">
+                      <div className="text-center flex-shrink-0">
+                        <div className="text-3xl font-display font-semibold">4.8</div>
+                        <div className="text-gold text-sm">★★★★★</div>
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        {RATING_DISTRIBUTION.map(row => (
+                          <div key={row.stars} className="flex items-center gap-2 text-xs font-body">
+                            <span className="w-5 text-muted-foreground">{row.label}</span>
+                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-gold rounded-full" style={{ width: `${row.pct}%` }} />
+                            </div>
+                            <span className="w-7 text-right text-muted-foreground">{row.pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sort control */}
+                    <div className="flex items-center gap-2 py-3 flex-shrink-0">
+                      <span className="text-xs font-body text-muted-foreground">
+                        {locale === 'zh' ? '排序：' : 'Sort:'}
+                      </span>
+                      {([
+                        { key: 'newest' as const, zh: '最新', en: 'Newest' },
+                        { key: 'highest' as const, zh: '评分最高', en: 'Highest Rated' },
+                        { key: 'lowest' as const, zh: '评分最低', en: 'Lowest Rated' },
+                      ]).map(opt => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setReviewSort(opt.key)}
+                          className={`px-2.5 py-1 rounded-full text-xs font-body transition-colors ${
+                            reviewSort === opt.key
+                              ? 'bg-accent text-accent-foreground'
+                              : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                          }`}
+                        >
+                          {locale === 'zh' ? opt.zh : opt.en}
+                        </button>
+                      ))}
+                    </div>
+
                     <div className="space-y-4 overflow-y-auto pr-1">
-                      {MOCK_REVIEWS.map(review => (
+                      {sortedReviews.map(review => (
                         <ReviewCard key={review.id} review={review} locale={locale} />
                       ))}
                     </div>
