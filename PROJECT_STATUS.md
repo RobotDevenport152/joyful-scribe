@@ -98,3 +98,31 @@
   referenced in `HeroSection.tsx` but never defined, so no scrim was ever
   actually applied) as defence-in-depth for legibility against bright frames.
   (commit `7106ce0`)
+
+- [x] **FarmStorySection step icons were dead decoration** (just a static
+  number badge) instead of links. Removed the numbers and made each icon
+  link to the page that covers that step (farm -> `/growers-info`,
+  shearing/processing/craftsmanship -> `/traceability`, luxury product ->
+  `/shop`). (commit `4323c0b`)
+
+- [x] **i18n copy read as literally-translated marketing fluff in both
+  directions** — e.g. hero eyebrow "引领天然睡眠材料革命" / "Leading the Natural
+  Sleep Material Revolution" and fiber section "会呼吸的软黄金" / "The Breathing
+  Soft Gold" sounded like machine translation, not brand voice, undermining
+  trust. Reworked hero/brand/fiber/process/certs copy in `i18n/index.ts`
+  plus the inline copy in `FarmStorySection.tsx` and
+  `BrandHeritageSection.tsx`'s "Cloud of Dreams" block to be warmer and
+  story-driven in both languages, while leaving every factual claim (cert
+  numbers, percentages, brand names, historical facts) untouched. **This is
+  only the homepage** — a full-site grep found ~573 more inline `zh`/`en`
+  string pairs across 40 files (product pages, checkout, account pages,
+  etc.) not yet reviewed; treat this as an ongoing pass, not a completed
+  audit. Also strengthened two related trust-signal UI gaps:
+  `AuthorityBanner.tsx`'s badge strip had no heading (read as decoration, not
+  certification), and `CertificationBadges.tsx` hid cert numbers behind a
+  hover-only tooltip that doesn't reliably work on touch devices — both now
+  show their trust info without requiring hover. (commit `0f24e85`)
+  - **Not done**: the broader "generic AI-template look" UI concern raised
+    alongside this — that's a visual design pass (layout/spacing/component
+    styling), separate from copy or trust-signal visibility, and hasn't been
+    scoped or started yet.
