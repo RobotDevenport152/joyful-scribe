@@ -58,4 +58,6 @@
     `BrandHeritageSection.tsx`'s "Cloud of Dreams" story image and its
     4-photo `GALLERY` array's vest entry; the same two spots duplicated in
     `ChinaLanding.tsx`, plus its "coming soon" Alpaca Topper placeholder image.
-  - Migration: `supabase/migrations/20260713190000_fix_stale_product_images.sql`.
+  - Migration: `supabase/migrations/20260713190000_fix_stale_product_images.sql`
+    (commit `65b2a29` — **run this migration's SQL manually in the Supabase
+    SQL Editor**; it is not applied automatically).
