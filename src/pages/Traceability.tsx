@@ -28,6 +28,22 @@ interface BatchResult {
 
 const STATUS_MAP: Record<string, number> = { raw: 0, scoured: 1, combed: 2, felted: 3, sterilized: 4, ready: 5 };
 
+const GRADE_LABELS: Record<string, { zh: string; en: string }> = {
+  baby: { zh: '幼驼级', en: 'Baby Alpaca' },
+  royal: { zh: '皇家级', en: 'Royal Alpaca' },
+  adult: { zh: '成驼级', en: 'Adult Alpaca' },
+  suri: { zh: '苏利级', en: 'Suri Alpaca' },
+};
+
+const STATUS_LABELS: Record<string, { zh: string; en: string }> = {
+  raw: { zh: '原毛', en: 'Raw' },
+  scoured: { zh: '已洗净', en: 'Scoured' },
+  combed: { zh: '已梳理', en: 'Combed' },
+  felted: { zh: '已成絮', en: 'Felted' },
+  sterilized: { zh: '已灭菌', en: 'Sterilized' },
+  ready: { zh: '已就绪', en: 'Ready' },
+};
+
 export default function TraceabilityPage() {
   const { locale } = useApp();
   const [urlParams] = useSearchParams();
@@ -134,6 +150,41 @@ export default function TraceabilityPage() {
             </p>
           </div>
 
+          {/* How it works — always visible, since the batch result below is
+              conditional on a search and would otherwise leave this page
+              mostly blank before a code is entered. */}
+          {!selectedBatch && (
+            <div className="max-w-4xl mx-auto mb-12">
+              <h2 className="font-display text-xl text-center mb-8">
+                {locale === 'zh' ? '追溯如何运作' : 'How Traceability Works'}
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {PROCESS_STEPS.map((ps, idx) => {
+                  const Icon = ps.icon;
+                  return (
+                    <motion.div
+                      key={ps.labelEn}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.08 }}
+                      className="bg-card border border-border rounded-sm p-4 text-center"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center mx-auto mb-3">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <p className="font-body font-semibold text-sm mb-1">
+                        {locale === 'zh' ? ps.labelZh : ps.labelEn}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body leading-snug">
+                        {locale === 'zh' ? ps.descZh : ps.descEn}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Batch Result */}
           {selectedBatch && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto mb-12">
@@ -146,7 +197,11 @@ export default function TraceabilityPage() {
                       <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {selectedBatch.date}</span>
                     </div>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-body bg-green-100 text-green-800 capitalize">{selectedBatch.status}</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-body bg-green-100 text-green-800">
+                    {locale === 'zh'
+                      ? STATUS_LABELS[selectedBatch.status]?.zh || selectedBatch.status
+                      : STATUS_LABELS[selectedBatch.status]?.en || selectedBatch.status}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -164,7 +219,11 @@ export default function TraceabilityPage() {
                   </div>
                   <div className="bg-background rounded-sm p-3 text-center">
                     <p className="text-xs text-muted-foreground font-body">{locale === 'zh' ? '等级' : 'Grade'}</p>
-                    <p className="font-body font-semibold text-sm mt-1 text-gold">{selectedBatch.grade}</p>
+                    <p className="font-body font-semibold text-sm mt-1 text-gold">
+                      {locale === 'zh'
+                        ? GRADE_LABELS[selectedBatch.grade]?.zh || selectedBatch.grade
+                        : GRADE_LABELS[selectedBatch.grade]?.en || selectedBatch.grade}
+                    </p>
                   </div>
                 </div>
 

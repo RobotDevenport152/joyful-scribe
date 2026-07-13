@@ -9,8 +9,19 @@
 
 - [ ] **Checkout forces account creation/login before purchase** — `/checkout`
   is wrapped in `<ProtectedRoute>` (`App.tsx`), no guest checkout path exists.
-  Likely a real conversion drag for first-time high-value buyers who don't want
-  to register before paying.
+  **On hold, needs a product decision from the user, not just a code fix**:
+  this was my audit recommendation, not an explicit requirement, and any fix
+  touches production payment code (`create-checkout` edge function's auth
+  guard) and/or `checkout_sessions`/`orders` RLS. Options discussed with the
+  user: (a) full anonymous guest checkout — biggest schema/RLS change; (b)
+  "quick registration at checkout" — front-end drops the forced pre-login,
+  `create-checkout` auto-creates a real account server-side via the Admin API
+  when no JWT is present, no schema/RLS change needed, but still changes the
+  edge function's auth logic from "JWT required" to "optional, else
+  auto-provision." Complicated by **Confirm-email being ON** in Supabase Auth,
+  so a client-side `signUp()` can't get an immediate usable session — hence
+  needing the server-side Admin API approach for (b). User asked to pause and
+  think about it further before implementing either option.
 
 ## P1 — Fix soon (real but lower-frequency impact)
 
@@ -19,16 +30,6 @@
   weighing raw fibre bags in a warehouse — operationally authentic, but not
   evocative of the "全球深睡新标准 / Luxury in Your Dreams" headline sitting on
   top of it. Headline text also has no scrim in some frames, hurting legibility.
-
-- [ ] **Traceability page (`/traceability`) landing state is mostly blank**
-  below the search box until a batch number is entered — no supporting content,
-  large empty whitespace before the footer.
-
-## P2 — Polish
-
-- [ ] **Untranslated enum leaks into UI**: cart / product-detail traceability
-  block shows `处理状态: ready` — raw English enum value (`processing_status`)
-  instead of a translated Chinese label (should be something like "已就绪").
 
 ## Fixed
 
@@ -61,3 +62,16 @@
   - Migration: `supabase/migrations/20260713190000_fix_stale_product_images.sql`
     (commit `65b2a29` — **run this migration's SQL manually in the Supabase
     SQL Editor**; it is not applied automatically).
+
+- [x] **Traceability page (`/traceability`) landing state was mostly blank**
+  below the search box until a batch number was entered. Added an always-visible
+  "How Traceability Works" section (the real 6-step process data that already
+  existed but was previously only shown after a successful search) so the
+  empty state has substantive content instead of whitespace. (commit `<pending>`)
+
+- [x] **Untranslated enum leaks into UI**: `处理状态: ready` and `等级: royal`
+  were rendering the raw DB enum value instead of a translated label — found
+  in both `ProductTraceability.tsx` (product detail / cart traceability block)
+  and `Traceability.tsx` (the dedicated lookup page, which had the same leak
+  for `grade` in addition to `processing_status`). Added zh/en label maps and
+  used them in both places. (commit `<pending>`)

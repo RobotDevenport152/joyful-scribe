@@ -24,6 +24,13 @@ const STATUS_COLORS: Record<string, string> = {
   ready: 'bg-green-100 text-green-800',
 };
 
+const STATUS_LABELS: Record<string, { zh: string; en: string }> = {
+  raw: { zh: '原毛', en: 'Raw' },
+  scoured: { zh: '已洗净', en: 'Scoured' },
+  combed: { zh: '已梳理', en: 'Combed' },
+  ready: { zh: '已就绪', en: 'Ready' },
+};
+
 export function ProductTraceability({ batchId }: Props) {
   const { i18n } = useTranslation();
   const lang = i18n.language;
@@ -98,7 +105,10 @@ export function ProductTraceability({ batchId }: Props) {
               <div className="flex items-center gap-2 text-sm font-body">
                 <span className="text-muted-foreground">{lang === 'zh' ? '处理状态' : 'Status'}:</span>
                 <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[batch.processing_status] || ''}`}>
-                  {batch.processing_status}
+                  {(() => {
+                    const label = STATUS_LABELS[batch.processing_status];
+                    return label ? (lang === 'zh' ? label.zh : label.en) : batch.processing_status;
+                  })()}
                 </span>
               </div>
             )}
