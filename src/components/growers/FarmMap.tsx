@@ -9,6 +9,8 @@ export interface MapPoint {
   contact?: string;
   phone?: string;
   feature?: string;
+  description?: string;
+  website?: string;
   type: 'collection' | 'farm';
 }
 
@@ -65,7 +67,7 @@ const FarmMap = ({ points, locale }: FarmMapProps) => {
             }}
           >
             <Popup>
-              <div className="min-w-[160px]">
+              <div className="min-w-[200px] max-w-[240px]">
                 <p className="font-semibold text-sm leading-tight mb-1">{pt.name}</p>
                 <p className="text-xs text-gray-500 mb-1">{pt.region}</p>
                 {pt.contact && <p className="text-xs">{pt.contact}</p>}
@@ -74,15 +76,31 @@ const FarmMap = ({ points, locale }: FarmMapProps) => {
                     {pt.phone}
                   </a>
                 )}
-                {pt.feature && <p className="text-xs text-gray-600 mt-1">{pt.feature}</p>}
-                <a
-                  href={googleMapsUrl(pt.lat, pt.lng)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-xs text-[#4a7c59] hover:underline mt-1.5 font-medium"
-                >
-                  {locale === 'zh' ? '在 Google 地图中导航 →' : 'Get directions →'}
-                </a>
+                {pt.description ? (
+                  <p className="text-xs text-gray-600 mt-1 leading-snug">{pt.description}</p>
+                ) : (
+                  pt.feature && <p className="text-xs text-gray-600 mt-1">{pt.feature}</p>
+                )}
+                <div className="flex items-center gap-3 mt-1.5">
+                  {pt.website && (
+                    <a
+                      href={pt.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-xs text-[#4a7c59] hover:underline font-medium"
+                    >
+                      {locale === 'zh' ? '官网 →' : 'Website →'}
+                    </a>
+                  )}
+                  <a
+                    href={googleMapsUrl(pt.lat, pt.lng)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs text-[#4a7c59] hover:underline font-medium"
+                  >
+                    {locale === 'zh' ? '导航 →' : 'Directions →'}
+                  </a>
+                </div>
               </div>
             </Popup>
           </CircleMarker>

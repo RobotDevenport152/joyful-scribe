@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import type { Locale } from '@/lib/i18n';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import Footer from '@/components/Footer';
-import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart } from 'lucide-react';
+import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -74,6 +74,7 @@ export default function ProductDetailPage() {
   const [careOpen, setCareOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'care' | 'reviews'>('description');
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
+  const [imageZoomOpen, setImageZoomOpen] = useState(false);
   const { data: product, isLoading } = useProduct(id || '');
   const { data: allProducts } = useProducts();
 
@@ -175,14 +176,25 @@ export default function ProductDetailPage() {
           <div className="grid lg:grid-cols-2 gap-12">
             <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
               {/* P1 FIX: Image gallery — uses products.images[] array from DB */}
-              <div className="relative aspect-square rounded-lg overflow-hidden bg-card">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setImageZoomOpen(true)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setImageZoomOpen(true); }}
+                aria-label={locale === 'zh' ? '点击查看大图' : 'Click to zoom image'}
+                className="relative aspect-square rounded-lg overflow-hidden bg-card group cursor-zoom-in"
+              >
                 <img
                   src={images[activeImg]}
                   alt={locale === 'zh' ? product.nameZh : product.nameEn}
                   className="w-full h-full object-cover transition-opacity duration-300"
                 />
+                <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ZoomIn className="w-4 h-4" />
+                </div>
                 <Link
                   to="/traceability"
+                  onClick={e => e.stopPropagation()}
                   className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-primary/80 backdrop-blur-sm text-primary-foreground text-xs font-body px-3 py-1.5 rounded-full hover:bg-primary transition-colors"
                 >
                   <MapPin className="w-3 h-3 text-gold" />
@@ -205,6 +217,44 @@ export default function ProductDetailPage() {
                   ))}
                 </div>
               )}
+
+              <Dialog open={imageZoomOpen} onOpenChange={setImageZoomOpen}>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-0">
+                  <DialogTitle className="sr-only">
+                    {locale === 'zh' ? product.nameZh : product.nameEn}
+                  </DialogTitle>
+                  <div className="relative">
+                    <img
+                      src={images[activeImg]}
+                      alt={locale === 'zh' ? product.nameZh : product.nameEn}
+                      className="w-full max-h-[85vh] object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImageZoomOpen(false)}
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                      aria-label={locale === 'zh' ? '关闭' : 'Close'}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    {images.length > 1 && (
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+                        {images.map((img, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setActiveImg(i)}
+                            className={`w-12 h-12 rounded-sm overflow-hidden border-2 transition-colors flex-shrink-0 ${
+                              activeImg === i ? 'border-gold' : 'border-white/30 hover:border-white/70'
+                            }`}
+                          >
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="flex flex-col">

@@ -210,11 +210,31 @@ export default function GrowersInfoPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="bg-card rounded-lg border border-border p-5 hover:border-gold/30 transition-colors"
+            className="bg-card rounded-lg border border-border p-5 hover:border-gold/30 transition-colors flex flex-col"
           >
             <h4 className="font-display text-base font-semibold mb-1">{farm.name}</h4>
             <p className="text-xs text-gold font-body mb-2">{farm.region}</p>
-            <p className="text-xs text-muted-foreground font-body">{locale === 'zh' ? farm.featureZh : farm.feature}</p>
+            <p className="text-xs text-muted-foreground font-body leading-relaxed flex-1">
+              {locale === 'zh' ? farm.descriptionZh : farm.description}
+            </p>
+            <div className="flex items-center gap-3 mt-4">
+              <a
+                href={farm.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 border border-border rounded-sm text-xs font-body hover:border-gold hover:text-gold transition-colors"
+              >
+                {locale === 'zh' ? '官网' : 'Website'}
+              </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${farm.lat},${farm.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-accent text-accent-foreground rounded-sm text-xs font-body hover:bg-accent/90 transition-colors"
+              >
+                {locale === 'zh' ? '导航' : 'Directions'}
+              </a>
+            </div>
           </motion.div>
         ))}
       </div>
