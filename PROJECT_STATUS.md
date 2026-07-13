@@ -25,11 +25,16 @@
 
 ## P1 — Fix soon (real but lower-frequency impact)
 
-- [ ] **Hero video doesn't match "luxury sleep" positioning.** Current loop
-  (`public/videos/promo.mp4`, 15–48s of source) shows two workers tagging/
-  weighing raw fibre bags in a warehouse — operationally authentic, but not
-  evocative of the "全球深睡新标准 / Luxury in Your Dreams" headline sitting on
-  top of it. Headline text also has no scrim in some frames, hurting legibility.
+- [ ] **Hero video footage doesn't match "luxury sleep" positioning.** Current
+  loop (`public/videos/promo.mp4`, 15–48s of source) shows warehouse/shearing
+  footage — operationally authentic, but not evocative of the "全球深睡新标准 /
+  Luxury in Your Dreams" headline sitting on top of it. (The separate
+  legibility problem originally filed alongside this — "no scrim, hard to
+  read" — turned out to have a different, now-fixed root cause; see Fixed
+  below. This item is now only about the footage content itself, which needs
+  either a different in/out point from the existing source videos in
+  `public/videos/` or new footage — a creative/content call, and re-cutting
+  needs `ffmpeg`, which isn't available in this environment.)
 
 ## Fixed
 
@@ -75,3 +80,21 @@
   and `Traceability.tsx` (the dedicated lookup page, which had the same leak
   for `grade` in addition to `processing_status`). Added zh/en label maps and
   used them in both places. (commit `322a40d`)
+
+- [x] **Site-wide: the entire `pa-*` custom color namespace (`pa-navy`,
+  `pa-ivory`, `pa-gold`, `pa-gold-lt`) was never defined in
+  `tailwind.config.ts`.** This is the real root cause of the hero headline
+  looking illegible — `text-pa-ivory` on the H1 was a no-op class, so the
+  headline silently fell back to the inherited near-black `--foreground`
+  color and rendered as dark text directly on the hero video, not a scrim
+  problem. The same undefined classes are used throughout
+  `FarmStorySection.tsx` (its entire dark navy/ivory section) and
+  `CrossSell.tsx`'s price text, so this had site-wide reach on the homepage,
+  not just the hero. Fixed by adding a `pa` color group to
+  `tailwind.config.ts` that reuses the existing `--navy`/`--cream`/`--gold`/
+  `--gold-light` CSS variables (so `pa-ivory` = `--cream`, etc.) — no new
+  colors invented, just wiring up tokens that were already designed for this
+  exact purpose. Also added a real `.hero-overlay` CSS rule (it too was
+  referenced in `HeroSection.tsx` but never defined, so no scrim was ever
+  actually applied) as defence-in-depth for legibility against bright frames.
+  (commit `<pending>`)

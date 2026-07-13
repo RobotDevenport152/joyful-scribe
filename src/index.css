@@ -108,6 +108,19 @@
   }
 }
 
+/* Hero video/image scrim — ensures the headline stays legible regardless of
+   how bright or busy the underlying frame is. Referenced by HeroSection.tsx
+   but was previously undefined, so no scrim was ever actually applied. */
+.hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 14, 22, 0.55) 0%,
+    rgba(10, 14, 22, 0.35) 35%,
+    rgba(10, 14, 22, 0.45) 65%,
+    rgba(10, 14, 22, 0.65) 100%
+  );
+}
+
 /* iOS safe area utilities */
 @layer utilities {
   .safe-bottom {
