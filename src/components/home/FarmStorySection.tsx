@@ -58,8 +58,10 @@ const FarmStorySection = () => {
 
         {/* Steps — vertical timeline */}
         <div className="max-w-3xl mx-auto relative">
-          {/* Vertical connecting line */}
-          <div className="absolute left-6 md:left-8 top-6 bottom-6 w-px bg-pa-ivory/10 hidden md:block" />
+          {/* Vertical connecting line — ties the numbered icons into a visible
+              sequence; needed most on mobile, where each step's image+text
+              block is tall and icons would otherwise look disconnected */}
+          <div className="absolute left-6 md:left-8 top-6 bottom-6 w-px bg-pa-ivory/10" />
 
           {STEPS.map(({ icon: Icon, key, image }, idx) => {
             const title = lang === 'zh'

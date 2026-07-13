@@ -30,7 +30,7 @@ function googleMapsUrl(lat: number, lng: number): string {
 
 const FarmMap = ({ points, locale }: FarmMapProps) => {
   return (
-    <div className="relative rounded-lg overflow-hidden border border-border shadow-sm">
+    <div className="relative isolate rounded-lg overflow-hidden border border-border shadow-sm">
       {/* Legend */}
       <div className="absolute top-3 right-3 z-[1000] bg-background/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 text-xs font-body space-y-1.5 shadow-sm">
         <div className="flex items-center gap-2">
