@@ -5,11 +5,11 @@ import { MapPin, Scissors, Droplets, Sparkles, BedDouble, ArrowRight } from 'luc
 import { Link } from 'react-router-dom';
 
 const STEPS = [
-  { icon: MapPin,    key: 'farm',          image: '/images/farmstory-farm.jpg' },
-  { icon: Scissors,  key: 'shearing',      image: '/images/farmstory-shearing.jpg' },
-  { icon: Droplets,  key: 'processing',    image: '/images/farmstory-processing.jpg' },
-  { icon: Sparkles,  key: 'craftsmanship', image: '/images/farmstory-craftsmanship.jpg' },
-  { icon: BedDouble, key: 'luxury',        image: '/images/farmstory-luxury.jpg' },
+  { icon: MapPin,    key: 'farm',          image: '/images/farmstory-farm.jpg',          link: '/growers-info' },
+  { icon: Scissors,  key: 'shearing',      image: '/images/farmstory-shearing.jpg',      link: '/traceability' },
+  { icon: Droplets,  key: 'processing',    image: '/images/farmstory-processing.jpg',    link: '/traceability' },
+  { icon: Sparkles,  key: 'craftsmanship', image: '/images/farmstory-craftsmanship.jpg', link: '/traceability' },
+  { icon: BedDouble, key: 'luxury',        image: '/images/farmstory-luxury.jpg',         link: '/shop' },
 ] as const;
 
 const FarmStorySection = () => {
@@ -58,12 +58,12 @@ const FarmStorySection = () => {
 
         {/* Steps — vertical timeline */}
         <div className="max-w-3xl mx-auto relative">
-          {/* Vertical connecting line — ties the numbered icons into a visible
-              sequence; needed most on mobile, where each step's image+text
-              block is tall and icons would otherwise look disconnected */}
+          {/* Vertical connecting line — ties the icons into a visible sequence;
+              needed most on mobile, where each step's image+text block is
+              tall and icons would otherwise look disconnected */}
           <div className="absolute left-6 md:left-8 top-6 bottom-6 w-px bg-pa-ivory/10" />
 
-          {STEPS.map(({ icon: Icon, key, image }, idx) => {
+          {STEPS.map(({ icon: Icon, key, image, link }, idx) => {
             const title = lang === 'zh'
               ? (['新西兰牧场', '年度剪获', '专有加工工艺', '匠心制造', '奢华成品'] as const)[idx]
               : (['NZ Farm', 'Annual Shearing', 'Proprietary Processing', 'Craftsmanship', 'Luxury Product'] as const)[idx];
@@ -98,16 +98,14 @@ const FarmStorySection = () => {
                 transition={{ duration: 0.55, delay: 0.15 + idx * 0.12 }}
                 className="flex gap-6 md:gap-10 mb-10 last:mb-0"
               >
-                {/* Icon circle */}
-                <div className="flex-shrink-0 relative">
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full border border-pa-gold-lt/40 bg-pa-ivory/5 flex items-center justify-center z-10 relative">
-                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-pa-gold-lt" />
-                  </div>
-                  {/* Step number */}
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-pa-gold-lt text-pa-navy text-[10px] font-body font-semibold flex items-center justify-center">
-                    {idx + 1}
-                  </span>
-                </div>
+                {/* Icon circle — links to the page covering this step */}
+                <Link
+                  to={link}
+                  aria-label={title}
+                  className="flex-shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-full border border-pa-gold-lt/40 bg-pa-ivory/5 flex items-center justify-center hover:bg-pa-gold-lt/15 hover:border-pa-gold-lt transition-colors"
+                >
+                  <Icon className="w-5 h-5 md:w-6 md:h-6 text-pa-gold-lt" />
+                </Link>
 
                 {/* Content */}
                 <div className="flex-1 pt-3 md:pt-4">
