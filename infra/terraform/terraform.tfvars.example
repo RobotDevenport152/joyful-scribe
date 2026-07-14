@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Never commit real values.
+
+cloudflare_api_token   = "paste-a-scoped-cloudflare-api-token"
+cloudflare_account_id  = "paste-your-cloudflare-account-id"
+vercel_api_token       = "paste-a-vercel-api-token"
+
+# Defaults already match this project — only override if different.
+# vercel_team_id     = "team_F1dXYNG6H7HNPP4OB6Rm5SJD"
+# vercel_project_id  = "prj_h9qpJHQT6IQFkciPKDrktOS1IknA"
+# domain             = "pacificalpacas.com"

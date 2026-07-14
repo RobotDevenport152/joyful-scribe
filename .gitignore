@@ -52,3 +52,13 @@ supabase/.temp/
 
 # Untracked local-only k8s experiment (contains hardcoded dev credentials)
 k8s/
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/terraform.tfvars
+infra/terraform/*.tfplan
+infra/terraform/crash.log
+# Note: .terraform.lock.hcl is intentionally NOT ignored — commit it, like
+# package-lock.json, so everyone applies with the same provider versions.
