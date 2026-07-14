@@ -5,6 +5,36 @@
 > Updated as issues are found and fixed. Fixed items are struck through with the
 > commit that resolved them; do not delete history — this file is the running log.
 
+## Operational Notes — do this whenever asked to "check the project"
+
+- **Sentry error monitoring is live in production** (added 2026-07-14). DSN is
+  hardcoded in `src/lib/sentry.ts` (safe — DSNs aren't secrets, they ship in
+  the public bundle) pointing at Sentry org `ben-po`, project
+  `javascript-react`. Not routed through `VITE_SENTRY_DSN`/Vercel env vars
+  because that path silently failed to take effect after repeated attempts —
+  see git history around commit `d9a2e1d` if debugging why.
+- **When a "check the project" / project-status request comes in, also check
+  Sentry for new real errors** (project has had zero real events as of
+  2026-07-14 — the only issue on record, `JAVASCRIPT-REACT-1`
+  "`updateFrom`" TypeError, is Sentry's own auto-seeded onboarding sample,
+  not a real bug — ignore it).
+- **How to check**: the `claude.ai Sentry` MCP connector for this account
+  keeps authorizing against an unrelated University of Auckland Sentry org
+  no matter how many times it's reconnected (tried multiple full
+  disconnect/reconnect cycles, incognito, logging out — never resolved).
+  Don't waste time retrying that path. Instead, ask the user for a
+  short-lived, read-only Sentry auth token (Settings → Auth Tokens in the
+  `ben-po` org, scopes `org:read` + `project:read` + `event:read` only) and
+  query the REST API directly, e.g.:
+  ```
+  curl -s "https://sentry.io/api/0/projects/ben-po/javascript-react/issues/?statsPeriod=14d" \
+    -H "Authorization: Bearer <token>"
+  ```
+  Also useful: `GET /api/0/organizations/ben-po/projects/` (check `firstEvent`
+  — `null` means no real events have ever landed). Never write the token
+  itself into this file or any committed file; it's provided fresh each
+  session and the user can revoke it after.
+
 ## P0 — Fix first (visible to every customer, or blocks purchase)
 
 - [ ] **Checkout forces account creation/login before purchase** — `/checkout`
