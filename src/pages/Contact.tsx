@@ -23,7 +23,10 @@ export default function ContactPage() {
     if (!form.name || !form.email || !form.message) return;
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('send-form-email', {
+      // "bright-task" is the send-form-email logic in supabase/functions/bright-task —
+      // named by the Supabase Dashboard when it was deployed manually; keep this in sync
+      // with that folder name if it's ever renamed.
+      const { error } = await supabase.functions.invoke('bright-task', {
         body: { formType: 'contact', locale, ...form },
       });
       if (error) throw error;

@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Star } from 'lucide-react';
 
 const BENEFITS = [
   { icon: ShieldCheck, labelZh: '保暖', labelEn: 'Warmth', descZh: '3倍于羊毛', descEn: '3× warmer than wool' },
@@ -38,6 +37,35 @@ const COMPARISON = [
   { key: '耐用性', keyEn: 'Durability', alpaca: '★★★★★', wool: '★★★★☆', silk: '★★☆☆☆' },
   { key: '抗静电', keyEn: 'Anti-static', alpaca: '★★★★★', wool: '★☆☆☆☆', silk: '★★★☆☆' },
 ];
+
+// TEMPORARY pre-launch placeholder content, shown only while the real
+// product_reviews table has zero approved rows for a product. Must NOT be
+// labeled "Verified Purchase" — these are not tied to real orders. Remove
+// this block once real reviews exist (or earlier, before public launch).
+const SAMPLE_REVIEWS = [
+  { id: 'sample-1', author: '张女士 / Ms. Zhang', rating: 5, textZh: '非常轻盈，比想象中更柔软。温控效果很好，不像羽绒被那样感觉闷热。强烈推荐！', textEn: 'Incredibly light and softer than expected. Temperature regulation is excellent — no stuffy feeling like down. Highly recommend!' },
+  { id: 'sample-2', author: '王先生 / Mr. Wang', rating: 5, textZh: '作为礼物送给父母，他们用了一周就说"终于睡好了"。包装精美，有溯源证书，仪式感很强。', textEn: 'Bought as a gift for my parents. One week in and they said "finally sleeping well." Beautiful packaging with the traceability certificate.' },
+  { id: 'sample-3', author: '李女士 / Ms. Li', rating: 4, textZh: '质量很好，填充均匀，面料很细腻。唯一美中不足是颜色比图片略偏米白。', textEn: 'Great quality, even fill, fine fabric. Only minor note: the color is slightly more off-white than in the photos.' },
+];
+
+function SampleReviewCard({ review, locale }: { review: typeof SAMPLE_REVIEWS[number]; locale: Locale }) {
+  return (
+    <div className="border border-dashed border-border rounded-sm p-4">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <span className="font-body font-semibold text-sm">{review.author}</span>
+          <span className="ml-2 text-xs text-muted-foreground font-body">
+            {locale === 'zh' ? '示例评价 · 测试数据' : 'Sample review · test data'}
+          </span>
+        </div>
+      </div>
+      <div className="text-gold text-sm mb-1">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+      <p className="text-sm font-body text-muted-foreground">
+        {locale === 'zh' ? review.textZh : review.textEn}
+      </p>
+    </div>
+  );
+}
 
 interface ReviewCardProps {
   review: ProductReview;
@@ -630,9 +658,16 @@ export default function ProductDetailPage() {
                     )}
                   </>
                 ) : (
-                  <p className="text-center text-sm text-muted-foreground font-body mb-8">
-                    {locale === 'zh' ? '暂无评价，欢迎成为第一位分享体验的顾客。' : 'No reviews yet — be the first to share your experience.'}
-                  </p>
+                  <div className="mb-8">
+                    <p className="text-center text-sm text-muted-foreground font-body mb-4">
+                      {locale === 'zh' ? '暂无真实评价，以下为示例展示：' : 'No real reviews yet — sample content shown below:'}
+                    </p>
+                    <div className="space-y-4">
+                      {SAMPLE_REVIEWS.map(review => (
+                        <SampleReviewCard key={review.id} review={review} locale={locale} />
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {eligibility?.eligible && (
