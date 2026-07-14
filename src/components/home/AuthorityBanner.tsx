@@ -106,6 +106,16 @@ const BADGES: Badge[] = [
     isNew: true,
     image: '/images/endorsement-radio-te-arawa-fm.jpg',
   },
+  {
+    icon: Crown,
+    titleZh: 'Miss National Worldwide 代言',
+    titleEn: 'Miss National Worldwide Ambassador',
+    detailZh: 'Miss National Worldwide 2020-22 People Choice\n获奖者佩戴太平洋羊驼系列产品',
+    detailEn: 'Miss National Worldwide 2020-22 People Choice\nwore and endorsed Pacific Alpacas products',
+    color: 'text-violet-300',
+    isNew: true,
+    image: '/images/endorsement-miss-national-worldwide.jpg',
+  },
 ];
 
 const AuthorityBanner = () => {

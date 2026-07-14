@@ -36,6 +36,7 @@ export default function Navbar() {
     { href: '/traceability', label: locale === 'zh' ? '溯源查询' : 'Traceability' },
     { href: '/verify', label: locale === 'zh' ? '正品验证' : 'Verify' },
     { href: '/lookbook', label: locale === 'zh' ? '造型集' : 'Lookbook' },
+    { href: '/culture', label: locale === 'zh' ? '艺术画廊' : 'Art Gallery' },
     { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
     { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
     { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },

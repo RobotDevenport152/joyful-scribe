@@ -121,7 +121,7 @@ export const products: Product[] = [
     descZh: '40%羊毛+60%羊驼纤维混纺。轻盈保暖，抗起球。',
     category: 'outerwear',
     prices: { NZD: 980, CNY: 5980, USD: 588 },
-    image: '/images/product-coat-main.jpg',
+    image: '/images/product-coat-cloud-camel.jpg',
     stock: 30,
     featured: true,
     variants: sameSizeVariants(
@@ -153,7 +153,7 @@ export const products: Product[] = [
     descZh: '甄选优质羊驼纤维，柔软透气针织毛衣。',
     category: 'accessories',
     prices: { NZD: 220, CNY: 1280, USD: 132 },
-    image: '/images/product-sweater.jpg',
+    image: '/images/product-sweater-cardigan-lifestyle.jpg',
     stock: 35,
     featured: false,
   },

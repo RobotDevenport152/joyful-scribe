@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 const VEST_PHOTOS = Array.from({ length: 12 }, (_, i) => `/images/lookbook/vest-${String(i + 1).padStart(2, '0')}.jpg`);
 const STREET_PHOTOS = Array.from({ length: 12 }, (_, i) => `/images/lookbook/street-${String(i + 1).padStart(2, '0')}.jpg`);
+const CITY_PHOTOS = Array.from({ length: 15 }, (_, i) => `/images/lookbook2/city-${String(i + 1).padStart(2, '0')}.jpg`);
 
 function PhotoGrid({ photos, onSelect }: { photos: string[]; onSelect: (src: string) => void }) {
   return (
@@ -69,11 +70,18 @@ export default function LookbookPage() {
             <PhotoGrid photos={VEST_PHOTOS} onSelect={setLightbox} />
           </div>
 
-          <div>
+          <div className="mb-16">
             <h2 className="font-display text-2xl mb-6">
               {locale === 'zh' ? '城市穿搭' : 'City Looks'}
             </h2>
             <PhotoGrid photos={STREET_PHOTOS} onSelect={setLightbox} />
+          </div>
+
+          <div>
+            <h2 className="font-display text-2xl mb-6">
+              {locale === 'zh' ? '更多造型' : 'More Looks'}
+            </h2>
+            <PhotoGrid photos={CITY_PHOTOS} onSelect={setLightbox} />
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ const mockItem = {
   price_usd: 349,
   size: "200x230",
   color: "经典白",
-  image: "/images/product-classic-duvet.jpg",
+  image: "/images/product-duvet-rolled.jpg",
 };
 
 describe("cartStore", () => {
