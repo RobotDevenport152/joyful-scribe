@@ -4,6 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
+import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -108,6 +109,10 @@ export default function LoginPage() {
                 {loading ? '...' : (locale === 'zh' ? '登录' : 'Sign In')}
               </button>
             </form>
+
+            <div className="mt-6">
+              <SocialAuthButtons locale={locale} redirectPath={from} />
+            </div>
 
             <p className="text-center text-sm text-muted-foreground font-body mt-6">
               {locale === 'zh' ? '没有账号？' : "Don't have an account? "}

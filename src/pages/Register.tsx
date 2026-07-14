@@ -4,6 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
+import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -122,6 +123,10 @@ export default function RegisterPage() {
                 {loading ? '...' : (locale === 'zh' ? '注册' : 'Create Account')}
               </button>
             </form>
+
+            <div className="mt-6">
+              <SocialAuthButtons locale={locale} redirectPath={from} />
+            </div>
 
             <p className="text-center text-sm text-muted-foreground font-body mt-6">
               {locale === 'zh' ? '已有账号？' : 'Already have an account? '}
