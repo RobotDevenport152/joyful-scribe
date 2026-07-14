@@ -46,7 +46,21 @@ const SAMPLE_REVIEWS = [
   { id: 'sample-1', author: '张女士 / Ms. Zhang', rating: 5, textZh: '非常轻盈，比想象中更柔软。温控效果很好，不像羽绒被那样感觉闷热。强烈推荐！', textEn: 'Incredibly light and softer than expected. Temperature regulation is excellent — no stuffy feeling like down. Highly recommend!' },
   { id: 'sample-2', author: '王先生 / Mr. Wang', rating: 5, textZh: '作为礼物送给父母，他们用了一周就说"终于睡好了"。包装精美，有溯源证书，仪式感很强。', textEn: 'Bought as a gift for my parents. One week in and they said "finally sleeping well." Beautiful packaging with the traceability certificate.' },
   { id: 'sample-3', author: '李女士 / Ms. Li', rating: 4, textZh: '质量很好，填充均匀，面料很细腻。唯一美中不足是颜色比图片略偏米白。', textEn: 'Great quality, even fill, fine fabric. Only minor note: the color is slightly more off-white than in the photos.' },
+  { id: 'sample-4', author: '陈先生 / Mr. Chen', rating: 5, textZh: '溯源二维码扫了之后能看到具体牧场信息，这个细节很打动我，感觉钱花得值。', textEn: 'Scanned the traceability QR code and could see the exact farm details — that detail really won me over. Felt worth every dollar.' },
+  { id: 'sample-5', author: '刘女士 / Ms. Liu', rating: 5, textZh: '冬天盖着一点都不重，也不会像羽绒被一样过敏，孩子皮肤敏感也能用。', textEn: 'Doesn\'t feel heavy at all in winter, and unlike down it doesn\'t trigger allergies — safe even for my child\'s sensitive skin.' },
+  { id: 'sample-6', author: '赵先生 / Mr. Zhao', rating: 4, textZh: '物流稍微慢了几天，但客服态度很好，被子本身没得挑。', textEn: 'Shipping was a few days slower than expected, but customer service was great and the duvet itself is flawless.' },
 ];
+
+function computeReviewStats(ratings: number[]) {
+  const count = ratings.length;
+  const avg = count > 0 ? ratings.reduce((sum, r) => sum + r, 0) / count : 0;
+  const distribution = [5, 4, 3, 2, 1].map(stars => ({
+    stars,
+    label: `${stars}★`,
+    pct: count > 0 ? Math.round((ratings.filter(r => r === stars).length / count) * 100) : 0,
+  }));
+  return { count, avg, distribution };
+}
 
 function SampleReviewCard({ review, locale }: { review: typeof SAMPLE_REVIEWS[number]; locale: Locale }) {
   return (
@@ -192,14 +206,22 @@ export default function ProductDetailPage() {
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
   });
   const reviewCount = approvedReviews.length;
-  const avgRating = reviewCount > 0
-    ? approvedReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-    : 0;
-  const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
-    stars,
-    label: `${stars}★`,
-    pct: reviewCount > 0 ? Math.round((approvedReviews.filter(r => r.rating === stars).length / reviewCount) * 100) : 0,
-  }));
+  const { avg: avgRating, distribution: ratingDistribution } = computeReviewStats(approvedReviews.map(r => r.rating));
+
+  // While there are zero real approved reviews, the "view all reviews" section
+  // (summary, distribution, dialog with sorting) falls back to the sample set
+  // above so the layout/interaction matches what's shown once real reviews
+  // exist — just with the honest "sample review" card instead of ReviewCard.
+  const usingSampleReviews = reviewCount === 0;
+  const sortedSampleReviews = [...SAMPLE_REVIEWS].sort((a, b) => {
+    if (reviewSort === 'highest') return b.rating - a.rating;
+    if (reviewSort === 'lowest') return a.rating - b.rating;
+    return 0;
+  });
+  const sampleStats = computeReviewStats(SAMPLE_REVIEWS.map(r => r.rating));
+  const displayCount = usingSampleReviews ? sampleStats.count : reviewCount;
+  const displayAvg = usingSampleReviews ? sampleStats.avg : avgRating;
+  const displayDistribution = usingSampleReviews ? sampleStats.distribution : ratingDistribution;
 
   const handleSubmitReview = async () => {
     if (!user || !eligibility?.eligible || !eligibility.orderId || !product) return;
@@ -617,56 +639,51 @@ export default function ProductDetailPage() {
 
             {activeTab === 'reviews' && (
               <div className="max-w-2xl mx-auto">
-                {reviewCount > 0 ? (
-                  <>
-                    <div className="mb-8 text-center">
-                      <div className="text-4xl font-display font-semibold mb-1">{avgRating.toFixed(1)}</div>
-                      <div className="text-gold text-xl mb-1">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</div>
-                      <div className="text-sm text-muted-foreground font-body">
-                        {locale === 'zh' ? `${reviewCount}条评价` : `${reviewCount} review${reviewCount === 1 ? '' : 's'}`}
+                {usingSampleReviews && (
+                  <p className="text-center text-xs text-muted-foreground font-body mb-4">
+                    {locale === 'zh' ? '暂无真实评价，以下为示例展示：' : 'No real reviews yet — sample content shown below:'}
+                  </p>
+                )}
+
+                <div className="mb-8 text-center">
+                  <div className="text-4xl font-display font-semibold mb-1">{displayAvg.toFixed(1)}</div>
+                  <div className="text-gold text-xl mb-1">{'★'.repeat(Math.round(displayAvg))}{'☆'.repeat(5 - Math.round(displayAvg))}</div>
+                  <div className="text-sm text-muted-foreground font-body">
+                    {locale === 'zh' ? `${displayCount}条评价` : `${displayCount} review${displayCount === 1 ? '' : 's'}`}
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-8 max-w-xs mx-auto">
+                  {displayDistribution.map(row => (
+                    <div key={row.stars} className="flex items-center gap-3 text-sm font-body">
+                      <span className="w-6 text-muted-foreground">{row.label}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-gold rounded-full" style={{ width: `${row.pct}%` }} />
                       </div>
+                      <span className="w-8 text-right text-muted-foreground">{row.pct}%</span>
                     </div>
+                  ))}
+                </div>
 
-                    <div className="space-y-2 mb-8 max-w-xs mx-auto">
-                      {ratingDistribution.map(row => (
-                        <div key={row.stars} className="flex items-center gap-3 text-sm font-body">
-                          <span className="w-6 text-muted-foreground">{row.label}</span>
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-gold rounded-full" style={{ width: `${row.pct}%` }} />
-                          </div>
-                          <span className="w-8 text-right text-muted-foreground">{row.pct}%</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-4 mb-6">
-                      {sortedReviews.slice(0, 3).map(review => (
+                <div className="space-y-4 mb-6">
+                  {usingSampleReviews
+                    ? sortedSampleReviews.slice(0, 3).map(review => (
+                        <SampleReviewCard key={review.id} review={review} locale={locale} />
+                      ))
+                    : sortedReviews.slice(0, 3).map(review => (
                         <ReviewCard key={review.id} review={review} locale={locale} />
                       ))}
-                    </div>
+                </div>
 
-                    {sortedReviews.length > 3 && (
-                      <div className="text-center mb-8">
-                        <button
-                          type="button"
-                          onClick={() => setAllReviewsOpen(true)}
-                          className="text-sm font-body text-gold hover:underline"
-                        >
-                          {locale === 'zh' ? '查看全部评价' : 'View all reviews'} →
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="mb-8">
-                    <p className="text-center text-sm text-muted-foreground font-body mb-4">
-                      {locale === 'zh' ? '暂无真实评价，以下为示例展示：' : 'No real reviews yet — sample content shown below:'}
-                    </p>
-                    <div className="space-y-4">
-                      {SAMPLE_REVIEWS.map(review => (
-                        <SampleReviewCard key={review.id} review={review} locale={locale} />
-                      ))}
-                    </div>
+                {displayCount > 3 && (
+                  <div className="text-center mb-8">
+                    <button
+                      type="button"
+                      onClick={() => setAllReviewsOpen(true)}
+                      className="text-sm font-body text-gold hover:underline"
+                    >
+                      {locale === 'zh' ? '查看全部评价' : 'View all reviews'} →
+                    </button>
                   </div>
                 )}
 
@@ -722,7 +739,7 @@ export default function ProductDetailPage() {
                   <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
                     <DialogHeader>
                       <DialogTitle className="font-display">
-                        {locale === 'zh' ? '全部评价' : 'All Reviews'} · {reviewCount}
+                        {locale === 'zh' ? '全部评价' : 'All Reviews'} · {displayCount}
                       </DialogTitle>
                     </DialogHeader>
 
@@ -730,11 +747,11 @@ export default function ProductDetailPage() {
                         not just a longer list appended to what's already shown */}
                     <div className="flex items-center gap-6 pb-4 border-b border-border flex-shrink-0">
                       <div className="text-center flex-shrink-0">
-                        <div className="text-3xl font-display font-semibold">{avgRating.toFixed(1)}</div>
-                        <div className="text-gold text-sm">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</div>
+                        <div className="text-3xl font-display font-semibold">{displayAvg.toFixed(1)}</div>
+                        <div className="text-gold text-sm">{'★'.repeat(Math.round(displayAvg))}{'☆'.repeat(5 - Math.round(displayAvg))}</div>
                       </div>
                       <div className="flex-1 space-y-1">
-                        {ratingDistribution.map(row => (
+                        {displayDistribution.map(row => (
                           <div key={row.stars} className="flex items-center gap-2 text-xs font-body">
                             <span className="w-5 text-muted-foreground">{row.label}</span>
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -772,9 +789,13 @@ export default function ProductDetailPage() {
                     </div>
 
                     <div className="space-y-4 overflow-y-auto pr-1">
-                      {sortedReviews.map(review => (
-                        <ReviewCard key={review.id} review={review} locale={locale} />
-                      ))}
+                      {usingSampleReviews
+                        ? sortedSampleReviews.map(review => (
+                            <SampleReviewCard key={review.id} review={review} locale={locale} />
+                          ))
+                        : sortedReviews.map(review => (
+                            <ReviewCard key={review.id} review={review} locale={locale} />
+                          ))}
                     </div>
                   </DialogContent>
                 </Dialog>
