@@ -15,7 +15,7 @@ resource "cloudflare_record" "apex" {
   zone_id = cloudflare_zone.this.id
   name    = "@"
   type    = "A"
-  value   = "76.76.21.21"
+  content = "76.76.21.21"
   proxied = true
   ttl     = 1 # ignored by Cloudflare when proxied
 }
@@ -24,7 +24,7 @@ resource "cloudflare_record" "www" {
   zone_id = cloudflare_zone.this.id
   name    = "www"
   type    = "CNAME"
-  value   = "cname.vercel-dns-0.com"
+  content = "cname.vercel-dns-0.com"
   proxied = true
   ttl     = 1
 }
@@ -34,12 +34,20 @@ resource "cloudflare_record" "www" {
 resource "cloudflare_zone_settings_override" "this" {
   zone_id = cloudflare_zone.this.id
   settings {
-    ssl                      = "full_strict"
+    ssl                      = "strict" # this is Cloudflare's "Full (strict)" mode
     always_use_https         = "on"
     min_tls_version          = "1.2"
     automatic_https_rewrites = "on"
-    bot_fight_mode           = "on"
   }
+}
+
+# Bot Fight Mode lives on its own resource, not in zone_settings_override's
+# settings block (confirmed via `terraform providers schema` against the
+# actual provider version — the settings-block attribute name doesn't
+# exist here even though older docs/examples reference it that way).
+resource "cloudflare_bot_management" "this" {
+  zone_id    = cloudflare_zone.this.id
+  fight_mode = true
 }
 
 # Resend domain verification records — pacificalpacas.com was registered in
@@ -53,7 +61,7 @@ resource "cloudflare_record" "resend_dkim" {
   zone_id = cloudflare_zone.this.id
   name    = "resend._domainkey"
   type    = "TXT"
-  value   = "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDLHn76jIGx0q2SIDgVmOJWNt0qNIiuIWFQICCYSChTWfJIfeu1Zgt2XQOxby7oqgYeVwXhLZKbgLulmWqCIrciQ+WPQhnTBMiy8oATTA/wJQbvSqaQANo1zu8Ac9gFkYYholKczFD7bAYYfY/M8RNfLPvqV2yPO7kTl6ZNXu9vcwIDAQAB"
+  content = "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDLHn76jIGx0q2SIDgVmOJWNt0qNIiuIWFQICCYSChTWfJIfeu1Zgt2XQOxby7oqgYeVwXhLZKbgLulmWqCIrciQ+WPQhnTBMiy8oATTA/wJQbvSqaQANo1zu8Ac9gFkYYholKczFD7bAYYfY/M8RNfLPvqV2yPO7kTl6ZNXu9vcwIDAQAB"
   proxied = false
   ttl     = 3600
 }
@@ -62,7 +70,7 @@ resource "cloudflare_record" "resend_spf_mx" {
   zone_id  = cloudflare_zone.this.id
   name     = "send"
   type     = "MX"
-  value    = "feedback-smtp.us-east-1.amazonses.com"
+  content  = "feedback-smtp.us-east-1.amazonses.com"
   priority = 10
   proxied  = false
   ttl      = 3600
@@ -72,7 +80,7 @@ resource "cloudflare_record" "resend_spf_txt" {
   zone_id = cloudflare_zone.this.id
   name    = "send"
   type    = "TXT"
-  value   = "v=spf1 include:amazonses.com ~all"
+  content = "v=spf1 include:amazonses.com ~all"
   proxied = false
   ttl     = 3600
 }
