@@ -8,6 +8,18 @@ import "./index.css";
 
 initSentry();
 
+// A stale tab can try to fetch a chunk that a newer deploy has already removed
+// (hashed filename no longer exists) — Vite dispatches this event when that
+// dynamic import fails. Reload once to pick up the current build; the
+// sessionStorage guard stops a reload loop if the fetch keeps failing.
+window.addEventListener("vite:preloadError", () => {
+  const key = "vite-preload-error-reloaded";
+  if (!sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key, "1");
+    window.location.reload();
+  }
+});
+
 const errorFallback = (
   <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 }}>
     <div>

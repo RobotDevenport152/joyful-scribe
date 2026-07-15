@@ -14,10 +14,10 @@
   because that path silently failed to take effect after repeated attempts —
   see git history around commit `d9a2e1d` if debugging why.
 - **When a "check the project" / project-status request comes in, also check
-  Sentry for new real errors** (project has had zero real events as of
-  2026-07-14 — the only issue on record, `JAVASCRIPT-REACT-1`
-  "`updateFrom`" TypeError, is Sentry's own auto-seeded onboarding sample,
-  not a real bug — ignore it).
+  Sentry for new real errors** (the only issue on record as of 2026-07-14,
+  `JAVASCRIPT-REACT-1` "`updateFrom`" TypeError, is Sentry's own auto-seeded
+  onboarding sample, not a real bug — ignore it. Two real errors,
+  `JAVASCRIPT-REACT-2`/`-3`, showed up 2026-07-15 — see Fixed below).
 - **How to check**: the `claude.ai Sentry` MCP connector for this account
   keeps authorizing against an unrelated University of Auckland Sentry org
   no matter how many times it's reconnected (tried multiple full
@@ -67,6 +67,19 @@
   needs `ffmpeg`, which isn't available in this environment.)
 
 ## Fixed
+
+- [x] **Stale-tab chunk load failures after a deploy** — Sentry showed two real
+  errors (`JAVASCRIPT-REACT-2`, `JAVASCRIPT-REACT-3`, 2026-07-15), both
+  `TypeError: Failed to fetch dynamically imported module` for the
+  `FarmMap` chunk (`src/components/growers/FarmMap.tsx`, lazy-loaded on the
+  homepage and `/growers-info`). Root cause: a browser tab open across a
+  deploy still references the old build's hashed chunk filenames; once the
+  new deploy removes those files, a lazy `import()` for one 404s. Fixed by
+  listening for Vite's `vite:preloadError` event in `src/main.tsx` and
+  reloading the page once (a `sessionStorage` flag prevents a reload loop
+  if the fetch keeps failing). Also removed a stray duplicate of
+  `20260329100000_add_growers_user_id.sql` that existed both at the repo
+  root and in `supabase/migrations/` — harmless but dead weight.
 
 - [x] **AI-generated fake webpage mockups used as product images — wider than
   first scoped.** Same class of bug previously found and fixed for
