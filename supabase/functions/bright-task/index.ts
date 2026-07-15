@@ -23,11 +23,10 @@ function getCorsHeaders(origin: string | null) {
 const FORM_RATE_LIMIT = 5; // submissions
 const FORM_RATE_WINDOW_SECONDS = 600; // per 10 minutes per IP
 
-// Falls back to Resend's shared test sender until the business's own domain
-// is verified in Resend (Domains → Add Domain) — sending from an unverified
-// custom domain is rejected by Resend's API, so this default keeps the
-// feature working the moment RESEND_API_KEY is set, not just after DNS is done.
-const DEFAULT_FROM = "Pacific Alpacas <onboarding@resend.dev>";
+// Real fallback now that pacificalpaca.com is verified in Resend. RESEND_FROM_EMAIL
+// is the actual switch (see customDomainVerified below) — this constant only
+// covers the case where that secret somehow isn't set on the deployed function.
+const DEFAULT_FROM = "Pacific Alpacas <info@pacificalpaca.com>";
 const DEFAULT_ADMIN_EMAIL = "info@pacificalpacas.nz";
 
 interface ContactPayload {
