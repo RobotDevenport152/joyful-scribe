@@ -13,7 +13,7 @@ A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand tar
 | Server state | TanStack React Query | Declarative cache with stale-time control. Product catalogue changes infrequently — 5-min stale time eliminates redundant DB hits without stale UI. |
 | Backend | Supabase (PostgreSQL + Auth + Edge Functions) | Row-Level Security means access control lives in the database, not scattered across API handlers. Eliminates an entire class of privilege escalation bugs. |
 | Payments | Stripe Checkout + Webhook | Checkout session offloads PCI scope. Order creation happens in the webhook handler after Stripe confirms payment — not at the "Place Order" click — so inventory is never decremented on failed payments. |
-| AI Chat | Google Gemini 2.5 Flash (Edge Function) | Runs server-side so the API key never reaches the client. The Edge Function transforms Gemini's response to OpenAI format, making the ChatWidget provider-agnostic. |
+| AI Chat | Google Gemini 3.5 Flash (Edge Function) | Runs server-side so the API key never reaches the client. The Edge Function transforms Gemini's response to OpenAI format, making the ChatWidget provider-agnostic. |
 | i18n | react-i18next | Two locales (zh/en). All strings in `src/i18n/index.ts`; locale state in React Context synced to i18next on every change so the language switcher updates all components atomically. |
 | Currency | Live rates via Frankfurter API | Exchange rates fetched with a 6-hour stale time, with fallback to hardcoded values on failure. Prices stored in NZD only — conversions happen at render time. |
 
@@ -49,7 +49,7 @@ Every table has RLS enabled. The `has_role(user_id, role)` security-definer func
 - **Fiber traceability** — QR-scannable batch codes linking products to specific NZ farms, with 6-step processing chain visualisation
 - **Grower portal** — Authenticated dashboard for NZ farmers: fiber batches, credit balance, transaction history
 - **Admin panel** — Full back-office: products, orders, growers, fiber batches, promo codes, 6-month revenue chart
-- **AI chat assistant** — In-page customer service powered by Gemini 2.5 Flash
+- **AI chat assistant** — In-page customer service powered by Gemini 3.5 Flash
 - **Stripe payments** — Secure checkout with webhook-driven order creation and inventory decrement trigger
 - **Sleep quiz** — Interactive product recommender
 
