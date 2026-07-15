@@ -13,7 +13,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  if (origin === "https://pacificalpacas.com") return true;
+  if (origin === "https://pacificalpaca.com") return true;
+  if (origin === "https://pacificalpacas.com") return true; // legacy domain, still live (WordPress)
   if (origin.startsWith("http://localhost")) return true;
   if (origin.endsWith(".lovable.app")) return true;
   if (origin.endsWith(".lovableproject.com")) return true;
@@ -22,7 +23,7 @@ function isAllowedOrigin(origin: string | null): boolean {
 }
 
 function getCorsHeaders(origin: string | null) {
-  const allowed = isAllowedOrigin(origin) ? origin! : "https://pacificalpacas.com";
+  const allowed = isAllowedOrigin(origin) ? origin! : "https://pacificalpaca.com";
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",

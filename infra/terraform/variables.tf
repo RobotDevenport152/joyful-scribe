@@ -1,5 +1,5 @@
 variable "cloudflare_api_token" {
-  description = "Cloudflare API token scoped to Zone:DNS:Edit, Zone:Zone Settings:Edit, Zone:Firewall Services:Edit for pacificalpacas.com only."
+  description = "Cloudflare API token scoped to Zone:DNS:Edit, Zone:Zone Settings:Edit, Zone:Firewall Services:Edit, Zone:WAF:Edit, Zone:Bot Management:Edit, plus Account:Zone:Edit for pacificalpaca.com."
   type        = string
   sensitive   = true
 }
@@ -28,7 +28,7 @@ variable "vercel_project_id" {
 }
 
 variable "domain" {
-  description = "Apex domain."
+  description = "Apex domain. NOT pacificalpacas.com (plural) -- that's a separate legacy GoDaddy domain still running the old WordPress site with real email; the brand confirmed pacificalpaca.com (singular, Alibaba Cloud registrar) is the one the new site goes on."
   type        = string
-  default     = "pacificalpacas.com"
+  default     = "pacificalpaca.com"
 }

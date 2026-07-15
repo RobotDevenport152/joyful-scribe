@@ -9,6 +9,6 @@ output "zone_status" {
 }
 
 output "resend_domain_id" {
-  description = "Resend domain id (already registered via API on 2026-07-15) — once the zone is active, trigger verification with: curl -X POST https://api.resend.com/domains/039f091b-841c-49a5-8447-ae07f72372c7/verify -H \"Authorization: Bearer $RESEND_API_KEY\", or click Verify DNS Records at resend.com/domains."
-  value       = "039f091b-841c-49a5-8447-ae07f72372c7"
+  description = "Resend domain id for pacificalpaca.com (registered via API on 2026-07-15) — once the zone is active, trigger verification with: curl -X POST https://api.resend.com/domains/21f73e4f-57e2-46a7-810f-96716c766d50/verify -H \"Authorization: Bearer $RESEND_API_KEY\", or click Verify DNS Records at resend.com/domains."
+  value       = "21f73e4f-57e2-46a7-810f-96716c766d50"
 }

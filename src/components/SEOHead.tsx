@@ -8,7 +8,7 @@ interface Props {
 
 export default function SEOHead({ title, description = '', image }: Props) {
   const fullTitle = `${title} | Pacific Alpacas — Luxury in Your Dreams`;
-  const ogImage = image || 'https://pacificalpacas.com/og-default.jpg';
+  const ogImage = image || 'https://pacificalpaca.com/og-default.jpg';
 
   return (
     <Helmet>
