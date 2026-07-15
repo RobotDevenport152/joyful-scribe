@@ -30,6 +30,7 @@ const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const WeChatCallback = React.lazy(() => import("./pages/WeChatCallback"));
 const MyOrders = React.lazy(() => import("./pages/MyOrders"));
 const GrowerBatches = React.lazy(() => import("./pages/GrowerBatches"));
 const GrowerCredits = React.lazy(() => import("./pages/GrowerCredits"));
@@ -112,6 +113,7 @@ const App = () => (
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/auth/wechat/callback" element={<WeChatCallback />} />
 
                 {/* Auth-required routes — still get Navbar/CartDrawer shell */}
                 <Route

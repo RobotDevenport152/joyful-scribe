@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { isWeChatBrowser, buildWeChatAuthUrl } from '@/lib/wechat';
 
 type Provider = 'google' | 'facebook' | 'azure';
 
@@ -40,6 +41,15 @@ function MicrosoftIcon() {
   );
 }
 
+function WeChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true" fill="#07C160">
+      <path d="M8.69 2.94C4.15 2.94.5 6.02.5 9.83c0 2.2 1.22 4.15 3.11 5.44a.6.6 0 0 1 .24.66l-.4 1.53a.3.3 0 0 0 .44.34l1.8-1.04a.6.6 0 0 1 .5-.06 9.6 9.6 0 0 0 2.5.33h.26a5.9 5.9 0 0 1-.2-1.5c0-3.5 3.4-6.33 7.6-6.33.25 0 .5.01.73.03C16.4 5.24 12.9 2.94 8.69 2.94zm-2.5 3.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8zm5 0a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z" />
+      <path d="M23.5 15.1c0-3.04-3.1-5.5-6.9-5.5s-6.9 2.46-6.9 5.5 3.1 5.5 6.9 5.5c.7 0 1.38-.08 2.02-.24a.5.5 0 0 1 .4.05l1.48.85a.25.25 0 0 0 .37-.28l-.33-1.25a.5.5 0 0 1 .2-.55c1.65-1.06 2.76-2.71 2.76-4.08zm-9.2-1.13a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm4.6 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z" />
+    </svg>
+  );
+}
+
 export default function SocialAuthButtons({ locale, redirectPath = '/' }: SocialAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
 
@@ -58,6 +68,10 @@ export default function SocialAuthButtons({ locale, redirectPath = '/' }: Social
       toast.error(err.message || (locale === 'zh' ? '登录失败，请重试' : 'Sign-in failed, please try again'));
       setLoadingProvider(null);
     }
+  };
+
+  const handleWeChat = () => {
+    window.location.href = buildWeChatAuthUrl(redirectPath);
   };
 
   return (
@@ -99,6 +113,17 @@ export default function SocialAuthButtons({ locale, redirectPath = '/' }: Social
           {loadingProvider === 'azure' ? '...' : 'Microsoft'}
         </button>
       </div>
+
+      {isWeChatBrowser() && (
+        <button
+          type="button"
+          onClick={handleWeChat}
+          className="w-full flex items-center justify-center gap-1.5 py-3 border border-border rounded-sm font-body text-xs sm:text-sm hover:bg-muted transition"
+        >
+          <WeChatIcon />
+          {locale === 'zh' ? '微信登录' : 'Log in with WeChat'}
+        </button>
+      )}
     </div>
   );
 }
