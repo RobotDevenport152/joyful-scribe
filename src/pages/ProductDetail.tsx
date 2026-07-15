@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import type { Locale } from '@/lib/i18n';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import Footer from '@/components/Footer';
-import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X, Star } from 'lucide-react';
+import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X, Star, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -498,6 +498,18 @@ export default function ProductDetailPage() {
                   </Link>
                 )}
               </div>
+
+              <Link
+                to="/verify"
+                className="mt-3 flex items-center gap-2.5 px-4 py-3 bg-secondary/40 border border-border rounded-sm text-sm font-body hover:border-gold transition-colors"
+              >
+                <Fingerprint className="w-4 h-4 text-gold flex-shrink-0" />
+                <span className="text-muted-foreground">
+                  {locale === 'zh'
+                    ? '本品配备独立防伪码 · 收货后可在证书上查验 →'
+                    : 'Comes with an individual anti-counterfeit code — verify it on your certificate after delivery →'}
+                </span>
+              </Link>
 
               <div className="grid grid-cols-5 gap-3 mt-8">
                 {BENEFITS.map((b) => (
