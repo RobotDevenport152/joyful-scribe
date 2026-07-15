@@ -10,6 +10,7 @@ import ProcessSection from '@/components/home/ProcessSection';
 import CertificationsSection from '@/components/home/CertificationsSection';
 import BrandHeritageSection from '@/components/home/BrandHeritageSection';
 import MediaCoverageSection from '@/components/home/MediaCoverageSection';
+import CultureShowcaseSection from '@/components/home/CultureShowcaseSection';
 import GrowerNetworkSection from '@/components/home/GrowerNetworkSection';
 
 export default function Index() {
@@ -29,6 +30,7 @@ export default function Index() {
       <CertificationsSection />
       <BrandHeritageSection />
       <MediaCoverageSection />
+      <CultureShowcaseSection />
       <GrowerNetworkSection />
       <ChatWidget />
     </div>
