@@ -21,6 +21,7 @@ const Contact = React.lazy(() => import("./pages/Contact"));
 const GrowersInfo = React.lazy(() => import("./pages/GrowersInfo"));
 const ApplyGrower = React.lazy(() => import("./pages/ApplyGrower"));
 const Wholesale = React.lazy(() => import("./pages/Wholesale"));
+const CorporateGifts = React.lazy(() => import("./pages/CorporateGifts"));
 const ChinaLanding = React.lazy(() => import("./pages/ChinaLanding"));
 const Compare = React.lazy(() => import("./pages/Compare"));
 const Returns = React.lazy(() => import("./pages/Returns"));
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/growers-info" element={<GrowersInfo />} />
                 <Route path="/wholesale" element={<Wholesale />} />
+                <Route path="/corporate-gifts" element={<CorporateGifts />} />
                 <Route path="/china" element={<ChinaLanding />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/returns" element={<Returns />} />

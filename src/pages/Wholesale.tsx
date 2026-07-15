@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Scissors, Droplets, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
+import { TrustSignals } from '@/components/wholesale/TrustSignals';
 
 const OFFERINGS = [
   { icon: Scissors, titleEn: 'Raw Fibre', titleZh: '原始纤维', descEn: 'Unsorted alpaca fleece direct from our collection pool', descZh: '来自我们收集池的未分类羊驼毛' },
@@ -67,6 +69,19 @@ export default function WholesalePage() {
 
       <div className="flex-1 py-16">
         <div className="container mx-auto px-6">
+          <TrustSignals />
+
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <p className="text-sm text-muted-foreground font-body">
+              {locale === 'zh'
+                ? '为企业采购礼品、批量定制？'
+                : 'Sourcing for corporate gifting or custom branding?'}{' '}
+              <Link to="/corporate-gifts" className="text-gold hover:underline font-semibold">
+                {locale === 'zh' ? '查看企业礼品定制 →' : 'See Corporate Gifting →'}
+              </Link>
+            </p>
+          </div>
+
           {/* Offerings */}
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
             {OFFERINGS.map((item, i) => (

@@ -39,6 +39,7 @@ export default function Navbar() {
     { href: '/culture', label: locale === 'zh' ? '艺术画廊' : 'Art Gallery' },
     { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
     { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
+    { href: '/corporate-gifts', label: locale === 'zh' ? '企业礼品定制' : 'Corporate Gifting' },
     { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },
     { href: '/china', label: locale === 'zh' ? '中国专区' : 'China' },
     { href: '/my-orders', label: locale === 'zh' ? '我的订单' : 'My Orders' },
