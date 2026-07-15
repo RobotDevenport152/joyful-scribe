@@ -42,6 +42,41 @@ resource "cloudflare_zone_settings_override" "this" {
   }
 }
 
+# Resend domain verification records — pacificalpacas.com was registered in
+# Resend on 2026-07-15 (domain id 039f091b-841c-49a5-8447-ae07f72372c7,
+# region us-east-1) via their API, so these are the real values Resend
+# assigned, not placeholders. Resend won't mark the domain verified until
+# these actually resolve, which only happens once the zone above is live —
+# after `terraform apply` + the nameserver cutover, check verification
+# status at resend.com/domains (or POST /domains/{id}/verify).
+resource "cloudflare_record" "resend_dkim" {
+  zone_id = cloudflare_zone.this.id
+  name    = "resend._domainkey"
+  type    = "TXT"
+  value   = "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDLHn76jIGx0q2SIDgVmOJWNt0qNIiuIWFQICCYSChTWfJIfeu1Zgt2XQOxby7oqgYeVwXhLZKbgLulmWqCIrciQ+WPQhnTBMiy8oATTA/wJQbvSqaQANo1zu8Ac9gFkYYholKczFD7bAYYfY/M8RNfLPvqV2yPO7kTl6ZNXu9vcwIDAQAB"
+  proxied = false
+  ttl     = 3600
+}
+
+resource "cloudflare_record" "resend_spf_mx" {
+  zone_id  = cloudflare_zone.this.id
+  name     = "send"
+  type     = "MX"
+  value    = "feedback-smtp.us-east-1.amazonses.com"
+  priority = 10
+  proxied  = false
+  ttl      = 3600
+}
+
+resource "cloudflare_record" "resend_spf_txt" {
+  zone_id = cloudflare_zone.this.id
+  name    = "send"
+  type    = "TXT"
+  value   = "v=spf1 include:amazonses.com ~all"
+  proxied = false
+  ttl     = 3600
+}
+
 # Cloudflare's free Managed Ruleset — baseline WAF coverage (OWASP-style
 # rules) without hand-writing individual rules.
 resource "cloudflare_ruleset" "waf_managed" {

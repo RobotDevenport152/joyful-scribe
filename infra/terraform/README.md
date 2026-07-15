@@ -38,9 +38,11 @@ terraform apply
 ```
 
 This creates the Cloudflare zone, the proxied DNS records pointing at
-Vercel, WAF + rate-limit rules, and attaches the domain to the Vercel
-project. `terraform apply` will print `cloudflare_nameservers` in the
-output.
+Vercel, the Resend domain-verification records (SPF/DKIM — the domain was
+already registered in Resend via their API on 2026-07-15, these are its
+real assigned values), WAF + rate-limit rules, and attaches the domain to
+the Vercel project. `terraform apply` will print `cloudflare_nameservers`
+in the output.
 
 ## Finish the cutover (you — registrar access I don't have)
 
@@ -53,6 +55,13 @@ output.
 6. Once active, visit `https://pacificalpacas.com` and confirm it loads
    the site with a valid cert (padlock, not a warning). Check
    `https://www.pacificalpacas.com` redirects to the apex.
+7. Trigger Resend verification (it doesn't auto-poll): `curl -X POST
+   https://api.resend.com/domains/039f091b-841c-49a5-8447-ae07f72372c7/verify
+   -H "Authorization: Bearer $RESEND_API_KEY"`, or click **Verify DNS
+   Records** at resend.com/domains. Once it flips to `verified`, update
+   `DEFAULT_FROM` in `supabase/functions/bright-task/index.ts` from
+   `onboarding@resend.dev` to a `@pacificalpacas.com` address and redeploy
+   — the shared test sender no longer applies.
 
 ## After this is live
 
