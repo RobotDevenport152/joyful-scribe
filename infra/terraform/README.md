@@ -1,30 +1,50 @@
 # Cloudflare + Vercel infrastructure
 
-Puts Cloudflare in front of the existing Vercel deployment for
-`pacificalpacas.com` — WAF, bot protection, and DNS management as code.
+Puts Cloudflare in front of the Vercel deployment for `pacificalpaca.com`
+(singular — **not** `pacificalpacas.com`, a separate legacy domain still
+running the old WordPress site with its own real email; brand confirmed
+`pacificalpaca.com`, registered at Alibaba Cloud/万网, is the real one).
 Vercel and Supabase stay exactly as they are; this only adds a proxy layer.
+
+## Status as of 2026-07-15: applied, waiting on the nameserver cutover
+
+Everything in this module has already been run against the real Cloudflare
+and Vercel accounts — the zone, DNS records (including `pacificalpaca.com`'s
+real NetEase/163 email, preserved so it doesn't break), Resend verification
+records, bot protection, and rate limiting all exist in Cloudflare right
+now. The one remaining step is nameservers, and it needs registrar access
+this environment doesn't have — see "Finish the cutover" below.
+
+If you're re-running this from scratch (new machine, lost `terraform.tfstate`),
+the account-access steps below still apply.
 
 ## Before you touch this
 
-**Does `pacificalpacas.com` currently send/receive email, or have any other
-DNS records (MX, TXT/SPF, DKIM, existing subdomains)?** Moving the domain's
-nameservers to Cloudflare replaces the entire zone — anything not
-recreated in Cloudflare will silently break (email stops arriving, SPF/DKIM
-fails, etc). Before step 2 below, export the current DNS records at your
-registrar and we add matching ones here first. If you're not sure, stop and
-check before changing nameservers — this is the one genuinely hard-to-reverse
-step in this whole setup.
+**Does the domain you're pointing here currently send/receive email, or
+have any other DNS records (MX, TXT/SPF, DKIM, existing subdomains)?**
+Moving a domain's nameservers to Cloudflare replaces the entire zone —
+anything not recreated in Cloudflare will silently break (email stops
+arriving, SPF/DKIM fails, etc). `cloudflare.tf` already recreates
+`pacificalpaca.com`'s known email records (163.com MX + SPF) — if you're
+adapting this for a different domain, check its existing records first
+(`dig MX/TXT <domain>` or query `https://cloudflare-dns.com/dns-query`)
+and add matching resources before applying. This is the one genuinely
+hard-to-reverse step in this whole setup — a near-miss happened on the
+first attempt (pacificalpacas.com's WordPress DNS was briefly replaced
+before being fully reverted).
 
 ## One-time setup (you — these need account access I don't have)
 
 1. **Cloudflare account**: sign up at cloudflare.com if you don't have one.
    Grab your Account ID from the dashboard sidebar.
 2. **API tokens**:
-   - Cloudflare: My Profile → API Tokens → Create Token → scope to
-     `Zone:DNS:Edit`, `Zone:Zone Settings:Edit`, `Zone:Firewall Services:Edit`,
-     restricted to the `pacificalpacas.com` zone (create the zone first via
-     step 4 below, or scope to "All zones" temporarily and narrow it after).
-   - Vercel: Account Settings → Tokens → Create Token.
+   - Cloudflare: My Profile → API Tokens → Create Token → Custom Token →
+     add permissions `Account`/`Zone`/`Edit` (needed to create the zone
+     itself), `Zone`/`DNS`/`Edit`, `Zone`/`Zone Settings`/`Edit`,
+     `Zone`/`Firewall Services`/`Edit` — Zone Resources: "All zones from
+     an account" (the zone doesn't exist yet, so you can't scope to it).
+   - Vercel: Account Settings → Tokens → Create Token, scoped to the team
+     that owns the `pacific-alpaca-website` project.
 3. Copy `terraform.tfvars.example` → `terraform.tfvars`, fill in both tokens
    and your Cloudflare account ID. This file is gitignored — never commit it.
 
@@ -37,30 +57,43 @@ terraform plan    # read this before applying anything
 terraform apply
 ```
 
-This creates the Cloudflare zone, the proxied DNS records pointing at
-Vercel, the Resend domain-verification records (SPF/DKIM — the domain was
-already registered in Resend via their API on 2026-07-15, these are its
-real assigned values), WAF + rate-limit rules, and attaches the domain to
-the Vercel project. `terraform apply` will print `cloudflare_nameservers`
-in the output.
+Cloudflare's Free plan rejects a few things that look reasonable in the
+config but aren't available on Free — found only by actually running
+apply, not from docs: Bot Fight Mode requires `enable_js = true` alongside
+it; the Managed WAF ruleset needs a paid plan (not included here); rate
+limit `period` and `mitigation_timeout` must both be exactly `10` (not
+`60`/`600`). If you're on Pro or higher and want the stronger settings,
+that's a deliberate downgrade to fit Free — revisit it.
 
 ## Finish the cutover (you — registrar access I don't have)
 
-4. Take the two nameservers from the `cloudflare_nameservers` output and
-   set them at wherever `pacificalpacas.com` is registered (GoDaddy,
-   Namecheap, etc. — replaces whatever nameservers are there now).
-5. Wait for propagation (usually under an hour, can take up to 24h). Check
-   with `terraform apply` again, or `dig NS pacificalpacas.com` — the zone's
-   `status` output flips from `pending` to `active`.
-6. Once active, visit `https://pacificalpacas.com` and confirm it loads
+The real nameservers Cloudflare assigned this zone are:
+```
+aarav.ns.cloudflare.com
+lorna.ns.cloudflare.com
+```
+(confirm with `terraform output cloudflare_nameservers` if state may have
+changed since this was written).
+
+1. Log into the Alibaba Cloud/万网 console (dc.godaddy.com or wherever the
+   registrar for this exact domain is — **check**, don't assume; the
+   pacificalpacas.com/pacificalpaca.com mixup this session happened
+   because two similarly-named domains have different registrars).
+2. Replace the current nameservers (`dns19.hichina.com` /
+   `dns20.hichina.com` for pacificalpaca.com specifically) with the two
+   above.
+3. Wait for propagation (usually under an hour, can take up to 24h). Check
+   with `dig NS pacificalpaca.com`, or `terraform apply` again — the
+   zone's `status` output flips from `pending` to `active`.
+4. Once active, visit `https://pacificalpaca.com` and confirm it loads
    the site with a valid cert (padlock, not a warning). Check
-   `https://www.pacificalpacas.com` redirects to the apex.
-7. Trigger Resend verification (it doesn't auto-poll): `curl -X POST
-   https://api.resend.com/domains/039f091b-841c-49a5-8447-ae07f72372c7/verify
+   `https://www.pacificalpaca.com` redirects to the apex.
+5. Trigger Resend verification (it doesn't auto-poll): `curl -X POST
+   https://api.resend.com/domains/21f73e4f-57e2-46a7-810f-96716c766d50/verify
    -H "Authorization: Bearer $RESEND_API_KEY"`, or click **Verify DNS
    Records** at resend.com/domains. Once it flips to `verified`, update
    `DEFAULT_FROM` in `supabase/functions/bright-task/index.ts` from
-   `onboarding@resend.dev` to a `@pacificalpacas.com` address and redeploy
+   `onboarding@resend.dev` to a `@pacificalpaca.com` address and redeploy
    — the shared test sender no longer applies.
 
 ## After this is live
@@ -72,6 +105,6 @@ in the output.
   whoever's machine ran `apply`. If anyone else needs to touch this,
   move to a remote backend (Terraform Cloud's free tier, or an R2/S3
   bucket) before they do, or you'll get conflicting state.
-- The WAF managed-ruleset ID and rate-limit numbers in `cloudflare.tf` are
-  reasonable starting points, not measured against real traffic — revisit
-  the rate limit once you know real admin-panel usage patterns.
+- The rate-limit numbers in `cloudflare.tf` are a starting guess
+  constrained by the Free plan, not measured against real traffic —
+  revisit once you know real admin-panel usage patterns or upgrade to Pro.

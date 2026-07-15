@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
   if (origin === "https://pacificalpaca.com") return true;
-  if (origin === "https://pacificalpacas.com") return true; // legacy domain, still live (WordPress)
   if (origin.startsWith("http://localhost")) return true;
   if (origin.endsWith(".lovable.app")) return true;
   if (origin.endsWith(".lovableproject.com")) return true;
@@ -56,7 +55,7 @@ ${BRAND_FACTS_EN}
 1. If you don't yet know enough (budget, sleeping preferences — hot/cold sleeper, allergies, bed size, season, who it's for), ask 1-2 short clarifying questions first.
 2. Once you understand their needs, pick 1-2 products from the "Current catalogue" below that best match, and briefly explain WHY (e.g. warmth level, price fit, fiber content, size).
 3. When recommending a product, include a link in this exact format: [Product Name](/product/slug)
-4. Never invent products, prices, or specs that are not in the catalogue below. If nothing fits, say so honestly and suggest contacting WeChat support or info@pacificalpacas.com.
+4. Never invent products, prices, or specs that are not in the catalogue below. If nothing fits, say so honestly and suggest contacting WeChat support or info@pacificalpaca.com.
 5. Keep replies concise (under 120 words), friendly but professional.
 
 ## Current catalogue (only recommend from this list)
@@ -71,7 +70,7 @@ ${BRAND_FACTS}
 1. 如果信息不足（预算、睡眠习惯：怕冷/怕热、过敏情况、床品尺寸、季节、送礼对象等），先用1-2个简短问题澄清需求。
 2. 了解需求后，从下方"当前在售商品目录"中挑选1-2款最匹配的产品，并简要说明推荐理由（如保暖等级、价格区间、纤维成分、尺寸是否合适）。
 3. 推荐产品时，必须使用以下格式附上链接：[产品名称](/product/slug)
-4. 不要编造目录之外不存在的产品、价格或参数。如果没有合适的产品，请如实告知，并引导联系微信客服或邮箱 info@pacificalpacas.com。
+4. 不要编造目录之外不存在的产品、价格或参数。如果没有合适的产品，请如实告知，并引导联系微信客服或邮箱 info@pacificalpaca.com。
 5. 回答简洁（200字以内），专业且亲切。
 
 ## 当前在售商品目录（只能从此列表中推荐）
@@ -84,8 +83,8 @@ ${catalogText}`;
 // message that points the customer to a human channel instead.
 function validateOutput(content: string, locale: "zh" | "en"): { valid: boolean; fallback?: string } {
   const genericFallback = locale === "en"
-    ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpacas.com."
-    : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpacas.com。";
+    ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpaca.com."
+    : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpaca.com。";
 
   if (!content || content.length < 2) return { valid: false, fallback: genericFallback };
   if (content.length > 1500) return { valid: false, fallback: genericFallback };
@@ -182,8 +181,8 @@ serve(async (req) => {
       console.error("gemini_api_error", { status: response.status, body: t });
       return new Response(JSON.stringify({
         error: lang === "en"
-          ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpacas.com."
-          : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpacas.com。",
+          ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpaca.com."
+          : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpaca.com。",
       }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -205,8 +204,8 @@ serve(async (req) => {
     console.error("chat_error", { message: e instanceof Error ? e.message : String(e) });
     return new Response(JSON.stringify({
       error: lang === "en"
-        ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpacas.com."
-        : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpacas.com。",
+        ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpaca.com."
+        : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpaca.com。",
     }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

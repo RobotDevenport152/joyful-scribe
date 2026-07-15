@@ -17,9 +17,9 @@ const mockOrders = [
 ];
 
 const mockUsers = [
-  { id: '1', name: 'Admin User', email: 'admin@pacificalpacas.com', role: 'admin' },
-  { id: '2', name: 'Store Manager', email: 'manager@pacificalpacas.com', role: 'manager' },
-  { id: '3', name: 'Staff', email: 'staff@pacificalpacas.com', role: 'staff' },
+  { id: '1', name: 'Admin User', email: 'admin@pacificalpaca.com', role: 'admin' },
+  { id: '2', name: 'Store Manager', email: 'manager@pacificalpaca.com', role: 'manager' },
+  { id: '3', name: 'Staff', email: 'staff@pacificalpaca.com', role: 'staff' },
 ];
 
 const statusColors: Record<string, string> = {

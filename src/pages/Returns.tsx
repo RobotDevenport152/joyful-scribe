@@ -77,11 +77,11 @@ export default function ReturnsPage() {
               </h2>
               <div className="space-y-4">
                 {(locale === 'zh' ? [
-                  { step: '1', title: '发起申请', desc: '发邮件至 returns@pacificalpacas.com，说明订单号和退换原因，获取退货授权码（RMA）。' },
+                  { step: '1', title: '发起申请', desc: '发邮件至 returns@pacificalpaca.com，说明订单号和退换原因，获取退货授权码（RMA）。' },
                   { step: '2', title: '寄回产品', desc: '将产品寄回仓库地址：1 Pigeon Rock Road, RD2, Cromwell, Central Otago 9382, New Zealand。请注明 RMA 编号。' },
                   { step: '3', title: '验收退款', desc: '我们收到并验收产品后，5个工作日内原路退款至您的支付账户。' },
                 ] : [
-                  { step: '1', title: 'Submit Request', desc: 'Email returns@pacificalpacas.com with your order number and reason to receive a Return Merchandise Authorization (RMA) code.' },
+                  { step: '1', title: 'Submit Request', desc: 'Email returns@pacificalpaca.com with your order number and reason to receive a Return Merchandise Authorization (RMA) code.' },
                   { step: '2', title: 'Ship Back', desc: 'Send the product to: 1 Pigeon Rock Road, RD2, Cromwell, Central Otago 9382, New Zealand. Include your RMA code.' },
                   { step: '3', title: 'Refund Processed', desc: 'Once received and inspected, your refund will be issued within 5 business days to your original payment method.' },
                 ]).map(item => (
@@ -106,8 +106,8 @@ export default function ReturnsPage() {
               </h2>
               <p className="text-sm text-muted-foreground">
                 {locale === 'zh'
-                  ? '如产品存在质量问题（如填充不均、面料缺陷、缝制问题），运费由我们全额承担，并优先安排补发新品，无需等待退款流程。请拍照发送至 quality@pacificalpacas.com，我们将在1个工作日内回复。'
-                  : 'For quality defects (uneven fill, fabric faults, stitching issues), we cover all return shipping and prioritize sending a replacement. Email photos to quality@pacificalpacas.com — we\'ll respond within 1 business day.'}
+                  ? '如产品存在质量问题（如填充不均、面料缺陷、缝制问题），运费由我们全额承担，并优先安排补发新品，无需等待退款流程。请拍照发送至 quality@pacificalpaca.com，我们将在1个工作日内回复。'
+                  : 'For quality defects (uneven fill, fabric faults, stitching issues), we cover all return shipping and prioritize sending a replacement. Email photos to quality@pacificalpaca.com — we\'ll respond within 1 business day.'}
               </p>
             </section>
 
@@ -118,11 +118,11 @@ export default function ReturnsPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <a
-                  href="mailto:returns@pacificalpacas.com"
+                  href="mailto:returns@pacificalpaca.com"
                   className="inline-flex items-center gap-2 px-6 py-2.5 border border-border rounded-sm font-body text-sm hover:border-gold hover:text-gold transition-colors"
                 >
                   <Mail className="w-4 h-4" />
-                  returns@pacificalpacas.com
+                  returns@pacificalpaca.com
                 </a>
                 <Link
                   to="/contact"

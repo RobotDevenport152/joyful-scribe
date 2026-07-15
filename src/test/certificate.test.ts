@@ -25,12 +25,12 @@ describe('isCertificateCodeFormat', () => {
 
 describe('buildVerifyUrl', () => {
   it('builds a /verify/:code link from an origin and code', () => {
-    expect(buildVerifyUrl('PA-CERT-1A2B3C4D5E6F7A8B9C', 'https://pacificalpacas.com'))
-      .toBe('https://pacificalpacas.com/verify/PA-CERT-1A2B3C4D5E6F7A8B9C');
+    expect(buildVerifyUrl('PA-CERT-1A2B3C4D5E6F7A8B9C', 'https://pacificalpaca.com'))
+      .toBe('https://pacificalpaca.com/verify/PA-CERT-1A2B3C4D5E6F7A8B9C');
   });
 
   it('trims the code and URL-encodes special characters', () => {
-    expect(buildVerifyUrl('  PA CERT/1  ', 'https://pacificalpacas.com'))
-      .toBe('https://pacificalpacas.com/verify/PA%20CERT%2F1');
+    expect(buildVerifyUrl('  PA CERT/1  ', 'https://pacificalpaca.com'))
+      .toBe('https://pacificalpaca.com/verify/PA%20CERT%2F1');
   });
 });
