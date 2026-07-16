@@ -12,10 +12,13 @@ terraform {
     }
   }
 
-  # State is not configured to a remote backend yet — this runs with local
-  # state by default. Before a second person touches this, move to a remote
-  # backend (Terraform Cloud, or an S3/R2 bucket) so state isn't only on one
-  # laptop.
+  # Remote state in a Cloudflare R2 bucket (S3-compatible), so state isn't
+  # only on one laptop. Left empty here deliberately -- bucket name,
+  # endpoint, and credentials live in backend.hcl (gitignored, not this
+  # file) and get passed at init time:
+  #   terraform init -backend-config=backend.hcl
+  # See backend.hcl.example for the template.
+  backend "s3" {}
 }
 
 provider "cloudflare" {

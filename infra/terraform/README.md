@@ -101,10 +101,20 @@ changed since this was written).
 - Don't hand-edit DNS/WAF/SSL settings in the Cloudflare dashboard —
   `terraform plan` will detect the drift and try to revert it. Change things
   here, in a PR, so the config stays the source of truth.
-- State is local only (`terraform.tfstate`, gitignored) — it lives on
-  whoever's machine ran `apply`. If anyone else needs to touch this,
-  move to a remote backend (Terraform Cloud's free tier, or an R2/S3
-  bucket) before they do, or you'll get conflicting state.
+- State lives remotely in a Cloudflare R2 bucket (`pacific-alpaca-terraform-state`,
+  S3-compatible backend, configured 2026-07-16). To work with this on a new
+  machine: copy `backend.hcl.example` to `backend.hcl` (gitignored — put
+  the R2 API token's Access Key ID / Secret Access Key in there, from
+  R2 → Manage R2 API Tokens in the Cloudflare dashboard), then run
+  `terraform init -backend-config=backend.hcl`. No local `terraform.tfstate`
+  file is authoritative anymore; if one exists locally from before this
+  migration, it's stale — don't `apply` against it.
+- This backend has no state locking configured (R2 has no DynamoDB
+  equivalent, and the Terraform version in use here predates the S3
+  backend's native `use_lockfile` support, added in 1.10). Fine for a
+  single operator; if a second person starts running `apply` against
+  this, upgrade Terraform to 1.10+ and add `use_lockfile = true` to
+  `backend.hcl` first, or applies can race and corrupt state.
 - The rate-limit numbers in `cloudflare.tf` are a starting guess
   constrained by the Free plan, not measured against real traffic —
   revisit once you know real admin-panel usage patterns or upgrade to Pro.

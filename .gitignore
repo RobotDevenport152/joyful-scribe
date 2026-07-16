@@ -59,6 +59,8 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/terraform.tfvars
 infra/terraform/*.tfplan
+infra/terraform/tfplan
 infra/terraform/crash.log
+infra/terraform/backend.hcl
 # Note: .terraform.lock.hcl is intentionally NOT ignored — commit it, like
 # package-lock.json, so everyone applies with the same provider versions.

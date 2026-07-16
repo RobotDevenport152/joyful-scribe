@@ -1,0 +1,19 @@
+# Copy to backend.hcl (gitignored) and fill in the secret_key.
+# Then run: terraform init -backend-config=backend.hcl -migrate-state
+
+bucket = "pacific-alpaca-terraform-state"
+key    = "terraform.tfstate"
+region = "auto"
+
+endpoints = {
+  s3 = "https://476050cc4afbe52c1fd3f83274cacf86.r2.cloudflarestorage.com"
+}
+
+access_key = "d00a442dab6f5c81acc2adbc777b5d22"
+secret_key = "<fill in the R2 API token's Secret Access Key>"
+
+skip_credentials_validation = true
+skip_region_validation      = true
+skip_metadata_api_check     = true
+skip_requesting_account_id  = true
+use_path_style              = true
