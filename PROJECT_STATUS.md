@@ -68,6 +68,33 @@
 
 ## Fixed
 
+- [x] **Checkout silently broken on the `pacific-alpaca-website.vercel.app`
+  alias domain — CORS mismatch.** New Sentry issue `JAVASCRIPT-REACT-7`
+  "checkout_failed", 2 events 2026-07-16 (two different logged-in users),
+  both from that alias domain, both
+  `"error":"Failed to send a request to the Edge Function"` — the generic
+  message the Supabase client throws when a fetch is blocked before it gets
+  a response, e.g. by CORS. Confirmed directly against production before
+  touching anything: `OPTIONS /functions/v1/create-checkout` with
+  `Origin: https://pacific-alpaca-website.vercel.app` returned
+  `Access-Control-Allow-Origin: https://pacificalpaca.com` (mismatch, so the
+  browser blocks it). `create-checkout`'s `isAllowedOrigin()` allows
+  `pacificalpaca.com`, `localhost`, `*.lovable.app`, `*.lovableproject.com` —
+  not the vercel.app alias — while `wechat-auth`'s allowlist already permits
+  `*.vercel.app`. Also confirmed the alias domain wasn't redirected
+  (`https://pacific-alpaca-website.vercel.app/` returned `200`, not a
+  redirect). Presented the user three options: (a) exact-match allowlist
+  just that host in `create-checkout` (code change, payment-adjacent); (b)
+  redirect the alias to `pacificalpaca.com` so there's one canonical
+  checkout surface and no CORS hole at all, no payment code touched; (c)
+  leave as-is. **User chose (b).** Added a host-matched redirect in
+  `vercel.json` (`has: [{ type: "host", value:
+  "pacific-alpaca-website.vercel.app" }]` → `https://pacificalpaca.com/:path*`,
+  permanent), scoped to that exact host so preview-deployment URLs
+  (`*-<hash>-<team>.vercel.app`) are unaffected. `create-checkout` and the
+  other edge functions' CORS allowlists were deliberately left untouched —
+  no payment code changed.
+
 - [x] **New Sentry error, single occurrence — `JAVASCRIPT-REACT-4`,
   `Error: Map container is already initialized`, culprit `_initContainer`
   in the `FarmMap` chunk (`src/components/growers/FarmMap.tsx`, the
