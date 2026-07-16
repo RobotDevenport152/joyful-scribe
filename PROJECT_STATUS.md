@@ -53,7 +53,70 @@
   needing the server-side Admin API approach for (b). User asked to pause and
   think about it further before implementing either option.
 
+- [ ] **Local migration history doesn't reconstruct the real production
+  schema — worse than "incomplete," it's actively wrong.** Found during a
+  7-item self-audit (2026-07-16). Remote `supabase_migrations.schema_migrations`
+  has 43 applied migrations; `supabase/migrations/` has only 31 files — 11
+  exist only on remote, invisible to git. The most severe: the *very first*
+  local migration (`20260328220859_...sql`) already creates a full
+  `products`/`orders`/`user_roles`/etc. schema (3-value `app_role` enum:
+  `admin, moderator, user`; denormalized `orders.items jsonb`, no
+  `order_items` table). A remote-only migration named `core_schema`
+  (version `20260408003807`, 8.5KB of SQL, no local file) later runs a plain
+  `create table public.products (...)` — no `IF NOT EXISTS` — which could
+  only succeed if the original tables had already been dropped outside of
+  any tracked migration (no local file drops them either). Verified against
+  the live DB: production's `orders` table and `app_role` enum
+  (`admin, moderator, grower, customer`) match `core_schema`'s shape, not
+  the original 20260328 one — confirming the schema really was replaced
+  wholesale, invisibly. **Running `supabase db push`/`db reset` from this
+  repo alone today would not fail loudly — it would silently produce a
+  different, incompatible, long-obsolete schema.** The other 10 remote-only
+  migrations: `fix_security` (RLS + search_path hardening, also
+  2026-04-08), a duplicate-named `checkout_sessions` and
+  `add_sku_to_products` pair (remote has an extra version of each under a
+  different timestamp than the local file), `seed_first_admin_user`, 4 of
+  the "advisor_fixes_batch1-4" perf/security migrations, and an earlier
+  duplicate of `fix_certificate_code_pgcrypto_search_path` (applied to
+  remote 2026-07-14 22:51 via dashboard/SQL editor, then re-applied a day
+  later as a proper local migration on 2026-07-15 13:00 — byte-for-byte
+  identical SQL, because whoever fixed it the second time had no way of
+  knowing it was already patched — **this is the direct cause of the
+  certificate-generation bug below**). **Not fixed** — reconstructing the 11
+  missing migrations from `supabase_migrations.schema_migrations.statements`
+  (all 11 already pulled and read once this session) is mechanical but has
+  real subtleties (the duplicate-named pairs need reconciling, ordering
+  matters), so it needs a explicit go-ahead before touching migration
+  history, not a silent fix.
+
 ## P1 — Fix soon (real but lower-frequency impact)
+
+- [ ] **No integration/RPC test coverage — DB function bugs can fail
+  silently for months.** `src/test/certificate.test.ts` only tests two pure
+  JS helpers (`isCertificateCodeFormat`, `buildVerifyUrl`); nothing anywhere
+  calls `generate_certificate_code()` or exercises `product_certificates`
+  end-to-end. A Playwright e2e smoke test already exists
+  (`tests/e2e/smoke.spec.ts` — browse → cart → checkout) but **isn't wired
+  into CI** — `.github/workflows/ci.yml` only runs `npm run lint`,
+  `npm run test` (vitest), and `tsc --noEmit`. Not fixed — needs a decision
+  on whether to add Playwright to CI (and how to handle its
+  `TEST_EMAIL`/`TEST_PASSWORD`-gated login step in that environment) plus a
+  new test that actually calls the certificate RPC.
+
+- [ ] **No documented visual/content QA gate for product images.** The
+  AI-generated fake product image issue (see Fixed below) was caught
+  reactively, not via any process — grepped `CLAUDE.md`, `DEVELOPMENT_GUIDE.md`,
+  and `.github/` for a checklist or PR template and found nothing. The fixes
+  so far were scoped to whichever products someone happened to investigate
+  (duvet tiers + vest-x6); there's no evidence all ~66 live products have
+  ever been fully re-audited. Not fixed — no code change possible here, this
+  needs a process decision (PR checklist item, admin-panel upload warning,
+  periodic re-audit cadence, etc.).
+
+- [ ] **`stripe-webhook/index.ts` still has 4 `any`-typed usages** (lines
+  ~91, ~132) in the order-creation-from-webhook path — same class of issue
+  as `create-checkout`'s pricing pipeline (fixed below), not yet addressed
+  since it wasn't in scope of what was approved this session.
 
 - [ ] **Hero video footage doesn't match "luxury sleep" positioning.** Current
   loop (`public/videos/promo.mp4`, 15–48s of source) shows warehouse/shearing
@@ -67,6 +130,58 @@
   needs `ffmpeg`, which isn't available in this environment.)
 
 ## Fixed
+
+- [x] **Dead code from a 7-item self-audit (2026-07-16).** User reported 7
+  suspected process/quality issues; this repo's part of the fix:
+  - `src/components/GrowerNetworkSection.tsx` — stale duplicate of
+    `src/components/home/GrowerNetworkSection.tsx` (missing the
+    Sentry.ErrorBoundary fix, imported nowhere). Deleted.
+  - `src/components/ErrorBoundary.tsx` — superseded by `Sentry.ErrorBoundary`
+    used everywhere else. Deleted.
+  - `src/pages/AuthPage.tsx` — superseded by `src/pages/Login.tsx` (the
+    actual `/login` route target); AuthPage was never routed. Deleted.
+  - `src/stores/uiStore.ts` — superseded by `AppContext`'s `locale` state.
+    Deleted.
+  - `src/components/storefront/LiveInventory.tsx` and
+    `src/components/storefront/ProductJsonLd.tsx` — fully built but never
+    wired in. Wired both into `src/pages/ProductDetail.tsx`: LiveInventory
+    replaced the old inline stock-threshold text (adds live polling + an
+    explicit "in stock" state that didn't exist before); ProductJsonLd
+    (schema.org Product structured data — nothing like this existed on the
+    page before) had its prop types rewritten to match the app's actual
+    mapped Product shape (it expected raw snake_case DB columns) and its
+    canonical URL fixed from a stale `/shop/:slug` to the real
+    `/product/:slug` route, plus made image URLs absolute (Google Rich
+    Results requires this). Verified live in a real browser via Playwright
+    against the local dev server — JSON-LD renders correctly, zero console
+    errors.
+  - `src/components/storefront/CrossSell.tsx` — **left alone, not deleted or
+    wired in.** It duplicates the "Customers Also Bought" section already in
+    `ProductDetail.tsx`, which has better fallback behavior (blends in
+    featured products when a category is thin; CrossSell just renders
+    nothing). Wiring it in too would've shipped two overlapping
+    related-products widgets on one page.
+  - `create-checkout/index.ts`'s cart-pricing pipeline (`resolveUnitPriceNZD`,
+    the subtotal `reduce`, `pricedItems`, Stripe `lineItems`/`sessionParams`)
+    was entirely `any`-typed — added real interfaces (`CartItem`,
+    `PricedItem`, `DbProduct`, `SizeOption`, `CheckoutRequestBody`) and used
+    Stripe's own `Stripe.Checkout.SessionCreateParams`/`LineItem` types.
+    One incidental behavior addition: `resolveUnitPriceNZD` now returns
+    `null` if a product lookup ever misses (previously would have thrown) —
+    a no-op today since the upstream `products.length !== productIds.length`
+    check already guarantees this can't happen, but safer if that check
+    ever changes. **Caveat: type-only change, verified only by ESLint (the
+    `any`s are gone, 99→85 warnings) and manual review** — this directory
+    isn't covered by `tsconfig.app.json` or CI's `tsc` step, and Deno isn't
+    installed here, so `Stripe.Checkout.SessionCreateParams.LineItem` being
+    a real type path is unconfirmed by any type-checker. Also: **the
+    deployed edge function won't pick this up until someone runs
+    `supabase functions deploy create-checkout`** — the CD job in
+    `ci.yml` only deploys the frontend to Vercel, not Supabase functions.
+  - Also fixed as part of the same audit: see the still-open P0/P1 entries
+    above for migration drift, missing integration tests, and no visual QA
+    gate — those are real findings, not yet fixed, don't let this entry
+    read as if the whole audit is closed.
 
 - [x] **Exchange-rate widget silently broken site-wide, spamming the console
   on every page** — `useExchangeRates.ts` called `api.frankfurter.app`,

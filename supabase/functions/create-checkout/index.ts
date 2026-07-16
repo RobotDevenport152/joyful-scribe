@@ -2,6 +2,46 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+interface CartItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  variant?: string | null;
+}
+
+interface PricedItem extends CartItem {
+  price: number;
+  priceNZD: number;
+}
+
+interface SizeOptionObject {
+  label?: string;
+  price_nzd?: number | string;
+}
+type SizeOption = string | SizeOptionObject;
+
+interface DbProduct {
+  id: string;
+  name_en: string;
+  price_nzd: number | string;
+  size_options: SizeOption[] | null;
+}
+
+interface CheckoutRequestBody {
+  items: CartItem[];
+  currency?: string;
+  promoCode?: string | null;
+  shippingInfo: {
+    name: string;
+    email: string;
+    phone?: string;
+    province?: string;
+    city?: string;
+    district?: string;
+    address?: string;
+  };
+}
+
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
   if (origin === "https://pacificalpaca.com") return true;
@@ -79,7 +119,7 @@ serve(async (req) => {
       });
     }
 
-    const { items, currency, shippingInfo, promoCode } = await req.json();
+    const { items, currency, shippingInfo, promoCode } = await req.json() as CheckoutRequestBody;
 
     if (!items?.length) {
       return new Response(JSON.stringify({ error: "No items" }), {
@@ -91,7 +131,7 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (items.some((item: any) => !item.productId || !(Number(item.quantity) > 0))) {
+    if (items.some((item) => !item.productId || !(Number(item.quantity) > 0))) {
       return new Response(JSON.stringify({ error: "Invalid item" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -117,12 +157,12 @@ serve(async (req) => {
     // so the base price alone isn't enough) from the products table.
     // Display-currency conversion also happens here with a fixed rate table
     // (mirrors the useExchangeRates fallback), never with a client-supplied rate.
-    const productIds = [...new Set(items.map((item: any) => item.productId))];
+    const productIds = [...new Set(items.map((item) => item.productId))];
     const { data: products, error: productsError } = await serviceClient
       .from("products")
       .select("id, name_en, price_nzd, size_options")
       .in("id", productIds)
-      .eq("is_active", true);
+      .eq("is_active", true) as { data: DbProduct[] | null; error: unknown };
 
     if (productsError || !products || products.length !== productIds.length) {
       return new Response(JSON.stringify({ error: "One or more items are invalid or unavailable" }), {
@@ -130,7 +170,7 @@ serve(async (req) => {
       });
     }
 
-    const productsById = new Map(products.map((p: any) => [p.id, p]));
+    const productsById = new Map(products.map((p) => [p.id, p]));
     const CURRENCY_RATES: Record<string, number> = { NZD: 1, CNY: 4.5, USD: 0.6 };
     const rate = CURRENCY_RATES[(currency || "NZD").toUpperCase()] ?? 1;
 
@@ -138,31 +178,32 @@ serve(async (req) => {
     // a variant was selected and that exact size_options entry carries its own
     // price_nzd override. A variant that doesn't match any real size is rejected
     // outright rather than silently falling back to the base price.
-    function resolveUnitPriceNZD(item: any): number | null {
+    function resolveUnitPriceNZD(item: CartItem): number | null {
       const product = productsById.get(item.productId);
+      if (!product) return null;
       if (!item.variant) return Number(product.price_nzd);
 
       const sizeOptions = Array.isArray(product.size_options) ? product.size_options : [];
-      const match = sizeOptions.find((v: any) => (typeof v === "string" ? v : v?.label) === item.variant);
+      const match = sizeOptions.find((v) => (typeof v === "string" ? v : v?.label) === item.variant);
       if (!match) return null;
       if (typeof match === "object" && match.price_nzd != null) return Number(match.price_nzd);
       return Number(product.price_nzd);
     }
 
-    if (items.some((item: any) => resolveUnitPriceNZD(item) === null)) {
+    if (items.some((item) => resolveUnitPriceNZD(item) === null)) {
       return new Response(JSON.stringify({ error: "One or more items have an invalid size/variant" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const pricedItems = items.map((item: any) => {
+    const pricedItems: PricedItem[] = items.map((item) => {
       const unitPriceNZD = resolveUnitPriceNZD(item)!;
       const unitPriceCurrency = rate === 1 ? unitPriceNZD : Math.round(unitPriceNZD * rate);
       return { ...item, price: unitPriceCurrency, priceNZD: unitPriceNZD };
     });
 
-    const subtotal = pricedItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-    const subtotalNZD = pricedItems.reduce((sum: number, item: any) => sum + item.priceNZD * item.quantity, 0);
+    const subtotal = pricedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotalNZD = pricedItems.reduce((sum, item) => sum + item.priceNZD * item.quantity, 0);
     const shippingCost = subtotalNZD >= 500 ? 0 : Math.round(25 * rate);
     const discountNZD = await previewPromoDiscount(serviceClient, promoCode, subtotalNZD);
     const discount = rate === 1 ? discountNZD : Math.round(discountNZD * rate * 100) / 100;
@@ -177,7 +218,7 @@ serve(async (req) => {
       .insert({
         user_id: userData.user.id,
         order_number: orderNumber,
-        items: pricedItems.map((item: any) => ({
+        items: pricedItems.map((item) => ({
           productId: item.productId,
           name: item.name,
           variant: item.variant || null,
@@ -210,7 +251,7 @@ serve(async (req) => {
       });
     }
 
-    const lineItems: any[] = pricedItems.map((item: any) => ({
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = pricedItems.map((item) => ({
       price_data: {
         currency: (currency || "nzd").toLowerCase(),
         product_data: { name: item.name, description: item.variant || undefined },
@@ -232,7 +273,7 @@ serve(async (req) => {
 
     const baseUrl = isAllowedOrigin(origin) ? origin! : "https://pacificalpaca.com";
 
-    const sessionParams: any = {
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",

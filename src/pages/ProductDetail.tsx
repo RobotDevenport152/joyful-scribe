@@ -12,6 +12,8 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import StockNotifyForm from '@/components/StockNotifyForm';
 import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
+import { LiveInventory } from '@/components/storefront/LiveInventory';
+import { ProductJsonLd } from '@/components/storefront/ProductJsonLd';
 import { ProductTraceability } from '@/components/traceability/ProductTraceability';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductReviews, type ProductReview } from '@/hooks/useProductReviews';
@@ -261,6 +263,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <ProductJsonLd product={product} />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6">
@@ -421,14 +424,9 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
-              {/* P2 FIX: Threshold display instead of exact stock number */}
-              {product.stock > 0 && product.stock <= 10 && (
-                <p className="text-xs font-body mb-2 text-amber-600">
-                  {product.stock <= 4
-                    ? (locale === 'zh' ? `仅剩 ${product.stock} 件，手慢无` : `Only ${product.stock} left`)
-                    : (locale === 'zh' ? '仅剩少量' : 'Low stock')}
-                </p>
-              )}
+              <div className="mb-2">
+                <LiveInventory productId={product.id} />
+              </div>
 
               {/* Care Instructions */}
               <div className="mb-4 border border-border rounded-sm overflow-hidden">

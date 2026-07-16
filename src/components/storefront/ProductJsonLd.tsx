@@ -1,34 +1,37 @@
 interface Props {
   product: {
-    name_en: string;
-    name_zh: string;
-    description_en: string | null;
-    price_nzd: number;
-    stock_quantity: number | null;
-    images: { url: string; alt: string }[] | null;
+    nameEn: string;
+    descEn: string;
+    images: string[];
+    stock: number;
     slug: string;
+    prices: { NZD: number };
   };
 }
 
 export function ProductJsonLd({ product }: Props) {
-  const images = (product.images as { url: string; alt: string }[] | null) || [];
+  // Google Rich Results requires absolute image URLs — the app stores
+  // relative paths (e.g. "/images/...") for locally-hosted product photos.
+  const absoluteImages = product.images.map(url =>
+    url.startsWith('http') ? url : `https://pacificalpaca.com${url}`
+  );
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name_en,
-    description: product.description_en || '',
-    image: images.map(i => i.url),
+    name: product.nameEn,
+    description: product.descEn || '',
+    image: absoluteImages,
     brand: { "@type": "Brand", name: "Pacific Alpaca" },
     offers: {
       "@type": "Offer",
-      price: product.price_nzd.toString(),
+      price: product.prices.NZD.toString(),
       priceCurrency: "NZD",
-      availability: (product.stock_quantity ?? 0) > 0
+      availability: product.stock > 0
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: "Pacific Alpaca" },
-      url: `https://pacificalpaca.com/shop/${product.slug}`,
+      url: `https://pacificalpaca.com/product/${product.slug}`,
     },
   };
 
