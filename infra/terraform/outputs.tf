@@ -12,3 +12,8 @@ output "resend_domain_id" {
   description = "Resend domain id for pacificalpaca.com (registered via API on 2026-07-15) — once the zone is active, trigger verification with: curl -X POST https://api.resend.com/domains/21f73e4f-57e2-46a7-810f-96716c766d50/verify -H \"Authorization: Bearer $RESEND_API_KEY\", or click Verify DNS Records at resend.com/domains."
   value       = "21f73e4f-57e2-46a7-810f-96716c766d50"
 }
+
+output "email_routing_destination_verified" {
+  description = "Null until the verification link Cloudflare emailed to the destination Gmail address is clicked -- catch-all forwarding silently does nothing until then."
+  value       = cloudflare_email_routing_address.gmail.verified
+}

@@ -10,38 +10,59 @@ resource "cloudflare_zone" "this" {
   plan       = "free"
 }
 
-# pacificalpaca.com's real, currently-active email (NetEase/163 enterprise
-# mail) -- confirmed live via public DNS lookup before this zone existed.
-# Must be recreated here or switching nameservers to Cloudflare silently
-# breaks email, exactly like almost happened with pacificalpacas.com.
-resource "cloudflare_record" "mx_163_primary" {
-  zone_id  = cloudflare_zone.this.id
-  name     = "@"
-  type     = "MX"
-  content  = "mx.ym.163.com"
-  priority = 10
-  proxied  = false
-  ttl      = 3600
-}
-
-resource "cloudflare_record" "mx_163_secondary" {
-  zone_id  = cloudflare_zone.this.id
-  name     = "@"
-  type     = "MX"
-  content  = "mx84.dns.com.cn"
-  priority = 10
-  proxied  = false
-  ttl      = 3600
-}
-
-resource "cloudflare_record" "spf_163" {
+# pacificalpaca.com's email moved off NetEase/163 (paid, cumbersome to set
+# up) to Cloudflare Email Routing (free) forwarding to a Gmail inbox
+# (2026-07-16, at the user's request). Cloudflare manages the MX/routing
+# TXT records itself once email_routing_settings.enabled = true -- do not
+# declare those as cloudflare_record resources, they're not ours to own.
+#
+# cloudflare_email_routing_address creates the destination and triggers a
+# verification email to it -- Cloudflare won't actually forward anything
+# until a human clicks the link in that email. Check
+# `terraform output email_routing_destination_verified` after apply; if
+# it's null, go verify it.
+resource "cloudflare_email_routing_settings" "this" {
   zone_id = cloudflare_zone.this.id
-  name    = "@"
-  type    = "TXT"
-  content = "v=spf1 include:spf.163.com ~all"
-  proxied = false
-  ttl     = 3600
+  enabled = true
 }
+
+resource "cloudflare_email_routing_address" "gmail" {
+  account_id = var.cloudflare_account_id
+  email      = var.email_routing_destination
+}
+
+# The catch-all rule itself is NOT managed here as
+# cloudflare_email_routing_catch_all, deliberately: creating it via this
+# token/API hit a persistent, unresolved "Authentication error (10000)" on
+# every read/write to /zones/{id}/email/routing/rules* despite the token
+# having every zone/account permission that seemed relevant (confirmed via
+# research this is a known, undocumented gap in Cloudflare's own token
+# permission system -- see cloudflare/terraform-provider-cloudflare#6616,
+# another user hitting the identical symptom with no resolution). Worked
+# around by creating the rule by hand in the dashboard (Email > Email
+# Routing > Routing Rules > catch-all -> forward to
+# var.email_routing_destination) instead. Then found
+# cloudflare_email_routing_catch_all doesn't support `terraform import`
+# at all ("resource ... doesn't support import"), so it can't be brought
+# under Terraform's management after the fact either -- it's permanently
+# dashboard-managed unless Cloudflare's provider or token permissions
+# change. If this ever needs recreating (e.g. the zone is rebuilt), redo
+# it by hand in the dashboard, not via this file.
+
+# NOT managed as a cloudflare_record resource here, deliberately: enabling
+# email_routing_settings above makes Cloudflare auto-create and own an SPF
+# TXT record at the apex (`include:_spf.mx.cloudflare.net`). A second,
+# Terraform-managed SPF record for Google (so Gmail's Send-As feature can
+# send "as" info@pacificalpaca.com) collided with it -- SPF only allows one
+# record per name, so Cloudflare locked the zone's Email Routing Rules API
+# entirely (`status: misconfigured/locked`, `spf.multiple`) and every rule
+# read/write 401'd with a misleading generic "Authentication error" until
+# this was found and fixed (2026-07-16). Fix: deleted the Terraform-owned
+# duplicate and merged `include:_spf.google.com` into Cloudflare's own
+# record by hand via the API. If that record is ever recreated (e.g.
+# email_routing_settings gets destroyed/recreated), re-merge the Google
+# include manually -- do not add a second cloudflare_record TXT resource
+# for SPF at "@" again.
 
 # Proxied (orange-cloud) records pointing at Vercel. Values are Vercel's
 # general targets — run `vercel domains inspect <domain>` after adding the

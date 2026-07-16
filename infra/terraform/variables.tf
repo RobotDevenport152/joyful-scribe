@@ -32,3 +32,9 @@ variable "domain" {
   type        = string
   default     = "pacificalpaca.com"
 }
+
+variable "email_routing_destination" {
+  description = "Gmail address that all @pacificalpaca.com mail (catch-all) forwards to. Cloudflare emails a verification link to this address on first apply -- forwarding won't actually work until it's clicked."
+  type        = string
+  default     = "xwy16923@gmail.com"
+}
