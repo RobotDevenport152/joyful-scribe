@@ -1,4 +1,5 @@
 ﻿import { useState, lazy, Suspense } from 'react';
+import * as Sentry from '@sentry/react';
 import { useApp } from '@/contexts/AppContext';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
@@ -366,13 +367,19 @@ export default function GrowersInfoPage() {
                 ? '点击地图上的标记查看详细信息 — 绿色为收集点，金色为可参观农场'
                 : 'Click any marker for details — green = collection points, gold = farm visits'}
             </p>
-            <Suspense fallback={
+            <Sentry.ErrorBoundary fallback={
               <div className="h-[480px] rounded-lg border border-border bg-muted/30 flex items-center justify-center font-body text-sm text-muted-foreground">
-                {locale === 'zh' ? '地图加载中…' : 'Loading map…'}
+                {locale === 'zh' ? '地图暂时无法加载' : 'Map temporarily unavailable'}
               </div>
             }>
-              <FarmMap locale={locale} points={buildMapPoints(locale)} />
-            </Suspense>
+              <Suspense fallback={
+                <div className="h-[480px] rounded-lg border border-border bg-muted/30 flex items-center justify-center font-body text-sm text-muted-foreground">
+                  {locale === 'zh' ? '地图加载中…' : 'Loading map…'}
+                </div>
+              }>
+                <FarmMap locale={locale} points={buildMapPoints(locale)} />
+              </Suspense>
+            </Sentry.ErrorBoundary>
           </div>
 
           {/* Tabs: Collection Points, Shearers, Visit A Farm */}

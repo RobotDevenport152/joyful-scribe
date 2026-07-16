@@ -1,4 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
+import * as Sentry from '@sentry/react';
 import { motion, useInView } from 'framer-motion';
 import { lazy, Suspense, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -26,13 +27,19 @@ export default function GrowerNetworkSection() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Real collection-point / farm-visit map (shared with /growers-info) */}
           <div>
-            <Suspense fallback={
+            <Sentry.ErrorBoundary fallback={
               <div className="h-[420px] rounded-lg border border-primary-foreground/10 bg-primary-foreground/5 flex items-center justify-center font-body text-sm text-primary-foreground/60">
-                {locale === 'zh' ? '地图加载中…' : 'Loading map…'}
+                {locale === 'zh' ? '地图暂时无法加载' : 'Map temporarily unavailable'}
               </div>
             }>
-              <FarmMap locale={locale} points={buildMapPoints(locale)} />
-            </Suspense>
+              <Suspense fallback={
+                <div className="h-[420px] rounded-lg border border-primary-foreground/10 bg-primary-foreground/5 flex items-center justify-center font-body text-sm text-primary-foreground/60">
+                  {locale === 'zh' ? '地图加载中…' : 'Loading map…'}
+                </div>
+              }>
+                <FarmMap locale={locale} points={buildMapPoints(locale)} />
+              </Suspense>
+            </Sentry.ErrorBoundary>
           </div>
 
           {/* Stats & CTA */}

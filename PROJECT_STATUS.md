@@ -68,6 +68,26 @@
 
 ## Fixed
 
+- [x] **New Sentry error, single occurrence — `JAVASCRIPT-REACT-4`,
+  `Error: Map container is already initialized`, culprit `_initContainer`
+  in the `FarmMap` chunk (`src/components/growers/FarmMap.tsx`, the
+  react-leaflet map shared by the homepage and `/growers-info`). First/only
+  seen 2026-07-16T02:12 UTC, 1 event, 0 identified users, but disproportionately
+  severe: the app's only `Sentry.ErrorBoundary` was at root level
+  (`src/main.tsx`), so this widget-level crash was blanking the *entire
+  page* to the generic "Something went wrong, please refresh" fallback. No
+  repro was found for the underlying react-leaflet double-init (a known
+  library failure mode when `L.map()` runs twice against the same DOM
+  node), so rather than guess-fix that unconfirmed cause, contained the
+  blast radius instead: added a local `Sentry.ErrorBoundary` around the
+  `<Suspense><FarmMap /></Suspense>` block at both call sites
+  (`src/components/home/GrowerNetworkSection.tsx`,
+  `src/pages/GrowersInfo.tsx`), each with a small inline "map temporarily
+  unavailable" fallback matching the section's existing loading-state
+  styling. If this recurs, Sentry will still capture it (still wrapped by
+  `Sentry.ErrorBoundary`, just scoped lower) — the rest of the page now
+  survives it.
+
 - [x] **Stale-tab chunk load failures after a deploy** — Sentry showed two real
   errors (`JAVASCRIPT-REACT-2`, `JAVASCRIPT-REACT-3`, 2026-07-15), both
   `TypeError: Failed to fetch dynamically imported module` for the
