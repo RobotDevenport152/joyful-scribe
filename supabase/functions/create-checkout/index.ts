@@ -126,7 +126,7 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!shippingInfo?.name || !shippingInfo?.email) {
+    if (!shippingInfo?.name || !shippingInfo?.email || !shippingInfo?.province || !shippingInfo?.city || !shippingInfo?.address) {
       return new Response(JSON.stringify({ error: "Missing shipping info" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

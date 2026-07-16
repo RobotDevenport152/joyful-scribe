@@ -131,6 +131,45 @@
 
 ## Fixed
 
+- [x] **Mainland China usability prep (2026-07-16), ahead of a brand
+  meeting.** User did their own codebase pass looking for concrete,
+  verifiable issues rather than waiting on vague feedback. Two items
+  verified and fixed here (three more — Alipay not wired up despite
+  showing in checkout, WeChat Pay not available via Stripe for a
+  NZ-registered business, general Vercel/Cloudflare edge latency from
+  mainland China — need a business decision first, not fixed):
+  - **Checkout could be completed with zero shipping address.** Found
+    while checking the first item below — not a China-specific issue, a
+    real bug affecting every order. `checkoutSchema` (`src/lib/schemas.ts`)
+    had `province`/`city`/`district`/`address` all `.optional()`, and
+    `Checkout.tsx`'s field labels only marked Name/Phone/Email as required
+    (`*`) — a customer could pay for a physical product with no way to
+    ship it. Fixed: `province`/`city`/`address` now required (`district`
+    stays optional — some regions don't use it), labels updated to match,
+    and the same check added server-side in `create-checkout/index.ts`
+    (the actual trust boundary — the frontend fix alone doesn't stop a
+    direct API call from skipping these fields). Added 4 regression tests
+    to `business-logic.test.ts` for the new requiredness (there was
+    previously zero test coverage of this at all).
+  - **Google Fonts loaded via a render-blocking `@import`** in
+    `src/index.css` (`fonts.googleapis.com`) — Google domains are
+    unreliably reachable from mainland China, one of this app's core
+    markets, so this could cause slow page loads or invisible text for
+    exactly the customers being targeted. Fixed by self-hosting via
+    `@fontsource/cormorant-garamond` + `@fontsource/inter` (imported in
+    `main.tsx`, bundled by Vite into `dist/assets/*.woff2`). Verified:
+    built output has zero references to `fonts.googleapis.com`/
+    `fonts.gstatic.com` anywhere, and a real browser check (Playwright
+    against the production build's preview server) confirmed zero
+    requests to Google font domains and both font families render with
+    the correct computed `font-family`.
+  - **Not the same thing, not touched**: Google Sign-In (OAuth via
+    `SocialAuthButtons.tsx`) is a separate feature from Google Fonts and
+    was not part of this fix — still works exactly as before (and is
+    separately subject to the same mainland-China Google-domain
+    reachability caveat, worth the brand knowing about, but out of scope
+    here).
+
 - [x] **Dead code from a 7-item self-audit (2026-07-16).** User reported 7
   suspected process/quality issues; this repo's part of the fix:
   - `src/components/GrowerNetworkSection.tsx` — stale duplicate of

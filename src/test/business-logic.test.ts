@@ -195,6 +195,9 @@ describe('checkoutSchema', () => {
     name: 'Li Wei',
     email: 'li@example.com',
     phone: '0211234567',
+    province: 'Guangdong',
+    city: 'Shenzhen',
+    address: '123 Test Street',
     paymentMethod: 'stripe' as const,
     isGift: false,
   };
@@ -216,6 +219,29 @@ describe('checkoutSchema', () => {
   it('rejects short phone', () => {
     const result = checkoutSchema.safeParse({ ...valid, phone: '123' });
     expect(result.success).toBe(false);
+  });
+
+  // A physical product needs a shipping address — these were previously
+  // .optional() in the schema, so an order could be placed and paid for
+  // with zero address info and would have no way to ship.
+  it('rejects missing province', () => {
+    const result = checkoutSchema.safeParse({ ...valid, province: undefined });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects missing city', () => {
+    const result = checkoutSchema.safeParse({ ...valid, city: undefined });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects missing address', () => {
+    const result = checkoutSchema.safeParse({ ...valid, address: undefined });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts missing district (still optional)', () => {
+    const result = checkoutSchema.safeParse({ ...valid, district: undefined });
+    expect(result.success).toBe(true);
   });
 
   it('rejects invalid payment method', () => {

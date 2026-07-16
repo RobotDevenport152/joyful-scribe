@@ -56,7 +56,7 @@ export default function CheckoutPage() {
   const validateInfoStep = handleSubmit(
     () => setStep('payment'),
     (errs) => {
-      const relevantError = errs.name || errs.email || errs.phone;
+      const relevantError = errs.name || errs.email || errs.phone || errs.province || errs.city || errs.address;
       if (relevantError) {
         toast.error(locale === 'zh' ? '请填写必填项' : 'Please fill required fields');
       }
@@ -181,10 +181,10 @@ export default function CheckoutPage() {
                     { field: 'name' as const, label: locale === 'zh' ? '姓名 *' : 'Name *' },
                     { field: 'phone' as const, label: locale === 'zh' ? '电话 *' : 'Phone *' },
                     { field: 'email' as const, label: locale === 'zh' ? '邮箱 *' : 'Email *' },
-                    { field: 'province' as const, label: locale === 'zh' ? '省份' : 'Province' },
-                    { field: 'city' as const, label: locale === 'zh' ? '城市' : 'City' },
+                    { field: 'province' as const, label: locale === 'zh' ? '省份 *' : 'Province *' },
+                    { field: 'city' as const, label: locale === 'zh' ? '城市 *' : 'City *' },
                     { field: 'district' as const, label: locale === 'zh' ? '区县' : 'District' },
-                    { field: 'address' as const, label: locale === 'zh' ? '详细地址' : 'Address' },
+                    { field: 'address' as const, label: locale === 'zh' ? '详细地址 *' : 'Address *' },
                   ].map(f => (
                     <div key={f.field}>
                       <label className="block text-sm font-body text-muted-foreground mb-1">
