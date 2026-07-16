@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import StockNotifyForm from '@/components/StockNotifyForm';
+import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
 import { ProductTraceability } from '@/components/traceability/ProductTraceability';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductReviews, type ProductReview } from '@/hooks/useProductReviews';
@@ -484,6 +485,10 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
               )}
+
+              <div className="mt-3">
+                <WeChatStoreButton locale={locale} />
+              </div>
 
               <div className="mt-4">
                 {product.fiberBatchId ? (

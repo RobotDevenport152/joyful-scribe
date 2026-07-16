@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { EXCHANGE_RATES } from '@/lib/store';
+import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
 
 const CartDrawer = () => {
   const { i18n } = useTranslation();
@@ -218,6 +219,7 @@ const CartDrawer = () => {
                 >
                   {lang === 'zh' ? '去结账' : 'Checkout'}
                 </Link>
+                <WeChatStoreButton locale={lang} />
               </div>
             )}
           </motion.div>
