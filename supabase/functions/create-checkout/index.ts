@@ -31,6 +31,10 @@ interface CheckoutRequestBody {
   items: CartItem[];
   currency?: string;
   promoCode?: string | null;
+  // WeChat Pay isn't offered by Stripe for a NZ-registered business, so it's
+  // deliberately not a valid value here — the frontend disables that option
+  // rather than sending it.
+  paymentMethod?: "stripe" | "alipay";
   shippingInfo: {
     name: string;
     email: string;
@@ -119,7 +123,7 @@ serve(async (req) => {
       });
     }
 
-    const { items, currency, shippingInfo, promoCode } = await req.json() as CheckoutRequestBody;
+    const { items, currency, shippingInfo, promoCode, paymentMethod } = await req.json() as CheckoutRequestBody;
 
     if (!items?.length) {
       return new Response(JSON.stringify({ error: "No items" }), {
@@ -274,7 +278,7 @@ serve(async (req) => {
     const baseUrl = isAllowedOrigin(origin) ? origin! : "https://pacificalpaca.com";
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      payment_method_types: ["card"],
+      payment_method_types: paymentMethod === "alipay" ? ["alipay"] : ["card"],
       line_items: lineItems,
       mode: "payment",
       success_url: `${baseUrl}/order-success?number=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,

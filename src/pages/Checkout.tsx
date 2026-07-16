@@ -73,7 +73,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      if (formData.paymentMethod === 'stripe') {
+      if (formData.paymentMethod === 'stripe' || formData.paymentMethod === 'alipay') {
         const { data, error } = await supabase.functions.invoke('create-checkout', {
           body: {
             items: cart.map(item => ({
@@ -95,6 +95,7 @@ export default function CheckoutPage() {
             },
             // P0 FIX: Send only the promo code string — server recalculates the discount
             promoCode: promoCode || undefined,
+            paymentMethod: formData.paymentMethod,
           },
         });
 
@@ -105,8 +106,11 @@ export default function CheckoutPage() {
         }
         throw new Error('No checkout URL returned');
       } else {
-        // WeChat / Alipay — placeholder until those integrations are built
-        toast.info(locale === 'zh' ? '该支付方式暂未开通，请选择信用卡支付' : 'This payment method is not available yet. Please use credit card.');
+        // WeChat Pay isn't available via Stripe for a NZ-registered business
+        // (Alipay is; card/Stripe and Alipay are both wired up above) — this
+        // is a real, confirmed processor limitation, not an unfinished
+        // integration. See PROJECT_STATUS.md.
+        toast.info(locale === 'zh' ? '该支付方式暂未开通，请选择其他支付方式' : 'This payment method is not available yet. Please choose a different one.');
       }
     } catch (err: unknown) {
       logger.error('checkout_failed', { userId: user?.id, cartSize: cart.length, error: err instanceof Error ? err.message : String(err) });
@@ -259,24 +263,35 @@ export default function CheckoutPage() {
               {step === 'payment' && (
                 <div className="space-y-4">
                   {[
-                    { value: 'stripe' as const, labelZh: '国际信用卡 (Stripe)', labelEn: 'Credit Card (Stripe)' },
-                    { value: 'wechat' as const, labelZh: '微信支付', labelEn: 'WeChat Pay' },
-                    { value: 'alipay' as const, labelZh: '支付宝', labelEn: 'Alipay' },
+                    { value: 'stripe' as const, labelZh: '国际信用卡 (Stripe)', labelEn: 'Credit Card (Stripe)', available: true },
+                    { value: 'alipay' as const, labelZh: '支付宝', labelEn: 'Alipay', available: true },
+                    // WeChat Pay isn't offered by Stripe for a NZ-registered business
+                    // (confirmed against Stripe's docs) — shown but disabled rather than
+                    // a dead-end click + toast, until a processor supporting it is added.
+                    { value: 'wechat' as const, labelZh: '微信支付', labelEn: 'WeChat Pay', available: false },
                   ].map(pm => (
                     <button
                       key={pm.value}
                       type="button"
+                      disabled={!pm.available}
                       onClick={() => setValue('paymentMethod', pm.value)}
                       className={`w-full text-left px-4 py-3 border rounded-sm font-body text-sm transition-colors ${
-                        paymentMethod === pm.value
+                        !pm.available
+                          ? 'border-border text-muted-foreground/50 cursor-not-allowed'
+                          : paymentMethod === pm.value
                           ? 'border-accent bg-accent/5 text-foreground'
                           : 'border-border text-foreground hover:border-accent'
                       }`}
                     >
                       {locale === 'zh' ? pm.labelZh : pm.labelEn}
-                      {pm.value === 'stripe' && (
+                      {pm.available && (
                         <span className="ml-2 text-xs text-muted-foreground">
                           <Lock className="w-3 h-3 inline" /> Secured by Stripe
+                        </span>
+                      )}
+                      {!pm.available && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {locale === 'zh' ? '暂未开通' : 'Coming soon'}
                         </span>
                       )}
                     </button>

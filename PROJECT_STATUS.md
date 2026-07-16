@@ -113,6 +113,20 @@
   needs a process decision (PR checklist item, admin-panel upload warning,
   periodic re-audit cadence, etc.).
 
+- [ ] **WeChat Pay is not available through Stripe for a NZ-registered
+  business** (2026-07-16, confirmed against Stripe's own docs — NZ isn't on
+  Stripe's WeChat Pay eligible-country list, unlike Alipay, which
+  specifically includes NZ and is now wired up, see Fixed above). This is a
+  real processor constraint, not neglect or an unfinished integration —
+  worth surfacing to the brand as exactly that framing. Needs a business
+  decision, not a code fix: (a) add a different payment processor that
+  supports WeChat Pay for NZ-to-China (e.g. Airwallex, which markets this
+  specifically) alongside Stripe; (b) register a business entity in a
+  country Stripe does support for WeChat Pay; (c) accept the gap and lean
+  on Alipay + card as the mainland-facing payment options. The WeChat Pay
+  button in checkout is currently shown but disabled ("Coming soon") rather
+  than removed, so it's a one-line UI change once a direction is picked.
+
 - [ ] **`stripe-webhook/index.ts` still has 4 `any`-typed usages** (lines
   ~91, ~132) in the order-creation-from-webhook path — same class of issue
   as `create-checkout`'s pricing pipeline (fixed below), not yet addressed
@@ -131,13 +145,46 @@
 
 ## Fixed
 
+- [x] **WeChat Mini Store QR code gave impractical instructions on mobile
+  (2026-07-16).** `WeChatStoreButton.tsx` only branched on whether the page
+  was open inside WeChat's own in-app browser. Outside WeChat, it always
+  said "open WeChat and scan this QR code" — correct advice on desktop
+  (the QR is on a different device from the phone that scans it), but
+  useless on a phone in a normal browser (Safari/Chrome), where the QR code
+  and the camera that would scan it are the same device — you can't
+  usefully point a phone's camera at its own screen. Real customers were
+  hitting this: save the image, then use WeChat's scan-from-album feature.
+  Added a third branch using the existing `useIsMobile` viewport hook
+  (already used elsewhere for the same purpose) so mobile-not-in-WeChat now
+  says "press and hold to save the image, then open WeChat Scan, tap the
+  album icon, and select the saved image" instead. Verified all three
+  states (desktop / mobile-in-WeChat / mobile-not-in-WeChat) render the
+  correct copy via Playwright against the local dev server, using device
+  emulation and a `MicroMessenger` UA override for the WeChat case.
+
 - [x] **Mainland China usability prep (2026-07-16), ahead of a brand
   meeting.** User did their own codebase pass looking for concrete,
-  verifiable issues rather than waiting on vague feedback. Two items
-  verified and fixed here (three more — Alipay not wired up despite
-  showing in checkout, WeChat Pay not available via Stripe for a
-  NZ-registered business, general Vercel/Cloudflare edge latency from
-  mainland China — need a business decision first, not fixed):
+  verifiable issues rather than waiting on vague feedback. Three items
+  fixed here; two more need a business decision first — see the new P1
+  entry below for WeChat Pay, and general Vercel/Cloudflare edge latency
+  from mainland China isn't a code fix at all, it's a hosting/CDN-strategy
+  question worth the brand being aware of:
+  - **Alipay showed as a payment option at checkout but wasn't actually
+    wired up** — selecting it just showed a "not available yet" toast.
+    Verified against Stripe's docs that Alipay genuinely supports this
+    account (NZD/CNY/USD are all Alipay-eligible settlement currencies,
+    and it works with Stripe's standard hosted Checkout Session in
+    `mode: "payment"`, no architecture change needed). Wired it up: the
+    frontend (`Checkout.tsx`) now sends `paymentMethod` through to
+    `create-checkout`, which sets `payment_method_types: ["alipay"]`
+    instead of `["card"]` when selected. Also disabled the WeChat Pay
+    button in the UI (was previously clickable, always led to the same
+    dead-end toast) with a "Coming soon" label, and moved the "Secured by
+    Stripe" badge onto Alipay too, since it's genuinely processed by
+    Stripe now. **Not yet deployed** — like the earlier `create-checkout`
+    type change, this needs a manual `supabase functions deploy
+    create-checkout` (or paste into the Dashboard editor); the CD pipeline
+    only deploys the Vercel frontend.
   - **Checkout could be completed with zero shipping address.** Found
     while checking the first item below — not a China-specific issue, a
     real bug affecting every order. `checkoutSchema` (`src/lib/schemas.ts`)
