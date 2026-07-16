@@ -17,3 +17,13 @@ output "email_routing_destination_verified" {
   description = "Null until the verification link Cloudflare emailed to the destination Gmail address is clicked -- catch-all forwarding silently does nothing until then."
   value       = cloudflare_email_routing_address.gmail.verified
 }
+
+output "dnssec_ds_record" {
+  description = "Add this exact DS record at the registrar (Aliyun/万网) to finish enabling DNSSEC. Status stays \"pending\" until it's added and propagates."
+  value       = cloudflare_zone_dnssec.this.ds
+}
+
+output "dnssec_status" {
+  description = "Flips from \"pending\" to \"active\" once the DS record above is added at the registrar."
+  value       = cloudflare_zone_dnssec.this.status
+}

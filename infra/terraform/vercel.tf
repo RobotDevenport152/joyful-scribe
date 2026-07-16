@@ -8,9 +8,9 @@ resource "vercel_project_domain" "apex" {
 }
 
 resource "vercel_project_domain" "www" {
-  project_id          = var.vercel_project_id
-  team_id             = var.vercel_team_id
-  domain              = "www.${var.domain}"
-  redirect            = var.domain
+  project_id           = var.vercel_project_id
+  team_id              = var.vercel_team_id
+  domain               = "www.${var.domain}"
+  redirect             = var.domain
   redirect_status_code = 308
 }

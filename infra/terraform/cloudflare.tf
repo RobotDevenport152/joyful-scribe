@@ -10,6 +10,16 @@ resource "cloudflare_zone" "this" {
   plan       = "free"
 }
 
+# Enables DNSSEC on Cloudflare's side only. This is NOT sufficient by
+# itself -- the registrar (Aliyun/万网, the same console the nameservers
+# were changed in) also needs the resulting DS record added, same
+# two-step shape as the earlier nameserver cutover. Check
+# `terraform output dnssec_ds_record` after apply and add it there.
+# Until that DS record is added, `status` here will show "pending".
+resource "cloudflare_zone_dnssec" "this" {
+  zone_id = cloudflare_zone.this.id
+}
+
 # pacificalpaca.com's email moved off NetEase/163 (paid, cumbersome to set
 # up) to Cloudflare Email Routing (free) forwarding to a Gmail inbox
 # (2026-07-16, at the user's request). Cloudflare manages the MX/routing
@@ -88,6 +98,24 @@ resource "cloudflare_record" "www" {
 
 # Full (strict) is required — Vercel auto-provisions a valid cert, and
 # "Flexible" would cause a redirect loop against Vercel's forced HTTPS.
+#
+# HSTS max_age is 1 year, include_subdomains on (www already redirects to
+# apex over HTTPS via vercel_project_domain.www, so this doesn't break
+# anything) -- preload deliberately left off/unset. Preload submits the
+# domain to browsers' built-in HSTS list, which is effectively
+# irreversible on any practical timescale (removal takes months and only
+# works if every browser vendor's preload list has already shipped the
+# removal) -- not worth that commitment for a domain that's still
+# actively being reconfigured. Revisit once the site's HTTPS setup has
+# been stable for a while.
+#
+# minify was tried here too (html/css/js on) but Cloudflare rejected it
+# via Terraform ("Invalid value for zone setting minify (1007)") and,
+# tested directly against the raw API, silently no-ops instead of
+# erroring -- classic Auto Minify appears to be retired/unavailable for
+# this account, not something wrong with this config. Not worth chasing
+# further: Vite's own build output is already minified, so there's
+# nothing real being missed here.
 resource "cloudflare_zone_settings_override" "this" {
   zone_id = cloudflare_zone.this.id
   settings {
@@ -95,6 +123,14 @@ resource "cloudflare_zone_settings_override" "this" {
     always_use_https         = "on"
     min_tls_version          = "1.2"
     automatic_https_rewrites = "on"
+
+    security_header {
+      enabled            = true
+      max_age            = 31536000
+      include_subdomains = true
+      nosniff            = true
+      preload            = false
+    }
   }
 }
 
@@ -120,7 +156,9 @@ resource "cloudflare_bot_management" "this" {
 # the zone above is live — after `terraform apply` + the nameserver
 # cutover, check verification status at resend.com/domains (or POST
 # /domains/{id}/verify). Scoped to resend._domainkey/send subdomains, so
-# these don't conflict with the apex-level 163.com SPF record above.
+# these don't conflict with the apex-level SPF record (now Cloudflare's
+# own auto-managed record, merged with Google's include -- see the note
+# near cloudflare_email_routing_settings above).
 resource "cloudflare_record" "resend_dkim" {
   zone_id = cloudflare_zone.this.id
   name    = "resend._domainkey"
@@ -145,6 +183,24 @@ resource "cloudflare_record" "resend_spf_txt" {
   name    = "send"
   type    = "TXT"
   content = "v=spf1 include:amazonses.com ~all"
+  proxied = false
+  ttl     = 3600
+}
+
+# DMARC in monitoring mode (p=none) -- reports on SPF/DKIM alignment
+# without rejecting or quarantining anything, so it can't break mail that
+# passed before this existed. The domain now sends via 3 different
+# mechanisms (Resend for transactional email, Google/Gmail for Send-As
+# replies, Cloudflare Email Routing for inbound) so alignment is worth
+# watching before tightening to p=quarantine or p=reject. rua= is the
+# aggregate-report destination -- pointed at the same Gmail inbox
+# everything else forwards to; revisit the policy once a few weeks of
+# reports show no unexpected failures.
+resource "cloudflare_record" "dmarc" {
+  zone_id = cloudflare_zone.this.id
+  name    = "_dmarc"
+  type    = "TXT"
+  content = "v=DMARC1; p=none; rua=mailto:${var.email_routing_destination}; fo=1"
   proxied = false
   ttl     = 3600
 }
