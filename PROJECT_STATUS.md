@@ -68,6 +68,20 @@
 
 ## Fixed
 
+- [x] **Exchange-rate widget silently broken site-wide, spamming the console
+  on every page** — `useExchangeRates.ts` called `api.frankfurter.app`,
+  which now 301-redirects to `api.frankfurter.dev`; the redirect response
+  itself carries no CORS headers, so the browser blocked it before
+  following through, on every page load. Not customer-visible (the hook
+  already falls back to hardcoded rates on fetch failure — that's exactly
+  what was happening), but it was cluttering Sentry breadcrumbs on every
+  event, including the checkout_failed traces below, making them noisier to
+  read. Found via a full customer walkthrough of the live
+  site (homepage -> shop -> product detail -> add to cart -> checkout ->
+  traceability/growers-info/compare/contact/wholesale/culture/corporate-gifts)
+  using Playwright against production, capturing console/network errors on
+  every page. Fixed by calling `api.frankfurter.dev/v1/latest` directly.
+
 - [x] **Checkout silently broken on the `pacific-alpaca-website.vercel.app`
   alias domain — CORS mismatch.** New Sentry issue `JAVASCRIPT-REACT-7`
   "checkout_failed", 2 events 2026-07-16 (two different logged-in users),

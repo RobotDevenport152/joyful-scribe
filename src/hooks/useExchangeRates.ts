@@ -28,8 +28,11 @@ const FALLBACK_RATES: ExchangeRates = {
 };
 
 async function fetchRates(): Promise<ExchangeRates> {
-  // Frankfurter is a free, open-source ECB exchange rate API
-  const res = await fetch('https://api.frankfurter.app/latest?from=NZD&to=CNY,USD');
+  // Frankfurter is a free, open-source ECB exchange rate API. frankfurter.app
+  // now 301s to frankfurter.dev, but the redirect response itself carries no
+  // CORS headers, so browsers block it before following through — call the
+  // new host directly.
+  const res = await fetch('https://api.frankfurter.dev/v1/latest?from=NZD&to=CNY,USD');
   if (!res.ok) throw new Error(`Exchange rate fetch failed: ${res.status}`);
   const data = await res.json();
 
