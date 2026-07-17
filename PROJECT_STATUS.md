@@ -228,6 +228,39 @@
 
 ## Fixed
 
+- [x] **Added post-deploy health check + automatic rollback to `ci.yml`
+  (2026-07-17)**, at the user's request after asking how CI/CD could keep
+  being strengthened. The `e2e` job already gates *before* a deploy, but
+  can't catch problems that only exist on real production infrastructure —
+  exactly the class of bug that broke the new crawler-metadata middleware
+  twice this same session (a Cloudflare 403, a cache-poisoning bug —
+  neither would show up in a local/CI build). New `verify-production` job
+  runs after `deploy-production`: waits for edge propagation, checks the
+  live homepage actually serves real content, and if not, rolls back to
+  the exact production deployment that was live immediately before this
+  one (captured via a new `capture_previous` step at the *start* of
+  `deploy-production`, before it gets replaced — `vercel rollback` in this
+  CLI version needs an explicit deployment id/url, there's no bare "undo
+  the last one" form). Uses `v7/deployments` with `rollbackCandidate=true`
+  (not `v6`) and reads the `id` field, not `uid` — confirmed against real
+  data from this session's own diagnostic work, not guessed. A rollback
+  still fails the job on purpose (loud, emails the repo's Actions
+  notification recipients) — the point is "stop the bleeding
+  automatically, then make sure a human notices," not silently paper over
+  a bad deploy. Deliberately did **not** attempt "automatically fix the
+  bug" — safe automated remediation here means reverting to known-good,
+  not letting anything rewrite code unsupervised on a payment-processing
+  site.
+
+  **Still open, needs the user to provide something before it can be
+  built**: Edge Function auto-deploy is fully scaffolded already (see the
+  `deploy-functions` job) but inert until a `SUPABASE_ACCESS_TOKEN` repo
+  secret exists; full login→checkout e2e coverage is similarly gated on
+  `TEST_EMAIL`/`TEST_PASSWORD` secrets (a dedicated test account). Neither
+  can be added by an agent directly — GitHub's secret-write API needs a
+  token this session doesn't have, and secrets should be added by the
+  user directly in any case, not relayed through chat.
+
 - [x] **New `/product/:id` crawler-metadata middleware (`middleware.ts`,
   started this session per the platform audit's "Later" tier SSR item —
   a Vercel Routing Middleware that serves correct per-product

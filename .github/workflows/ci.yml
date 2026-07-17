@@ -141,6 +141,8 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     permissions:
       contents: read
+    outputs:
+      previous_deployment_id: ${{ steps.capture_previous.outputs.id }}
 
     steps:
       - uses: actions/checkout@v4
@@ -152,6 +154,31 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Recorded before the new deploy replaces it, so verify-production can
+      # roll back to exactly this if the new deploy turns out to be broken.
+      # `vercel rollback` (this CLI version) requires an explicit deployment
+      # id/url — there's no bare "undo the last one" form to rely on.
+      # v7/deployments + rollbackCandidate=true, not v6: verified this
+      # session that Vercel's own deployment listing (via the dashboard-plane
+      # tooling used to diagnose today's incidents) returns an `id` field —
+      # not `uid` — and exposes `isRollbackCandidate`; filtering on it here
+      # is an extra guarantee this is actually something Vercel considers
+      # safe to roll back to, not just "whatever sorted first".
+      - name: Capture current production deployment (for rollback if needed)
+        id: capture_previous
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s "https://api.vercel.com/v7/deployments?projectId=prj_h9qpJHQT6IQFkciPKDrktOS1IknA&target=production&rollbackCandidate=true&limit=1&teamId=team_F1dXYNG6H7HNPP4OB6Rm5SJD" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
+          ID=$(echo "$RESPONSE" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);process.stdout.write(j.deployments?.[0]?.id||'');}catch(e){}})")
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+          if [ -z "$ID" ]; then
+            echo "::warning::Could not capture a previous production deployment id — auto-rollback won't be possible if this deploy turns out unhealthy. Raw API response: $(echo "$RESPONSE" | head -c 300)"
+          else
+            echo "::notice::Current (pre-deploy) production deployment recorded for possible rollback: $ID"
+          fi
 
       - name: Pull Vercel env vars
         env:
@@ -178,6 +205,52 @@ jobs:
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: echo "### Production deployed to $DEPLOY_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Post-deploy safety net: catches problems e2e can't (real Vercel/DNS/
+  # Cloudflare edge behavior, exactly the class of bug that broke the new
+  # crawler-metadata middleware twice this session) and auto-rolls back
+  # rather than leaving a broken site live until a human notices.
+  verify-production:
+    name: Verify Production & Auto-Rollback
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: deploy-production
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Wait for edge propagation
+        run: sleep 20
+
+      - name: Health check the live site
+        id: health
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            https://pacificalpaca.com/)
+          echo "HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ] && grep -q "Pacific Alpacas" /tmp/body.html; then
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Post-deploy health check failed (HTTP $HTTP_CODE) — rolling back."
+          fi
+
+      - name: Roll back to the previous production deployment
+        if: steps.health.outputs.healthy != 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PREVIOUS_ID: ${{ needs.deploy-production.outputs.previous_deployment_id }}
+        run: |
+          if [ -z "$PREVIOUS_ID" ]; then
+            echo "::error::No previous production deployment was recorded — cannot auto-rollback. Investigate and roll back manually via the Vercel dashboard."
+            exit 1
+          fi
+          npx vercel rollback "$PREVIOUS_ID" --token="$VERCEL_TOKEN" --yes
+          npx vercel rollback status --token="$VERCEL_TOKEN" || true
+          echo "::error::Health check failed after deploying — automatically rolled back to $PREVIOUS_ID. The commit that triggered this needs investigation before it can ship again."
+          exit 1
 
   deploy-preview:
     name: Deploy Preview
