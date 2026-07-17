@@ -24,10 +24,10 @@
   (`checkout_failed` from the vercel.app alias) predates the `de17cdf`
   redirect and hasn't recurred either. `-5`/`-6`/`-8` (Contact/Shop/
   ProductDetail stale-chunk errors) **did recur after** the `e85826a`
-  reload-on-preload-error fix — root cause and fix below. None of these
-  issues are marked "resolved" in the Sentry dashboard itself (that's a
-  manual dashboard action, not something inferred from git history) —
-  ask before touching Sentry's issue state if that bookkeeping matters.
+  reload-on-preload-error fix — root cause and fix below. `-2`/`-3`/`-4`/`-7`
+  marked resolved in Sentry via the API (commit `f931bcf`'s session);
+  `-5`/`-6`/`-8` deliberately left unresolved until the `f931bcf` fix is
+  confirmed live in production, and `-1` left alone (known Sentry sample).
 - **How to check**: the `claude.ai Sentry` MCP connector for this account
   keeps authorizing against an unrelated University of Auckland Sentry org
   no matter how many times it's reconnected (tried multiple full
