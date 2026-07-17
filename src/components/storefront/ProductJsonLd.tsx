@@ -1,3 +1,5 @@
+import { toAbsoluteUrl } from '@/lib/seo';
+
 interface Props {
   product: {
     nameEn: string;
@@ -12,9 +14,7 @@ interface Props {
 export function ProductJsonLd({ product }: Props) {
   // Google Rich Results requires absolute image URLs — the app stores
   // relative paths (e.g. "/images/...") for locally-hosted product photos.
-  const absoluteImages = product.images.map(url =>
-    url.startsWith('http') ? url : `https://pacificalpaca.com${url}`
-  );
+  const absoluteImages = product.images.map(toAbsoluteUrl);
 
   const schema = {
     "@context": "https://schema.org",

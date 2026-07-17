@@ -85,7 +85,11 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEOHead
-        title={locale === 'zh' ? '产品展示 — 太平洋羊驼' : 'Shop — Pacific Alpacas'}
+        title={
+          category === 'all'
+            ? (locale === 'zh' ? '产品展示 — 太平洋羊驼' : 'Shop — Pacific Alpacas')
+            : `${categories.find(c => c.key === category)?.label} — Pacific Alpacas`
+        }
         description={locale === 'zh' ? '探索我们的羊驼纤维奢华产品系列' : 'Explore our luxury alpaca fiber collections'}
       />
 

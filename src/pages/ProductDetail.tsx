@@ -14,6 +14,8 @@ import StockNotifyForm from '@/components/StockNotifyForm';
 import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
 import { LiveInventory } from '@/components/storefront/LiveInventory';
 import { ProductJsonLd } from '@/components/storefront/ProductJsonLd';
+import SEOHead from '@/components/SEOHead';
+import { toAbsoluteUrl } from '@/lib/seo';
 import { ProductTraceability } from '@/components/traceability/ProductTraceability';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductReviews, type ProductReview } from '@/hooks/useProductReviews';
@@ -263,6 +265,11 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEOHead
+        title={locale === 'zh' ? product.nameZh : product.nameEn}
+        description={(locale === 'zh' ? product.descZh : product.descEn) || ''}
+        image={images[0] ? toAbsoluteUrl(images[0]) : undefined}
+      />
       <ProductJsonLd product={product} />
 
       <div className="pt-24 pb-16 flex-1">

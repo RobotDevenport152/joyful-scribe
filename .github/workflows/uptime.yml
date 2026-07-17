@@ -1,0 +1,54 @@
+name: Uptime check
+
+# Scheduled synthetic checks against production. Deliberately NOT just
+# "curl / and check for 200" — vercel.json rewrites every path to
+# index.html, so a bare status check on /login or /checkout can't actually
+# tell a broken route from a working one (the SPA shell always loads).
+# These three checks instead exercise the layers that have actually broken
+# in the past this session/in PROJECT_STATUS.md: DNS/CDN reachability, the
+# Supabase API itself, and the exact CORS preflight that caused the
+# JAVASCRIPT-REACT-7 checkout_failed incident.
+#
+# On failure, GitHub emails the repo's Actions-notification recipients by
+# default — no Slack webhook or external service required. If you want
+# Slack/SMS paging instead, that needs a webhook URL added as a repo
+# secret; ask for that to be wired in once one exists.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  uptime:
+    name: Ping production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Homepage reachable and serving real content
+        run: |
+          BODY=$(curl -sf --max-time 15 https://pacificalpaca.com/)
+          echo "$BODY" | grep -q "Pacific Alpacas" || { echo "Homepage didn't contain expected content"; exit 1; }
+
+      - name: Supabase API reachable
+        env:
+          # Public anon key — safe to commit, it's already shipped in the
+          # client bundle (same reasoning as the Sentry DSN elsewhere in
+          # this repo: this class of key is meant to be public).
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW5xdXl4cG9lcWtrdXp6aWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDcyMzMsImV4cCI6MjA5MTE4MzIzM30.-q0rjRbjArN__-H6BPw9ZUHfb_BQSYBC2-fkYQSEBbc
+        run: |
+          curl -sf --max-time 15 "https://pymnquyxpoeqkkuzzial.supabase.co/rest/v1/products?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -o /dev/null
+
+      - name: Checkout CORS preflight allows the real domain
+        run: |
+          ALLOW_ORIGIN=$(curl -s --max-time 15 -X OPTIONS \
+            "https://pymnquyxpoeqkkuzzial.supabase.co/functions/v1/create-checkout" \
+            -H "Origin: https://pacificalpaca.com" \
+            -H "Access-Control-Request-Method: POST" \
+            -D - -o /dev/null | grep -i "access-control-allow-origin" | tr -d '\r')
+          echo "$ALLOW_ORIGIN"
+          echo "$ALLOW_ORIGIN" | grep -q "https://pacificalpaca.com" || { echo "CORS preflight no longer allows pacificalpaca.com — this is exactly the JAVASCRIPT-REACT-7 class of bug"; exit 1; }

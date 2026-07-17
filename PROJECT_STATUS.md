@@ -176,7 +176,107 @@
   references to the `cart/` one anywhere). Both confirmed via grep, not
   deleted since deleting wasn't asked for.
 
+- [ ] **Responsive/next-gen product images — needs a decision, not a code
+  fix.** From the platform-audit "Next" tier. Investigated properly before
+  implementing anything (2026-07-17): queried the live `products` table —
+  every sampled row's `images[].url` is a static `/images/*.jpg` path
+  bundled in this repo's `public/images/`, none are Supabase Storage or R2
+  URLs. Confirmed there's also no admin-panel upload path that could
+  produce one (`AdminProducts.tsx` explicitly `delete`s the `images` field
+  before submitting — there's no image-management UI at all; every product
+  photo today was added by a developer, not an admin user). This changes
+  the original recommendation: **Supabase Storage transforms don't apply**
+  (images aren't in Storage, and the org's on the free plan anyway, which
+  doesn't include that feature) and **Cloudflare Image Resizing would work**
+  (the zone's already proxied) **but needs a Cloudflare Pro upgrade**
+  (~US$20/mo) — this account has hit and deliberately accepted free-plan
+  limits multiple times already (see `cloudflare.tf`'s own comments on
+  Bot Fight Mode, the WAF ruleset, rate-limit windows), so defaulting to a
+  paid upgrade without asking would be wrong. There's a genuinely free
+  alternative — a build-time script (e.g. via `sharp`) that pre-generates
+  WebP + a couple of resolutions for the known, bounded set of files in
+  `public/images/`, with render code deriving `srcset` from `product.image`
+  — that fully covers today's catalog with no new recurring cost, and would
+  only stop being sufficient if an admin image-upload feature gets built
+  later (which doesn't exist today). Not implemented yet — surfaced to the
+  user as a decision point rather than assumed.
+
 ## Fixed
+
+- [x] **`SEOHead` was shipping duplicate, spec-losing `og:*`/`twitter:*`
+  meta tags on all 16 pages that used it — found while wiring per-page SEO
+  into `ProductDetail.tsx` (2026-07-17).** `react-helmet-async` only
+  dedupes tags against its own previously-rendered instances, not
+  pre-existing static markup — so it never removed `index.html`'s static
+  `og:title`/`og:description`/etc., meaning every `<SEOHead>` page ended up
+  with two conflicting copies of each tag. Per the Open Graph spec, the
+  *first* tag wins in a conflict — the static, generic one — meaning
+  per-page social-sharing metadata has likely never actually worked for any
+  JS-executing crawler on any of these 16 pages: Shop, Compare, ApplyGrower,
+  CorporateGifts, Culture, ForgotPassword, GrowerBatches, GrowerCredits,
+  GrowersInfo, Index, Lookbook, Login, MyOrders, ResetPassword, Register,
+  Returns. Separately found the `og-default.jpg` fallback image (used by
+  every one of those pages except product pages, which always pass an
+  explicit `image`) was never a real file — a 404 shipping sitewide. Fixed
+  both in `SEOHead.tsx`: a `useEffect` now removes the stale static
+  duplicate (identified by the absence of Helmet's own `data-rh` marker)
+  once this component's tags land, and the fallback image now points at
+  the same real asset `index.html`'s own static default uses. Also added
+  `twitter:image` (previously not set at all, silently falling back to
+  Twitter's own `og:image` fallback behavior — worked, but wasn't explicit
+  and wasn't fixed by the og:image correction alone since Twitter checks
+  `twitter:image` first). **Verified against a real browser**, not just
+  reasoned about: built the app, served it, and drove it with Playwright —
+  confirmed exactly one `og:title` (not two) on `/shop`, confirmed a page
+  that never renders `<SEOHead>` (`/contact`) is untouched (no regression),
+  and confirmed a real product page's `twitter:image` resolves to that
+  product's actual photo, not the generic fallback.
+
+- [x] **Wired `<SEOHead>` + `<ProductJsonLd>`-style per-page metadata into
+  `ProductDetail.tsx` (2026-07-17)** — the one page type most relevant to
+  social-commerce sharing had never had it, unlike 16 other pages (see
+  above). Also made `Shop.tsx`'s existing `<SEOHead>` category-aware (a
+  filtered `?cat=duvet` link now titles as "Duvets — Pacific Alpacas"
+  instead of the generic "Shop" title for every category). Extracted a
+  shared `toAbsoluteUrl()` helper (`src/lib/seo.ts`) used by both
+  `SEOHead`'s image prop and `ProductJsonLd`'s existing (slightly
+  duplicated) absolute-URL logic. Note the real limit here, unchanged by
+  this fix: this is still a client-rendered SPA with no SSR/prerendering,
+  so this helps crawlers that execute JS (Googlebot does) but does **not**
+  fix link previews for unfurlers that only read the initial static HTML —
+  classic Facebook/Twitter/WeChat behavior. `index.html`'s static tags are
+  still what those see for every page. Closing that gap needs
+  prerendering — still a "Later" tier item, not done here.
+
+- [x] **Added a scheduled uptime-check workflow** (`.github/workflows/uptime.yml`,
+  every 15 min) — deliberately not a bare "curl / and check for 200":
+  `vercel.json` rewrites every path to `index.html`, so a plain status check
+  on `/login` or `/checkout` can't distinguish a broken route from a working
+  one, the SPA shell always loads. Checks instead: homepage serves real
+  content (catches the DNS-negative-cache class of issue from earlier this
+  session), the Supabase REST API is reachable, and the `create-checkout`
+  CORS preflight still allows `pacificalpaca.com` — this last one is the
+  exact class of bug behind the already-fixed `JAVASCRIPT-REACT-7`
+  incident, verified by running all three checks against real production
+  infrastructure before committing the workflow. On failure, GitHub emails
+  the repo's default Actions-notification recipients — no new secret
+  needed. Slack/SMS paging instead would need a webhook URL as a new secret.
+
+- [x] **Scaffolded Supabase Edge Function CI/CD** — a `deploy-functions` job
+  in `ci.yml` that runs `supabase functions deploy --use-api` (server-side
+  bundling, no Docker needed in the runner) after `test` passes on master.
+  **Inactive until a `SUPABASE_ACCESS_TOKEN` repo secret is added**
+  (Supabase dashboard → Account → Access Tokens) — that's a personal access
+  token, a different and simpler auth path than the browser-OAuth
+  `supabase login` flow that's been 401ing all session, worth trying even
+  though CLI login itself is broken. Deliberately skips (not fails) when
+  the secret is missing, rather than showing red on every single push
+  regardless of what changed — that would train people to ignore CI,
+  undermining the e2e gate added in the same session. Once the secret
+  exists, this replaces the manual dashboard-paste deploy workflow
+  entirely, including for the `create-checkout` (Alipay) and
+  `stripe-webhook` (typing) fixes that are still sitting
+  deployed-in-git-but-not-in-production.
 
 - [x] **Platform-audit "Now" tier fixed end-to-end (2026-07-17)** — the
   six near-term items from that session's architecture review, in one pass:
