@@ -228,6 +228,33 @@
 
 ## Fixed
 
+- [x] **Auto-rollback disabled (2026-07-17), at the user's explicit
+  request, after a second real run of it also misbehaved** — the field-name
+  fix below was correct, but the health check itself then hit a
+  Cloudflare Bot Fight Mode false-positive (403) that the 5-retry fix
+  hadn't been verified against a real run yet, and it nearly triggered a
+  rollback of a perfectly healthy deploy. `verify-production` in `ci.yml`
+  is now `if: false` — code intact, not running. Do not re-enable without
+  watching at least one real run succeed end-to-end first; see the job's
+  own comment for the exact bar to clear.
+
+- [x] **Created a dedicated e2e test account** (2026-07-17, at the user's
+  request, after they added `SUPABASE_ACCESS_TOKEN` as a repo secret
+  themselves — activating the already-scaffolded `deploy-functions` CI
+  job). No Supabase MCP tool creates auth users directly, so this went
+  through `auth.users`/`auth.identities` directly via `pgcrypto`'s
+  `crypt()`/`gen_salt('bf')` (the same bcrypt format GoTrue expects),
+  matching the exact column pattern of a real existing user row rather
+  than guessing at the schema. **Verified by actually logging in** — a
+  real `POST /auth/v1/token?grant_type=password` call against this
+  account returned a genuine 200 with a valid access token, not just "the
+  insert didn't error." Email: `e2e-test@pacificalpaca.com`, no
+  admin/grower role — a plain customer account, for testing the ordinary
+  login→checkout path only. Password given to the user directly in chat,
+  not committed anywhere; they still need to add `TEST_EMAIL`/
+  `TEST_PASSWORD` as repo secrets themselves for `smoke.spec.ts`'s
+  post-login continuation to actually run in CI instead of skipping.
+
 - [x] **The auto-rollback mechanism (below) broke on its own first real
   run — two bugs, both caught by watching that run rather than assuming
   the earlier local review was enough.** (1) The deployment-id field is

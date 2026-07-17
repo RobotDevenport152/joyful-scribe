@@ -210,12 +210,23 @@ jobs:
   # Cloudflare edge behavior, exactly the class of bug that broke the new
   # crawler-metadata middleware twice this session) and auto-rolls back
   # rather than leaving a broken site live until a human notices.
+  #
+  # DISABLED (2026-07-17, at the user's explicit request) after its own
+  # first two real runs both malfunctioned: a wrong field name meant
+  # rollback silently couldn't happen, and — more concerning — a
+  # Cloudflare Bot Fight Mode false-positive on the health check nearly
+  # triggered a rollback of a perfectly healthy deploy. The 5-retry fix for
+  # the false-positive case is in this file but UNVERIFIED against a real
+  # run. Do not flip `if: false` back to enabled without watching at least
+  # one real run complete successfully end to end first — the point of
+  # this job is to be trustworthy enough to act on automatically; two
+  # unverified fixes in a row is not that bar yet.
   verify-production:
     name: Verify Production & Auto-Rollback
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-production
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    if: false
     permissions:
       contents: read
 
