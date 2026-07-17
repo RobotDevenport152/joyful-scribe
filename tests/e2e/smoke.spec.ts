@@ -3,20 +3,34 @@ import { test, expect } from '@playwright/test';
 test('smoke: browse, add to cart, checkout', async ({ page }) => {
   await page.goto('http://localhost:8080/shop');
 
-  // wait for product links and open first product
+  // Wait for a product link and open the first product.
   await page.waitForSelector('a[href^="/product/"]');
   await page.click('a[href^="/product/"]');
+  await page.waitForURL(/\/product\//, { timeout: 5000 });
 
-  // wait for Add to Cart button (English or Chinese)
+  // Many featured products require a size/variant selection before they can be added.
+  // Pick the first visible variant when present so this flow works across products.
+  const variantButton = page
+    .locator('button')
+    .filter({
+      hasText: /^(Single|King Single|Queen|King|Super King|Chinese Single|Chinese Double|Chinese Queen|Chinese King|S|M|L|XL)$/,
+    })
+    .first();
+
+  if (await variantButton.count()) {
+    await variantButton.click();
+  }
+
+  // Wait for Add to Cart button (English or Chinese)
   const addBtn = page.getByRole('button', { name: /Add to Cart|加入购物车/ });
   await addBtn.waitFor({ state: 'visible', timeout: 5000 });
   await addBtn.click();
 
-  // Drawer should open and show 'Checkout' button
+  // Drawer should open and show Checkout button
   const checkoutLink = page.getByRole('link', { name: /Checkout|去结账|去结算/ });
   await checkoutLink.waitFor({ state: 'visible', timeout: 5000 });
 
-  // Click checkout — the route is protected, so we may land on /checkout
+  // Click checkout - the route is protected, so we may land on /checkout
   // directly or get redirected to /login first.
   await checkoutLink.click();
   await page.waitForURL(/\/(checkout|login)/, { timeout: 5000 });

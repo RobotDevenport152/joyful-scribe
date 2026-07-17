@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
+    "ci:check-supabase-env": "node scripts/ci-check-supabase-env.mjs",
     "generate-image-variants": "node scripts/generate-image-variants.mjs"
   },
   "dependencies": {
@@ -89,6 +90,7 @@
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
+    "@vercel/functions": "^3.7.5",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",

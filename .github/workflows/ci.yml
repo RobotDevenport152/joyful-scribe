@@ -109,16 +109,7 @@ jobs:
       # the "preview" Vercel environment, which nothing had ever verified
       # actually has working Supabase credentials in it).
       - name: Sanity check the pulled Supabase credentials actually work
-        run: |
-          SUPABASE_URL=$(grep '^VITE_SUPABASE_URL=' .env.local | cut -d= -f2-)
-          SUPABASE_KEY=$(grep '^VITE_SUPABASE_PUBLISHABLE_KEY=' .env.local | cut -d= -f2-)
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-            echo "::error::VITE_SUPABASE_URL/VITE_SUPABASE_PUBLISHABLE_KEY missing from the pulled Vercel env"
-            exit 1
-          fi
-          curl -sf "$SUPABASE_URL/rest/v1/products?select=id&limit=1" \
-            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -o /dev/null \
-            || { echo "::error::Pulled Supabase credentials don't work against the real API — this is why the browser test below has no products to click through"; exit 1; }
+        run: npm run ci:check-supabase-env
 
       # TEST_EMAIL/TEST_PASSWORD are optional repo secrets: unset, the suite
       # still covers browse → product → add-to-cart → checkout-redirect and
