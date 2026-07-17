@@ -228,6 +228,30 @@
 
 ## Fixed
 
+- [x] **The auto-rollback mechanism (below) broke on its own first real
+  run — two bugs, both caught by watching that run rather than assuming
+  the earlier local review was enough.** (1) The deployment-id field is
+  `uid`, not `id` — the original script assumed `id` from memory of a
+  different tool's already-normalized output instead of checking a real
+  raw response; a live run's own `::warning::` annotation printed the
+  actual payload and settled it. (2) More importantly: the health check
+  itself got HTTP 403 and (correctly, given bug 1 also meant no id was
+  captured) failed to roll back — but the live site was independently
+  confirmed completely healthy seconds later. This is the **third**
+  confirmed case this session of Cloudflare's Bot Fight Mode (enabled on
+  this zone) blocking a GitHub Actions request that had nothing wrong
+  with it — the uptime-check workflow hit this twice already, and the
+  crawler middleware's self-fetch hit a version of the same thing. Fixed
+  the immediate bug (field name) and made the health check retry 5 times
+  with a 10s gap before concluding "unhealthy" — a real outage fails
+  consistently across retries, a Cloudflare challenge usually doesn't.
+  **Not fixed, and worth a deliberate decision**: the actual, recurring
+  root cause is Cloudflare treating GitHub Actions' IP range as
+  suspicious. The durable fix is allowlisting GitHub's published Actions
+  IP ranges (`api.github.com/meta`) in the Cloudflare zone config — not
+  done here since it's a WAF/bot-protection posture change with its own
+  tradeoffs, surfaced for a decision rather than changed unprompted.
+
 - [x] **Added post-deploy health check + automatic rollback to `ci.yml`
   (2026-07-17)**, at the user's request after asking how CI/CD could keep
   being strengthened. The `e2e` job already gates *before* a deploy, but

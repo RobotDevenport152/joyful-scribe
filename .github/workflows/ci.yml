@@ -159,12 +159,12 @@ jobs:
       # roll back to exactly this if the new deploy turns out to be broken.
       # `vercel rollback` (this CLI version) requires an explicit deployment
       # id/url — there's no bare "undo the last one" form to rely on.
-      # v7/deployments + rollbackCandidate=true, not v6: verified this
-      # session that Vercel's own deployment listing (via the dashboard-plane
-      # tooling used to diagnose today's incidents) returns an `id` field —
-      # not `uid` — and exposes `isRollbackCandidate`; filtering on it here
-      # is an extra guarantee this is actually something Vercel considers
-      # safe to roll back to, not just "whatever sorted first".
+      # v7/deployments + rollbackCandidate=true, not v6. Field is `uid`, NOT
+      # `id` — the first version of this script got that wrong (assumed
+      # from memory of a different tool's already-normalized output instead
+      # of checking the raw response) and it went undetected until a real
+      # run's ::warning:: annotation printed the actual payload. Confirmed
+      # from that real response, not guessed a second time.
       - name: Capture current production deployment (for rollback if needed)
         id: capture_previous
         env:
@@ -172,7 +172,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s "https://api.vercel.com/v7/deployments?projectId=prj_h9qpJHQT6IQFkciPKDrktOS1IknA&target=production&rollbackCandidate=true&limit=1&teamId=team_F1dXYNG6H7HNPP4OB6Rm5SJD" \
             -H "Authorization: Bearer $VERCEL_TOKEN")
-          ID=$(echo "$RESPONSE" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);process.stdout.write(j.deployments?.[0]?.id||'');}catch(e){}})")
+          ID=$(echo "$RESPONSE" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);process.stdout.write(j.deployments?.[0]?.uid||'');}catch(e){}})")
           echo "id=$ID" >> "$GITHUB_OUTPUT"
           if [ -z "$ID" ]; then
             echo "::warning::Could not capture a previous production deployment id — auto-rollback won't be possible if this deploy turns out unhealthy. Raw API response: $(echo "$RESPONSE" | head -c 300)"
@@ -223,18 +223,36 @@ jobs:
       - name: Wait for edge propagation
         run: sleep 20
 
-      - name: Health check the live site
+      # Retries before concluding "unhealthy": a single request isn't
+      # reliable enough to trigger an automatic rollback on. This zone has
+      # Cloudflare Bot Fight Mode enabled, and GitHub Actions' IP range has
+      # now been blocked by it three separate times this session (the
+      # uptime-check workflow twice, and this exact check once, immediately
+      # confirmed as a false alarm — the live site was independently
+      # verified healthy seconds later from a different network). A real
+      # outage fails consistently across retries; a Cloudflare challenge
+      # usually doesn't.
+      - name: Health check the live site (with retries)
         id: health
         run: |
-          HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
-            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            https://pacificalpaca.com/)
-          echo "HTTP status: $HTTP_CODE"
-          if [ "$HTTP_CODE" = "200" ] && grep -q "Pacific Alpacas" /tmp/body.html; then
+          HEALTHY=false
+          for i in 1 2 3 4 5; do
+            HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
+              -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              "https://pacificalpaca.com/?_health_check_attempt=$i")
+            echo "Attempt $i: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ] && grep -q "Pacific Alpacas" /tmp/body.html; then
+              HEALTHY=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$HEALTHY" = "true" ]; then
             echo "healthy=true" >> "$GITHUB_OUTPUT"
           else
             echo "healthy=false" >> "$GITHUB_OUTPUT"
-            echo "::error::Post-deploy health check failed (HTTP $HTTP_CODE) — rolling back."
+            echo "::error::Post-deploy health check failed 5 times in a row (last: HTTP $HTTP_CODE) — rolling back."
+            head -c 500 /tmp/body.html
           fi
 
       - name: Roll back to the previous production deployment
