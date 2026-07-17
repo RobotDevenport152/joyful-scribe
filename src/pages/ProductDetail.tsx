@@ -287,6 +287,7 @@ export default function ProductDetailPage() {
                   src={images[activeImg]}
                   alt={locale === 'zh' ? product.nameZh : product.nameEn}
                   className="w-full h-full object-cover transition-opacity duration-300"
+                  fetchPriority="high"
                 />
                 <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <ZoomIn className="w-4 h-4" />
@@ -311,7 +312,7 @@ export default function ProductDetailPage() {
                         activeImg === i ? 'border-gold' : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                     </button>
                   ))}
                 </div>
@@ -346,7 +347,7 @@ export default function ProductDetailPage() {
                               activeImg === i ? 'border-gold' : 'border-white/30 hover:border-white/70'
                             }`}
                           >
-                            <img src={img} alt="" className="w-full h-full object-cover" />
+                            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                           </button>
                         ))}
                       </div>
@@ -828,7 +829,7 @@ export default function ProductDetailPage() {
                 {alsoBought.map(p => (
                   <Link key={p.id} to={`/product/${p.id}`} className="group block">
                     <div className="aspect-square rounded-lg overflow-hidden bg-card mb-3">
-                      <img src={p.image} alt={locale === 'zh' ? p.nameZh : p.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={p.image} alt={locale === 'zh' ? p.nameZh : p.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p.nameZh : p.nameEn}</p>
                     <p className="text-gold font-display text-sm">{fp(p.prices[currency])}</p>
@@ -848,7 +849,7 @@ export default function ProductDetailPage() {
                 {recentProducts.map(p => (
                   <Link key={p!.id} to={`/product/${p!.id}`} className="group block">
                     <div className="aspect-square rounded-lg overflow-hidden bg-card mb-3">
-                      <img src={p!.image} alt={locale === 'zh' ? p!.nameZh : p!.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={p!.image} alt={locale === 'zh' ? p!.nameZh : p!.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p!.nameZh : p!.nameEn}</p>
                     <p className="text-gold font-display text-sm">{fp(p!.prices[currency])}</p>

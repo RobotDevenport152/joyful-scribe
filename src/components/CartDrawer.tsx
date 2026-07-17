@@ -69,7 +69,7 @@ export default function CartDrawer() {
           ) : (
             cart.map(item => (
               <div key={`${item.product.id}-${item.variant}`} className="flex gap-4 bg-card rounded-lg p-4">
-                <img src={item.product.image} alt={locale === 'zh' ? item.product.nameZh : item.product.nameEn} className="w-20 h-20 object-cover rounded" />
+                <img src={item.product.image} alt={locale === 'zh' ? item.product.nameZh : item.product.nameEn} className="w-20 h-20 object-cover rounded" loading="lazy" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display font-semibold text-sm truncate">
                     {locale === 'zh' ? item.product.nameZh : item.product.nameEn}

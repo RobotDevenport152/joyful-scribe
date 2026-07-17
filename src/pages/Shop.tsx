@@ -258,7 +258,7 @@ export default function ShopPage() {
                   {dbProducts.filter((p: any) => p.featured).slice(0, 3).map((p: any) => (
                     <Link key={p.id} to={`/product/${p.id}`} className="group border border-border rounded-lg overflow-hidden hover:border-gold transition-colors">
                       <div className="aspect-square overflow-hidden bg-card">
-                        <img src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                       </div>
                       <div className="p-3">
                         <p className="font-body text-xs font-semibold truncate">{locale === 'zh' ? p.nameZh : p.nameEn}</p>

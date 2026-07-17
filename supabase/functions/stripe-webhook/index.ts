@@ -2,6 +2,35 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Shape of one entry in checkout_sessions.items — written by create-checkout's
+// pricedItems.map() (see CheckoutRequestBody/PricedItem there), read back here
+// once Stripe confirms payment.
+interface StoredCheckoutItem {
+  productId: string;
+  name: string;
+  variant: string | null;
+  quantity: number;
+  price: number;
+}
+
+interface CheckoutSessionRow {
+  id: string;
+  status: string;
+  user_id: string;
+  order_number: string;
+  shipping_name: string;
+  shipping_email: string;
+  shipping_phone: string | null;
+  shipping_address: unknown;
+  subtotal: number;
+  discount: number;
+  shipping_cost: number;
+  total: number;
+  currency: string;
+  promo_code: string | null;
+  items: StoredCheckoutItem[];
+}
+
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
@@ -63,7 +92,8 @@ serve(async (req) => {
         ? serviceClient.from("checkout_sessions").select("*").eq("id", checkoutSessionId).maybeSingle()
         : serviceClient.from("checkout_sessions").select("*").eq("order_number", orderNumber).maybeSingle();
 
-      const { data: checkoutData, error: fetchError } = await checkoutQuery;
+      const { data: rawCheckoutData, error: fetchError } = await checkoutQuery;
+      const checkoutData = rawCheckoutData as CheckoutSessionRow | null;
 
       if (fetchError || !checkoutData) {
         console.error("webhook_checkout_session_not_found", {
@@ -88,7 +118,7 @@ serve(async (req) => {
 
       // Map items to the format expected by the decrement_stock DB trigger:
       // the trigger reads item->>'product_id' and item->>'qty'.
-      const orderItemsSnapshot = (checkoutData.items as any[]).map((item: any) => ({
+      const orderItemsSnapshot = checkoutData.items.map((item) => ({
         product_id: item.productId || null,
         qty:        item.quantity,
         name:       item.name,
@@ -129,7 +159,7 @@ serve(async (req) => {
       }
 
       // Populate order_items for admin order management views
-      const orderItemRows = (checkoutData.items as any[]).map((item: any) => ({
+      const orderItemRows = checkoutData.items.map((item) => ({
         order_id:     order.id,
         product_id:   item.productId || null,
         product_name: item.name,

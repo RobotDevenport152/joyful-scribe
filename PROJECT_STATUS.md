@@ -105,13 +105,19 @@
   silently for months.** `src/test/certificate.test.ts` only tests two pure
   JS helpers (`isCertificateCodeFormat`, `buildVerifyUrl`); nothing anywhere
   calls `generate_certificate_code()` or exercises `product_certificates`
-  end-to-end. A Playwright e2e smoke test already exists
-  (`tests/e2e/smoke.spec.ts` — browse → cart → checkout) but **isn't wired
-  into CI** — `.github/workflows/ci.yml` only runs `npm run lint`,
-  `npm run test` (vitest), and `tsc --noEmit`. Not fixed — needs a decision
-  on whether to add Playwright to CI (and how to handle its
-  `TEST_EMAIL`/`TEST_PASSWORD`-gated login step in that environment) plus a
-  new test that actually calls the certificate RPC.
+  end-to-end. ~~A Playwright e2e smoke test already exists
+  (`tests/e2e/smoke.spec.ts` — browse → cart → checkout) but isn't wired
+  into CI~~ — **fixed (2026-07-17)**: added an `e2e` job to
+  `ci.yml` that builds against pulled preview env vars, serves it, and runs
+  the suite, gating `deploy-production` on it (`deploy-preview` stays
+  ungated so reviewer preview links don't slow down). Along the way found
+  `playwright.config.ts`'s `testDir` pointed at a `playwright/` directory
+  that's never existed — the suite was undiscoverable by a plain
+  `npx playwright test` even locally; fixed to `tests/e2e`. Still not fixed:
+  a new test that actually calls the certificate RPC, and the suite's
+  `TEST_EMAIL`/`TEST_PASSWORD`-gated login continuation has no secrets set
+  in CI yet, so it exercises browse → cart → checkout-redirect but skips the
+  post-login continuation until those two repo secrets are added.
 
 - [ ] **No documented visual/content QA gate for product images.** The
   AI-generated fake product image issue (see Fixed below) was caught
@@ -137,10 +143,16 @@
   button in checkout is currently shown but disabled ("Coming soon") rather
   than removed, so it's a one-line UI change once a direction is picked.
 
-- [ ] **`stripe-webhook/index.ts` still has 4 `any`-typed usages** (lines
-  ~91, ~132) in the order-creation-from-webhook path — same class of issue
-  as `create-checkout`'s pricing pipeline (fixed below), not yet addressed
-  since it wasn't in scope of what was approved this session.
+- [x] ~~`stripe-webhook/index.ts` still has 4 `any`-typed usages~~ (lines
+  ~91, ~132) in the order-creation-from-webhook path — **fixed (2026-07-17)**:
+  added `StoredCheckoutItem`/`CheckoutSessionRow` interfaces matching the
+  exact shape `create-checkout` writes into `checkout_sessions.items`, same
+  read-result-cast pattern already used for `create-checkout`'s `DbProduct`
+  reads. Same caveat as that earlier fix: type-only change, verified via
+  ESLint (85→81 warnings) and `tsc --noEmit`, not a real Deno type-check
+  (still not installed here) — and, like `create-checkout`, the deployed
+  edge function won't pick this up until someone runs
+  `supabase functions deploy stripe-webhook`.
 
 - [ ] **Hero video footage doesn't match "luxury sleep" positioning.** Current
   loop (`public/videos/promo.mp4`, 15–48s of source) shows warehouse/shearing
@@ -153,7 +165,70 @@
   `public/videos/` or new footage — a creative/content call, and re-cutting
   needs `ffmpeg`, which isn't available in this environment.)
 
+- [ ] **Two more dead files found while fixing image lazy-loading (2026-07-17)**,
+  same pattern as the 2026-07-16 dead-code audit's `GrowerNetworkSection`/
+  `ErrorBoundary`/`AuthPage`/`uiStore` finds — not deleted here, out of scope
+  for what was being worked on: `src/pages/Admin.tsx` (a standalone admin
+  page, entirely superseded by `AdminLayout` + `pages/admin/*` — not
+  imported or routed anywhere in `App.tsx`) and
+  `src/components/cart/CartDrawer.tsx` (a duplicate of the real, actually-used
+  `src/components/CartDrawer.tsx` imported by `PublicLayout.tsx` — zero
+  references to the `cart/` one anywhere). Both confirmed via grep, not
+  deleted since deleting wasn't asked for.
+
 ## Fixed
+
+- [x] **Platform-audit "Now" tier fixed end-to-end (2026-07-17)** — the
+  six near-term items from that session's architecture review, in one pass:
+  - `index.html`'s `og:image`/`twitter:image` pointed at a leftover Lovable
+    scaffold screenshot, `twitter:site` still read `@Lovable`, and a stray
+    `<!-- TODO: Set the document title... -->` comment shipped on every page.
+    Replaced the image with a real on-domain asset
+    (`https://pacificalpaca.com/images/hero-comforter.jpg`, already used as
+    the hero video's poster frame); dropped `twitter:site` entirely rather
+    than invent a handle — the only real social account referenced anywhere
+    in the codebase is Instagram (`instagram.com/pacific_alpacas`), no
+    Twitter/X account exists to cite.
+  - Added a `headers` block to `vercel.json`: a CSP (`script-src 'self'`,
+    no `unsafe-eval`/inline scripts — the built output has none),
+    `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+    `Referrer-Policy: strict-origin-when-cross-origin`, and a
+    `Permissions-Policy` disabling camera/mic/geolocation (grepped — unused
+    anywhere). `connect-src` scoped to the real Supabase project
+    (`pymnquyxpoeqkkuzzial.supabase.co`, both `https:`/`wss:`), Frankfurter,
+    and Sentry's ingest host. **Verified against a real browser, not just
+    reasoned about**: built the app, served it with the same CSP injected as
+    a meta tag, and drove it with Playwright across every public route
+    (including `/growers-info`'s Leaflet/OpenStreetMap map and an
+    unauthenticated `/checkout` redirect) — zero CSP console violations.
+  - Added `npm audit --omit=dev --audit-level=high` to `ci.yml`. Scoped to
+    production deps deliberately: the one existing finding
+    (GHSA-67mh-4wv8-2f99, esbuild's dev server) lives entirely in
+    vite/esbuild devDependencies, never ships to production, and its fix is
+    an intentional Vite 5→8 major bump — already a known, deferred decision,
+    not something this check should turn permanently red over.
+  - Wired the existing Playwright e2e suite into CI as a real gate — see the
+    struck-through P1 entry above for the details, including the
+    `playwright.config.ts` `testDir` bug found along the way.
+  - Made `loading="lazy"` consistent across the product-grid, cart-drawer,
+    and related-products images that were missing it (`Shop.tsx`,
+    `ProductDetail.tsx`, `CartDrawer.tsx`); gave `ProductDetail.tsx`'s main
+    product image `fetchPriority="high"` instead, since it's that page's LCP
+    element — matching the pattern `HeroSection.tsx` already uses. Checked
+    first whether missing width/height was a real layout-shift risk here:
+    it isn't — every one of these images sits inside a CSS `aspect-square`
+    wrapper, which reserves the box before the image loads regardless of
+    HTML width/height attributes, so that part of the original audit finding
+    was overstated and no width/height changes were needed.
+  - See the struck-through P1 entry above for the `stripe-webhook` typing
+    fix.
+  
+  All six verified together: `tsc --noEmit` clean, ESLint 0 errors (85→81
+  warnings), all 59 vitest tests pass, full production build succeeds.
+  **Not yet deployed** — needs a push to `master` (frontend changes) plus a
+  manual `supabase functions deploy stripe-webhook` (edge functions still
+  aren't in CI/CD, see the migration-drift and CLI-auth notes elsewhere in
+  this file).
 
 - [x] **Stale-chunk reload fix wasn't actually suppressing the Sentry report it
   was meant to suppress (2026-07-17).** Found via the Sentry check above:
