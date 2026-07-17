@@ -228,6 +228,81 @@
 
 ## Fixed
 
+- [x] **New `/product/:id` crawler-metadata middleware (`middleware.ts`,
+  started this session per the platform audit's "Later" tier SSR item —
+  a Vercel Routing Middleware that serves correct per-product
+  `og:title`/`og:image`/etc. to known social-crawler user agents only,
+  leaving real users' SPA untouched) shipped with a real cache-poisoning
+  bug, caught by checking the live deployment rather than trusting the
+  build succeeded.** The middleware's crawler-specific response set
+  `Cache-Control: public, max-age=300, s-maxage=3600` — a *shared* cache
+  directive, which both Vercel's edge cache and Cloudflare in front of it
+  key by URL, not by User-Agent, by default. A real browser's plain
+  request to `/product/716a392f-...` got cached first; every subsequent
+  crawler request to that same URL then received the cached generic page
+  instead of ever re-running the middleware — confirmed directly via
+  `get_runtime_logs(source: edge-middleware)`, which showed `cache=HIT`/
+  `cache=MISS` entries for exactly this path. Fixed by dropping shared
+  caching entirely (`private, no-store`) rather than attempting to fix it
+  with `Vary: User-Agent`, which would need to work correctly across two
+  independent CDN layers (Vercel + Cloudflare) to be reliable — not worth
+  the fragility for a boutique site's crawler traffic volume. Also
+  confirmed separately, before this bug was found: the build step
+  correctly detects and bundles the middleware (`.vercel/output/functions/
+  middleware.func`, a proper route entry in `config.json`) — the earlier
+  "still showing the generic card" symptom was caching, not a build or
+  detection problem. Not yet re-verified against the live site as of this
+  entry — see the immediately following commit/session action for that.
+
+- [x] **Every deploy silently failed for most of today (2026-07-17) — nothing
+  from the platform-audit "Now" tier onward actually reached production
+  until this was caught and fixed.** Root cause: `add273c` (the first
+  Now-tier commit) added the `e2e` CI job as a hard requirement for
+  `deploy-production` (`needs: [test, e2e]`) in the same commit that
+  changed `index.html`. The `e2e` job passed locally every time it was
+  checked this session, but failed in real GitHub Actions on every single
+  push since — confirmed via the GitHub API (`gh` CLI isn't available
+  here, but the repo is public, so `api.github.com/repos/.../actions/runs`
+  and `.../check-runs/{id}/annotations` are readable without a token; that
+  path is how this got diagnosed and later verified fixed, since raw log
+  download does require auth this session never had). This was caught
+  *because* a routine follow-up check (confirming an earlier index.html
+  fix was actually live) found the production site still serving the old,
+  supposedly-already-fixed Lovable placeholder image — the fix was real
+  and correct in the repo, just never deployed.
+
+  Root cause of the `e2e` failure itself: it pulled Vercel's **preview**
+  environment's env vars, which — this repo has only ever pushed straight
+  to `master`, no PR has ever actually triggered `deploy-preview` — had
+  never been exercised or verified to contain working Supabase
+  credentials. Fixed by switching to `--environment=production`, matching
+  `deploy-production`'s own long-proven-working env source (there's only
+  one real Supabase project used anywhere in this repo regardless).
+  Verified the fix landed by watching the next real CI run to completion
+  via the GitHub API rather than assuming: `Deploy Production` succeeded,
+  and the live site was independently re-checked afterward (correct
+  `og:image`/`og:url`, correct CSP headers all present).
+
+  **Update, same session**: while this was being fixed, the user
+  independently committed two more CI hardening passes directly
+  (`9a873df`, `b2e66f8` — concurrency groups, per-job timeouts, a
+  Node-based Supabase-credential sanity check now run as
+  `npm run ci:check-supabase-env`, a `preview-smoke` job that actually
+  exercises a real deployed preview URL, and fixed `smoke.spec.ts` to use
+  Playwright's `baseURL` instead of a hardcoded `localhost:8080`). Those
+  are folded in as-is, not redone.
+
+  **Separately found, not yet resolved**: the new `uptime.yml` scheduled
+  check (added earlier this session) has itself failed twice with a
+  non-2xx response (`curl -sf` exit 22) at times when the site was
+  independently confirmed healthy — plausibly Cloudflare's Bot Fight Mode
+  (enabled on this zone) challenging GitHub Actions' datacenter IP range,
+  a very different traffic profile than a real browser. Added a browser
+  User-Agent and explicit status-code logging so the next occurrence is
+  self-diagnosing; if it keeps happening, the real fix is likely
+  allowlisting GitHub Actions' IP ranges in the Cloudflare zone config, not
+  something to guess at further without more failed-run evidence.
+
 - [x] **Built a free responsive/WebP image pipeline for product photos
   (2026-07-17)**, after confirming (see the struck-through item above) that
   every product image is a static repo-bundled file, not a Storage/R2 URL,

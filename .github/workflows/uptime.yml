@@ -26,10 +26,28 @@ jobs:
     name: Ping production
     runs-on: ubuntu-latest
     steps:
+      # -A: a plain curl UA plus GitHub Actions' datacenter IP range is
+      # exactly the traffic profile Cloudflare's Bot Fight Mode (enabled on
+      # this zone, see infra/terraform/cloudflare.tf) is designed to
+      # challenge — two real runs already came back non-2xx (curl exit 22)
+      # for reasons unrelated to the site's real health, confirmed by
+      # manually curling the same URL successfully seconds later from a
+      # different network. A browser UA doesn't guarantee passing Cloudflare's
+      # scoring (TLS fingerprint matters too, which curl can't fake), but it's
+      # a real, cheap improvement worth trying before concluding this needs a
+      # Cloudflare-side allowlist for GitHub's IP ranges instead.
       - name: Homepage reachable and serving real content
         run: |
-          BODY=$(curl -sf --max-time 15 https://pacificalpaca.com/)
-          echo "$BODY" | grep -q "Pacific Alpacas" || { echo "Homepage didn't contain expected content"; exit 1; }
+          HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            https://pacificalpaca.com/)
+          echo "HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Non-200 response ($HTTP_CODE) — check whether this is a real outage or Cloudflare challenging GitHub Actions' IP range (Bot Fight Mode is enabled on this zone)."
+            head -c 500 /tmp/body.html
+            exit 1
+          fi
+          grep -q "Pacific Alpacas" /tmp/body.html || { echo "::error::Got 200 but the homepage didn't contain expected content"; exit 1; }
 
       - name: Supabase API reachable
         env:

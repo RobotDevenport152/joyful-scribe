@@ -114,9 +114,18 @@ export default async function middleware(request: Request) {
     return new Response(html, {
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        // Short edge cache: a popular shared product gets cached briefly
-        // instead of re-fetching + re-templating on every crawl.
-        'cache-control': 'public, max-age=300, s-maxage=3600',
+        // Deliberately NOT shared/publicly cached. A shared cache (Vercel's
+        // edge cache and Cloudflare in front of it both apply) keys by URL,
+        // not by User-Agent, by default — an earlier version of this set
+        // `public, max-age=300, s-maxage=3600` and it caused exactly the bug
+        // this comment is warning against: a real user's plain request to
+        // /product/:id got cached, and every subsequent crawler request to
+        // that same URL was served the cached generic page instead of ever
+        // running this middleware again. Crawler traffic on a boutique
+        // storefront is low-volume enough that re-running this on every hit
+        // is cheap; it's not worth re-introducing shared caching without
+        // also solving the Vary-across-two-CDN-layers problem properly.
+        'cache-control': 'private, no-store',
       },
     });
   } catch {
