@@ -26,7 +26,11 @@ initSentry();
 // (hashed filename no longer exists) — Vite dispatches this event when that
 // dynamic import fails. Reload once to pick up the current build; the
 // sessionStorage guard stops a reload loop if the fetch keeps failing.
-window.addEventListener("vite:preloadError", () => {
+// preventDefault() is required: without it Vite rethrows the original error
+// after this listener runs, so it still reaches Sentry as an unhandled error
+// even though the reload already recovers the page.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
   const key = "vite-preload-error-reloaded";
   if (!sessionStorage.getItem(key)) {
     sessionStorage.setItem(key, "1");

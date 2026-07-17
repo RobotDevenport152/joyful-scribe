@@ -18,6 +18,16 @@
   `JAVASCRIPT-REACT-1` "`updateFrom`" TypeError, is Sentry's own auto-seeded
   onboarding sample, not a real bug — ignore it. Two real errors,
   `JAVASCRIPT-REACT-2`/`-3`, showed up 2026-07-15 — see Fixed below).
+- **As of the 2026-07-17 check**, `JAVASCRIPT-REACT-2` through `-8` are all
+  accounted for: `-2`/`-3` (FarmMap chunk-load) and `-4` (Map container
+  re-init) predate the `a396b83`/`de17cdf` fixes and haven't recurred; `-7`
+  (`checkout_failed` from the vercel.app alias) predates the `de17cdf`
+  redirect and hasn't recurred either. `-5`/`-6`/`-8` (Contact/Shop/
+  ProductDetail stale-chunk errors) **did recur after** the `e85826a`
+  reload-on-preload-error fix — root cause and fix below. None of these
+  issues are marked "resolved" in the Sentry dashboard itself (that's a
+  manual dashboard action, not something inferred from git history) —
+  ask before touching Sentry's issue state if that bookkeeping matters.
 - **How to check**: the `claude.ai Sentry` MCP connector for this account
   keeps authorizing against an unrelated University of Auckland Sentry org
   no matter how many times it's reconnected (tried multiple full
@@ -144,6 +154,21 @@
   needs `ffmpeg`, which isn't available in this environment.)
 
 ## Fixed
+
+- [x] **Stale-chunk reload fix wasn't actually suppressing the Sentry report it
+  was meant to suppress (2026-07-17).** Found via the Sentry check above:
+  `JAVASCRIPT-REACT-5`/`-6`/`-8` (chunk-load `TypeError`s for `ProductDetail`,
+  `Shop`, `Contact`) kept appearing *after* `e85826a` ("Reload once on stale
+  chunk load failure after a deploy") landed, which shouldn't happen if that
+  fix worked. Root cause: the `vite:preloadError` listener in `src/main.tsx`
+  reloaded the page but never called `event.preventDefault()` — per Vite's
+  own event semantics, without that call the original import error is
+  rethrown after the listener runs and still reaches Sentry's global handler
+  as an unhandled error, even though the user's browser recovers fine via the
+  reload. So the fix was working for the user (silent recovery) but not for
+  the noise it was supposed to eliminate from Sentry. One-line fix: added
+  `event.preventDefault()`. Verified: `tsc --noEmit` clean, `npm run build`
+  succeeds, all 59 vitest tests still pass.
 
 - [x] **WeChat Mini Store QR code gave impractical instructions on mobile
   (2026-07-16).** `WeChatStoreButton.tsx` only branched on whether the page
