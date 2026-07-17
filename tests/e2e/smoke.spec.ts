@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('smoke: browse, add to cart, checkout', async ({ page }) => {
-  await page.goto('http://localhost:8080/shop');
+  await page.goto('/shop');
 
   // Wait for a product link and open the first product.
   await page.waitForSelector('a[href^="/product/"]');

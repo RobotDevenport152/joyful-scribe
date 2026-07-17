@@ -1,7 +1,10 @@
 name: CI/CD
 
-# Deny all permissions by default — each job grants only what it needs
 permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -10,10 +13,10 @@ on:
     branches: [master, main]
 
 jobs:
-  # ── CI: lint + test + type-check on every push and PR ─────────────────────
   test:
     name: Lint & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
 
@@ -37,21 +40,13 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # --omit=dev: the one known issue in this tree (GHSA-67mh-4wv8-2f99, esbuild's
-      # dev server accepting cross-origin requests) lives entirely in vite/esbuild
-      # devDependencies, never shipped to production, fixed only by an intentional
-      # Vite 5→8 major bump — deliberately deferred, not an oversight. Scoping to
-      # production dependencies keeps this check meaningful instead of permanently red.
       - name: Dependency vulnerability scan (production deps)
         run: npm audit --omit=dev --audit-level=high
 
-  # ── E2E: real browse → cart → checkout, against an actual production build ──
-  # Gates deploy-production so a broken checkout flow can't ship green. Doesn't
-  # gate deploy-preview — preview links should stay fast for reviewers to click
-  # through even while this runs.
   e2e:
     name: End-to-end smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: test
     permissions:
       contents: read
@@ -70,24 +65,11 @@ jobs:
       - name: Install Playwright's Chromium
         run: npx playwright install --with-deps chromium
 
-      # Uses --environment=production, not preview: this repo has always
-      # pushed straight to master (no PR-based workflow has actually run
-      # deploy-preview yet), so "preview" env vars in Vercel have never been
-      # verified and are the likely reason this job failed against real CI
-      # after being added (built fine, but the app had no working Supabase
-      # credentials, so Shop had no products, so every DOM wait here timed
-      # out). There's only one real Supabase project used everywhere in this
-      # repo anyway — production and preview would point at the same
-      # database regardless — so this loses nothing and matches
-      # deploy-production's own proven-working env source.
       - name: Pull Vercel env vars
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
-      # Vite inlines VITE_* vars at build time, not runtime, so they need to land
-      # in .env.local (Vite's own convention) before `npm run build`, not just
-      # exist in the pulled .vercel/ files.
       - name: Build against production env
         run: |
           cp .vercel/.env.production.local .env.local
@@ -102,48 +84,29 @@ jobs:
           done
           echo "Preview server never came up:" && cat vite-preview.log && exit 1
 
-      # Fails fast with a specific, obvious message if the pulled Vercel env
-      # vars don't actually work against Supabase, instead of letting
-      # Playwright time out downstream with a much less diagnosable error —
-      # exactly the failure mode that broke this job the first time (pulled
-      # the "preview" Vercel environment, which nothing had ever verified
-      # actually has working Supabase credentials in it).
       - name: Sanity check the pulled Supabase credentials actually work
         run: npm run ci:check-supabase-env
 
-      # TEST_EMAIL/TEST_PASSWORD are optional repo secrets: unset, the suite
-      # still covers browse → product → add-to-cart → checkout-redirect and
-      # skips only the post-login continuation (tests/e2e/smoke.spec.ts handles
-      # this itself via test.skip when the vars are missing).
       - name: Run Playwright e2e suite
         env:
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-        run: npx playwright test tests/e2e --config=playwright.config.ts --reporter=list
+        run: npx playwright test tests/e2e --config=playwright.config.ts --reporter=list,html
 
-      - name: Upload Playwright report on failure
+      - name: Upload Playwright artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
 
-  # ── CD (edge functions): deploy Supabase Edge Functions after CI passes ────
-  # Needs a SUPABASE_ACCESS_TOKEN repo secret to actually run (Supabase
-  # dashboard -> Account -> Access Tokens -> generate one, then add it as a
-  # repo secret). That's a personal access token, a different, simpler auth
-  # path than the browser-OAuth `supabase login` flow that's been 401ing in
-  # this environment — worth trying even though CLI login itself is broken.
-  # Skips (not fails) when the secret is missing: a job that's red on every
-  # single push regardless of what changed trains people to ignore CI, which
-  # would undermine the e2e gate added alongside this. Once the secret's
-  # added, this replaces the manual dashboard-paste deploy workflow
-  # entirely, including for the create-checkout (Alipay) and stripe-webhook
-  # (typing) fixes that are currently sitting deployed-in-git-but-not-in-production.
   deploy-functions:
-    name: Deploy → Supabase Edge Functions
+    name: Deploy Supabase Edge Functions
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: test
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     permissions:
@@ -158,7 +121,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::notice::SUPABASE_ACCESS_TOKEN secret is not set — skipping this job. Generate one from the Supabase dashboard (Account -> Access Tokens) and add it as a repo secret to enable automatic Edge Function deploys. Until then, deploy manually via the dashboard's function editor — see PROJECT_STATUS.md."
+            echo "::notice::SUPABASE_ACCESS_TOKEN secret is not set - skipping this job. Generate one from the Supabase dashboard (Account -> Access Tokens) and add it as a repo secret to enable automatic Edge Function deploys."
             echo "configured=false" >> "$GITHUB_OUTPUT"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -170,10 +133,10 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: npx supabase functions deploy --project-ref pymnquyxpoeqkkuzzial --use-api
 
-  # ── CD (production): deploy to Vercel only after CI + e2e pass on master ───
   deploy-production:
-    name: Deploy → Production
+    name: Deploy Production
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [test, e2e]
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     permissions:
@@ -216,15 +179,17 @@ jobs:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: echo "### Production deployed to $DEPLOY_URL" >> "$GITHUB_STEP_SUMMARY"
 
-  # ── CD (preview): deploy PR previews so reviewers can click through ─────────
   deploy-preview:
-    name: Deploy → Preview
+    name: Deploy Preview
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: test
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: write
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -258,8 +223,8 @@ jobs:
           fi
           printf 'url=%s\n' "$URL" >> "$GITHUB_OUTPUT"
 
-      # URL passed via env: so it's treated as data, not code
       - name: Comment preview URL on PR
+        if: success()
         uses: actions/github-script@v7
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
@@ -269,5 +234,50 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### Preview deployed\n\n🔗 ${process.env.DEPLOY_URL}`
+              body: `### Preview deployed\n\n🔗 ${process.env.DEPLOY_URL}\n\nThe preview smoke test runs in a separate job.`
             })
+
+  preview-smoke:
+    name: Preview smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: deploy-preview
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright's Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Health check preview URL
+        env:
+          DEPLOY_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+        run: curl -fsSL "$DEPLOY_URL" > /dev/null
+
+      - name: Run preview smoke test
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/smoke.spec.ts --config=playwright.config.ts --reporter=list,html
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-preview-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
