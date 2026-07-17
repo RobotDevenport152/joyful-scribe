@@ -4,17 +4,27 @@ import { next } from '@vercel/functions';
 // rewrite. This is a client-only Vite/React SPA (see PROJECT_STATUS.md's
 // platform audit) — index.html ships one static set of og:*/twitter:*
 // tags for every URL, and per-page overrides (SEOHead) only apply after
-// React hydrates. That's fine for crawlers that execute JS (Googlebot),
-// but classic social-share unfurlers (Facebook, Twitter, LinkedIn, Slack,
-// Discord, WhatsApp, Telegram) fetch the URL once and read the raw HTML —
-// they never run JS, so a shared /product/:id link has always shown the
+// React hydrates. That's fine for crawlers that execute JS — Googlebot,
+// Bingbot, and Applebot all do, so they already see SEOHead's correct
+// per-page tags via a normal render and are deliberately NOT in the list
+// below. The real gap is classic social-share unfurlers (Facebook,
+// Twitter, LinkedIn, Slack, Discord, WhatsApp, Telegram, Pinterest,
+// Reddit) — they fetch the URL once and read the raw HTML, never
+// executing JS, so a shared /product/:id link has always shown the
 // generic homepage card, never that product's name/photo/price.
 //
-// This middleware intercepts ONLY requests from those known crawler user
-// agents on /product/:id, fetches the real product server-side, and
-// serves the same index.html with just the meta tags swapped — real users
-// (including anyone on a normal browser or the real WeChat in-app browser)
-// are never touched by this and get the exact same SPA as before.
+// Because none of these crawlers execute JS, they don't need the real
+// app shell (script tags, hashed asset bundle) at all — only correct
+// <head> meta tags. So this builds a minimal, self-contained HTML
+// response directly, rather than fetching the real index.html over the
+// network: an earlier version did that (fetch(new URL('/', request.url)))
+// and it silently failed in production — confirmed via runtime logs
+// (mw: shell fetch status: 403) — because that self-fetch went back out
+// through Cloudflare (this zone has Bot Fight Mode enabled, see
+// infra/terraform/cloudflare.tf) and got treated as bot traffic, the same
+// way the uptime-check workflow's GitHub Actions requests occasionally
+// have been. Building the HTML directly sidesteps that failure mode
+// entirely instead of working around it.
 //
 // Deliberately does NOT try to detect WeChat's link-preview crawler: there
 // is no reliably documented, distinct user agent for it separate from
@@ -29,8 +39,9 @@ export const config = {
   matcher: '/product/:path*',
 };
 
-const CRAWLER_UA = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|Googlebot|bingbot|Applebot|Pinterest|redditbot/i;
+const CRAWLER_UA = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|Pinterest|redditbot/i;
 
+const SITE_ORIGIN = 'https://pacificalpaca.com';
 const SUPABASE_URL = 'https://pymnquyxpoeqkkuzzial.supabase.co';
 // Public anon key — safe to embed, it's already shipped in the client
 // bundle (same reasoning as the Sentry DSN and the uptime-check workflow
@@ -59,35 +70,51 @@ async function fetchProduct(idOrSlug: string): Promise<ProductRow | null> {
   return rows[0] ?? null;
 }
 
-function toAbsoluteUrl(url: string, origin: string): string {
-  return url.startsWith('http') ? url : `${origin}${url}`;
+function toAbsoluteUrl(url: string): string {
+  return url.startsWith('http') ? url : `${SITE_ORIGIN}${url}`;
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function injectProductMeta(html: string, product: ProductRow, pageUrl: string, origin: string): string {
+// A minimal, self-contained document — not the real app shell. Safe
+// because every crawler this runs for reads only <head> and never
+// executes JS (see the module comment above), so there's no hashed asset
+// bundle to reference and nothing to go stale.
+function buildCrawlerHtml(product: ProductRow, pageUrl: string): string {
   const title = `${product.name_en} | Pacific Alpacas`;
   const description = product.description_en || 'Premium 100% New Zealand alpaca fiber products from Pacific Alpacas.';
   const primaryImage = product.images?.find((i) => i.is_primary) ?? product.images?.[0];
-  const image = primaryImage ? toAbsoluteUrl(primaryImage.url, origin) : `${origin}/images/hero-comforter.jpg`;
+  const image = primaryImage ? toAbsoluteUrl(primaryImage.url) : `${SITE_ORIGIN}/images/hero-comforter.jpg`;
 
   const t = escapeHtml(title);
   const d = escapeHtml(description);
   const u = escapeHtml(pageUrl);
   const img = escapeHtml(image);
 
-  return html
-    .replace(/<title>[^<]*<\/title>/, `<title>${t}</title>`)
-    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${d}">`)
-    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${t}">`)
-    .replace(/<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${t}">`)
-    .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${d}">`)
-    .replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${d}">`)
-    .replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${img}">`)
-    .replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${img}">`)
-    .replace(/<meta property="og:url" content="[^"]*">/, `<meta property="og:url" content="${u}">`);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${t}</title>
+<meta name="description" content="${d}">
+<link rel="canonical" href="${u}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${t}">
+<meta property="og:description" content="${d}">
+<meta property="og:image" content="${img}">
+<meta property="og:url" content="${u}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${t}">
+<meta name="twitter:description" content="${d}">
+<meta name="twitter:image" content="${img}">
+</head>
+<body>
+<p><a href="${u}">${t}</a></p>
+</body>
+</html>`;
 }
 
 export default async function middleware(request: Request) {
@@ -102,29 +129,20 @@ export default async function middleware(request: Request) {
     const product = await fetchProduct(id);
     if (!product) return next();
 
-    // Fetch the real built index.html from the origin — a plain GET to
-    // "/" doesn't match this middleware's own matcher (scoped to
-    // /product/:path*), so this can't recurse.
-    const shellRes = await fetch(new URL('/', request.url));
-    if (!shellRes.ok) return next();
-    const shell = await shellRes.text();
-
-    const html = injectProductMeta(shell, product, request.url, url.origin);
+    const html = buildCrawlerHtml(product, request.url);
 
     return new Response(html, {
       headers: {
         'content-type': 'text/html; charset=utf-8',
         // Deliberately NOT shared/publicly cached. A shared cache (Vercel's
         // edge cache and Cloudflare in front of it both apply) keys by URL,
-        // not by User-Agent, by default — an earlier version of this set
-        // `public, max-age=300, s-maxage=3600` and it caused exactly the bug
-        // this comment is warning against: a real user's plain request to
-        // /product/:id got cached, and every subsequent crawler request to
-        // that same URL was served the cached generic page instead of ever
-        // running this middleware again. Crawler traffic on a boutique
-        // storefront is low-volume enough that re-running this on every hit
-        // is cheap; it's not worth re-introducing shared caching without
-        // also solving the Vary-across-two-CDN-layers problem properly.
+        // not by User-Agent, by default — an earlier version of this set a
+        // shared max-age and it caused exactly the bug this comment is
+        // warning against: a real user's plain request got cached, and
+        // every subsequent crawler request to that same URL was served the
+        // cached generic page instead of ever running this middleware
+        // again. Crawler traffic on a boutique storefront is low-volume
+        // enough that re-running this on every hit is cheap.
         'cache-control': 'private, no-store',
       },
     });

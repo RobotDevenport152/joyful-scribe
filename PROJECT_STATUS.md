@@ -232,27 +232,55 @@
   started this session per the platform audit's "Later" tier SSR item —
   a Vercel Routing Middleware that serves correct per-product
   `og:title`/`og:image`/etc. to known social-crawler user agents only,
-  leaving real users' SPA untouched) shipped with a real cache-poisoning
-  bug, caught by checking the live deployment rather than trusting the
-  build succeeded.** The middleware's crawler-specific response set
+  leaving real users' SPA untouched) went through two real bugs before it
+  actually worked in production, both caught by checking the live
+  deployment directly rather than trusting a green build.**
+
+  **Bug 1 — cache poisoning.** The first version's crawler response set
   `Cache-Control: public, max-age=300, s-maxage=3600` — a *shared* cache
   directive, which both Vercel's edge cache and Cloudflare in front of it
-  key by URL, not by User-Agent, by default. A real browser's plain
-  request to `/product/716a392f-...` got cached first; every subsequent
-  crawler request to that same URL then received the cached generic page
-  instead of ever re-running the middleware — confirmed directly via
-  `get_runtime_logs(source: edge-middleware)`, which showed `cache=HIT`/
-  `cache=MISS` entries for exactly this path. Fixed by dropping shared
-  caching entirely (`private, no-store`) rather than attempting to fix it
-  with `Vary: User-Agent`, which would need to work correctly across two
-  independent CDN layers (Vercel + Cloudflare) to be reliable — not worth
-  the fragility for a boutique site's crawler traffic volume. Also
-  confirmed separately, before this bug was found: the build step
-  correctly detects and bundles the middleware (`.vercel/output/functions/
-  middleware.func`, a proper route entry in `config.json`) — the earlier
-  "still showing the generic card" symptom was caching, not a build or
-  detection problem. Not yet re-verified against the live site as of this
-  entry — see the immediately following commit/session action for that.
+  key by URL, not User-Agent, by default. A real browser's plain request
+  to `/product/716a392f-...` got cached first; every later crawler
+  request to that same URL then got served the cached generic page
+  instead of ever re-running the middleware — confirmed via
+  `get_runtime_logs(source: edge-middleware)` showing `cache=HIT`/`MISS`
+  on exactly that path. Fixed by dropping shared caching entirely
+  (`private, no-store`) rather than fighting it with `Vary: User-Agent`,
+  which would need two independent CDN layers to cooperate to be
+  reliable — not worth the fragility for this traffic volume.
+
+  **Bug 2 — the real one, found after fixing bug 1 and still seeing the
+  generic page.** The original design fetched the real built `index.html`
+  from the origin (`fetch(new URL('/', request.url))`) to reuse its
+  script tags, then swapped just the meta tags. That self-fetch routed
+  back out through Cloudflare — this zone has Bot Fight Mode enabled (see
+  `infra/terraform/cloudflare.tf`) — and got a **403**, confirmed by
+  adding temporary diagnostic logging and reading it back via
+  `get_runtime_logs` (`mw: shell fetch status: 403`). Same underlying
+  cause as the `uptime.yml` flakiness noted below: server-to-server
+  requests from cloud/datacenter infrastructure are exactly what Bot
+  Fight Mode is built to challenge.
+
+  Rather than work around Cloudflare (allowlisting Vercel's edge IaaS
+  ranges isn't practical — they're not static/published), reconsidered
+  the design: every crawler this middleware targets (Facebook, Twitter,
+  LinkedIn, Slack, Discord, WhatsApp, Telegram, Pinterest, Reddit) never
+  executes JS, so none of them need the real app shell's hashed script
+  tags at all — only correct `<head>` meta tags. **Removed Googlebot,
+  Bingbot, and Applebot from the crawler list entirely** — all three
+  execute JS for indexing and already see `SEOHead`'s correct per-page
+  tags via a normal render, so they never needed this middleware in the
+  first place. With only non-JS crawlers left to serve, the middleware
+  now builds a minimal, self-contained HTML document directly (no
+  network fetch at all) — eliminating the Cloudflare round-trip
+  entirely instead of routing around it.
+
+  **Verified end-to-end against the live production site** (not just
+  reasoned about): a real `facebookexternalhit` UA gets the correct
+  product-specific title/description/image with no caching; a real
+  WeChat in-app browser UA and a real desktop Chrome UA both still get
+  the exact same working SPA (`<div id="root">` present) as before this
+  middleware existed.
 
 - [x] **Every deploy silently failed for most of today (2026-07-17) — nothing
   from the platform-audit "Now" tier onward actually reached production
