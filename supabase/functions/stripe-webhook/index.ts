@@ -52,8 +52,9 @@ serve(async (req) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err) {
-    console.error("webhook_signature_invalid", { message: err.message });
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("webhook_signature_invalid", { message });
+    return new Response(`Webhook Error: ${message}`, { status: 400 });
   }
 
   const serviceClient = createClient(

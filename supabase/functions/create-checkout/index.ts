@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 interface CartItem {
   productId: string;
@@ -72,18 +72,27 @@ function getCorsHeaders(origin: string | null) {
 // Previously this was a hardcoded PROMO_CODES constant that didn't read
 // promo_codes at all — codes created/edited in the admin panel had no
 // effect on checkout, and vice versa.
+interface PromoCodeRow {
+  discount_type: string;
+  discount_value: number;
+  min_order_nzd: number | null;
+  usage_limit: number | null;
+  used_count: number | null;
+  expires_at: string | null;
+}
+
 async function previewPromoDiscount(
-  serviceClient: ReturnType<typeof createClient>,
+  serviceClient: SupabaseClient,
   code: string | null | undefined,
   subtotalNZD: number,
 ): Promise<number> {
   if (!code) return 0;
   const { data } = await serviceClient
     .from("promo_codes")
-    .select("*")
+    .select("discount_type, discount_value, min_order_nzd, usage_limit, used_count, expires_at")
     .eq("code", code.toUpperCase())
     .eq("is_active", true)
-    .maybeSingle();
+    .maybeSingle() as { data: PromoCodeRow | null };
 
   if (!data) return 0;
   if (data.expires_at && new Date(data.expires_at) < new Date()) return 0;
@@ -318,8 +327,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("checkout_error", { message: error.message });
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("checkout_error", { message });
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
     });

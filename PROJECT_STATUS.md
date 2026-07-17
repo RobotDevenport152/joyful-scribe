@@ -228,6 +228,50 @@
 
 ## Fixed
 
+- [x] **Installed Deno locally (`irm https://deno.land/install.ps1 | iex`)
+  and real-Deno-type-checked all 6 Edge Functions for the first time ever
+  in this project's history (2026-07-18)**, after `deploy-functions`'s
+  first real run (now that the user added `SUPABASE_ACCESS_TOKEN`) failed
+  with no usable detail beyond "exit code 1" — every earlier session,
+  including this one's own `create-checkout`/`stripe-webhook` type work,
+  had explicitly caveated "verified only by ESLint/tsc, not a real Deno
+  type-check, Deno isn't installed here." Found two real, pre-existing
+  problems `deno check` surfaced immediately:
+  - `create-checkout/index.ts`: 4 errors in `previewPromoDiscount` and its
+    catch block — an untyped `.select("*")` on `promo_codes` (no
+    `PromoCodeRow` interface existed, unlike the file's own already-typed
+    `products` query), a `SupabaseClient` parameter type that didn't
+    structurally match what was actually passed, and two `error.message`
+    accesses on a `catch` variable typed `unknown`. None of these were
+    introduced this session — this function's own promo-code logic
+    predates today.
+  - `stripe-webhook/index.ts`: 2 errors, same `unknown`-catch-variable
+    pattern, in the *original* signature-verification block (not the
+    `checkout.session.completed` handler this session's own earlier work
+    touched).
+
+  Fixed both properly (typed interfaces/casts matching the file's own
+  existing conventions, `instanceof Error` guards on catch variables) and
+  reverified with `deno check` — all 6 functions now type-check cleanly.
+
+  Separately investigated `wechat-auth`, which `deno check` also flagged
+  — but for an unrelated reason: its only JSR import
+  (`@supabase/functions-js/edge-runtime.d.ts`, itself unversioned)
+  transitively references `npm:openai` in its own type declarations,
+  which a bare Deno environment without `nodeModulesDir` can't resolve.
+  Confirmed this affects every version of that package (tried the current
+  latest and a much older release, both fail the same way) and confirmed
+  it's a real non-issue by adding a throwaway `{"nodeModulesDir": "auto"}`
+  config — with npm auto-install enabled, `wechat-auth` checks completely
+  clean. Supabase's actual Edge Function runtime supports `npm:` specifiers
+  natively, so this is very unlikely to affect the real deploy pipeline —
+  noted rather than "fixed", since there was nothing wrong with this
+  function's own code.
+
+  **Not yet re-verified against a real CI run** — the fixes are committed
+  and reasoned through carefully, but `deploy-functions` succeeding is the
+  actual bar, not `deno check` passing locally.
+
 - [x] **Auto-rollback disabled (2026-07-17), at the user's explicit
   request, after a second real run of it also misbehaved** — the field-name
   fix below was correct, but the health check itself then hit a
