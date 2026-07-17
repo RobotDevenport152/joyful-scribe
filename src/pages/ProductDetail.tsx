@@ -14,6 +14,7 @@ import StockNotifyForm from '@/components/StockNotifyForm';
 import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
 import { LiveInventory } from '@/components/storefront/LiveInventory';
 import { ProductJsonLd } from '@/components/storefront/ProductJsonLd';
+import { ResponsiveImage } from '@/components/storefront/ResponsiveImage';
 import SEOHead from '@/components/SEOHead';
 import { toAbsoluteUrl } from '@/lib/seo';
 import { ProductTraceability } from '@/components/traceability/ProductTraceability';
@@ -290,11 +291,13 @@ export default function ProductDetailPage() {
                 aria-label={locale === 'zh' ? '点击查看大图' : 'Click to zoom image'}
                 className="relative aspect-square rounded-lg overflow-hidden bg-card group cursor-zoom-in"
               >
-                <img
+                <ResponsiveImage
                   src={images[activeImg]}
                   alt={locale === 'zh' ? product.nameZh : product.nameEn}
                   className="w-full h-full object-cover transition-opacity duration-300"
+                  loading="eager"
                   fetchPriority="high"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                 />
                 <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <ZoomIn className="w-4 h-4" />
@@ -319,7 +322,7 @@ export default function ProductDetailPage() {
                         activeImg === i ? 'border-gold' : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <ResponsiveImage src={img} alt="" className="w-full h-full object-cover" sizes="64px" />
                     </button>
                   ))}
                 </div>
@@ -331,10 +334,11 @@ export default function ProductDetailPage() {
                     {locale === 'zh' ? product.nameZh : product.nameEn}
                   </DialogTitle>
                   <div className="relative">
-                    <img
+                    <ResponsiveImage
                       src={images[activeImg]}
                       alt={locale === 'zh' ? product.nameZh : product.nameEn}
                       className="w-full max-h-[85vh] object-contain"
+                      sizes="100vw"
                     />
                     <button
                       type="button"
@@ -354,7 +358,7 @@ export default function ProductDetailPage() {
                               activeImg === i ? 'border-gold' : 'border-white/30 hover:border-white/70'
                             }`}
                           >
-                            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                            <ResponsiveImage src={img} alt="" className="w-full h-full object-cover" sizes="48px" />
                           </button>
                         ))}
                       </div>
@@ -836,7 +840,7 @@ export default function ProductDetailPage() {
                 {alsoBought.map(p => (
                   <Link key={p.id} to={`/product/${p.id}`} className="group block">
                     <div className="aspect-square rounded-lg overflow-hidden bg-card mb-3">
-                      <img src={p.image} alt={locale === 'zh' ? p.nameZh : p.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                      <ResponsiveImage src={p.image} alt={locale === 'zh' ? p.nameZh : p.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 50vw, 33vw" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p.nameZh : p.nameEn}</p>
                     <p className="text-gold font-display text-sm">{fp(p.prices[currency])}</p>
@@ -856,7 +860,7 @@ export default function ProductDetailPage() {
                 {recentProducts.map(p => (
                   <Link key={p!.id} to={`/product/${p!.id}`} className="group block">
                     <div className="aspect-square rounded-lg overflow-hidden bg-card mb-3">
-                      <img src={p!.image} alt={locale === 'zh' ? p!.nameZh : p!.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                      <ResponsiveImage src={p!.image} alt={locale === 'zh' ? p!.nameZh : p!.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 50vw, 25vw" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p!.nameZh : p!.nameEn}</p>
                     <p className="text-gold font-display text-sm">{fp(p!.prices[currency])}</p>

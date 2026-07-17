@@ -219,32 +219,44 @@
   references to the `cart/` one anywhere). Both confirmed via grep, not
   deleted since deleting wasn't asked for.
 
-- [ ] **Responsive/next-gen product images — needs a decision, not a code
-  fix.** From the platform-audit "Next" tier. Investigated properly before
-  implementing anything (2026-07-17): queried the live `products` table —
-  every sampled row's `images[].url` is a static `/images/*.jpg` path
-  bundled in this repo's `public/images/`, none are Supabase Storage or R2
-  URLs. Confirmed there's also no admin-panel upload path that could
-  produce one (`AdminProducts.tsx` explicitly `delete`s the `images` field
-  before submitting — there's no image-management UI at all; every product
-  photo today was added by a developer, not an admin user). This changes
-  the original recommendation: **Supabase Storage transforms don't apply**
-  (images aren't in Storage, and the org's on the free plan anyway, which
-  doesn't include that feature) and **Cloudflare Image Resizing would work**
-  (the zone's already proxied) **but needs a Cloudflare Pro upgrade**
-  (~US$20/mo) — this account has hit and deliberately accepted free-plan
-  limits multiple times already (see `cloudflare.tf`'s own comments on
-  Bot Fight Mode, the WAF ruleset, rate-limit windows), so defaulting to a
-  paid upgrade without asking would be wrong. There's a genuinely free
-  alternative — a build-time script (e.g. via `sharp`) that pre-generates
-  WebP + a couple of resolutions for the known, bounded set of files in
-  `public/images/`, with render code deriving `srcset` from `product.image`
-  — that fully covers today's catalog with no new recurring cost, and would
-  only stop being sufficient if an admin image-upload feature gets built
-  later (which doesn't exist today). Not implemented yet — surfaced to the
-  user as a decision point rather than assumed.
+- [x] ~~Responsive/next-gen product images~~ — investigated then built
+  (2026-07-17: queried the live `products` table, confirmed every image is
+  a static `/images/*.jpg` file with no admin upload path that could
+  produce a remote URL, so a build-time approach fully covers today's
+  catalog with no new recurring cost — see the Fixed section below for
+  what got built).
 
 ## Fixed
+
+- [x] **Built a free responsive/WebP image pipeline for product photos
+  (2026-07-17)**, after confirming (see the struck-through item above) that
+  every product image is a static repo-bundled file, not a Storage/R2 URL,
+  and there's no upload path that could add one — so a build-time approach
+  fully covers today's catalog with zero new recurring cost, unlike the
+  Cloudflare Pro upgrade or Supabase Storage transforms the original
+  audit item considered. `scripts/generate-image-variants.mjs` (new
+  `sharp` devDependency) generates WebP at 480/800/1200px for every
+  `public/images/product-*.{jpg,png}` file, capped to never upscale past
+  the source, skipping regeneration when a variant is already newer than
+  its source. Not wired into the CI build — these are static, rarely-added
+  assets, re-run manually via `npm run generate-image-variants` after
+  adding a new product photo, then commit the output alongside it (documented
+  in the script's own header). New `ResponsiveImage` component
+  (`src/components/storefront/ResponsiveImage.tsx`) renders a
+  `<picture>`/`srcset` for any recognized `/images/product-*` path and
+  falls back to a plain `<img>` for anything else, rather than guessing at
+  a variant that might not exist. Wired into every product-image render
+  site: `Shop.tsx`'s grids, `ProductDetail.tsx`'s hero (kept `fetchPriority
+  ="high"`, this page's LCP element), thumbnail strip, zoom dialog, and
+  related-products grids, and `CartDrawer.tsx`. **Verified against a real
+  browser, not just the build output**: served the actual production
+  build and drove it with Playwright — all 18 real product-image requests
+  on the Shop page resolved as WebP with zero failures, and confirmed the
+  responsive behavior actually works (a narrow 400px viewport correctly
+  requests the 480w variant instead of 1200w). 126 variants generated,
+  totalling 3.4MB combined — smaller than the 4.8MB of source JPEGs alone,
+  before even counting that any single page load only fetches one variant
+  per image, not all three.
 
 - [x] **`SEOHead` was shipping duplicate, spec-losing `og:*`/`twitter:*`
   meta tags on all 16 pages that used it — found while wiring per-page SEO

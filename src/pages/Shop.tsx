@@ -6,6 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useWishlist } from '@/hooks/useWishlist';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
+import { ResponsiveImage } from '@/components/storefront/ResponsiveImage';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -189,7 +190,7 @@ export default function ShopPage() {
                   <div key={product.id} className={`group bg-card rounded-lg overflow-hidden border border-border hover:border-gold/30 hover:shadow-lg transition-all ${outOfStock ? 'opacity-70' : ''}`}>
                     <Link to={`/product/${product.id}`} className="block">
                       <div className="relative aspect-square overflow-hidden">
-                        <img src={product.image} alt={locale === 'zh' ? product.nameZh : product.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                        <ResponsiveImage src={product.image} alt={locale === 'zh' ? product.nameZh : product.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         {product.badge && !outOfStock && (
                           <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-[10px] px-3 py-1 rounded-full font-body font-semibold tracking-wider uppercase">{product.badge}</span>
                         )}
@@ -262,7 +263,7 @@ export default function ShopPage() {
                   {dbProducts.filter((p: any) => p.featured).slice(0, 3).map((p: any) => (
                     <Link key={p.id} to={`/product/${p.id}`} className="group border border-border rounded-lg overflow-hidden hover:border-gold transition-colors">
                       <div className="aspect-square overflow-hidden bg-card">
-                        <img src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                        <ResponsiveImage src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 240px, 480px" />
                       </div>
                       <div className="p-3">
                         <p className="font-body text-xs font-semibold truncate">{locale === 'zh' ? p.nameZh : p.nameEn}</p>
