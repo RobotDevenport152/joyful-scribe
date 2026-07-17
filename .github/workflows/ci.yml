@@ -70,17 +70,27 @@ jobs:
       - name: Install Playwright's Chromium
         run: npx playwright install --with-deps chromium
 
+      # Uses --environment=production, not preview: this repo has always
+      # pushed straight to master (no PR-based workflow has actually run
+      # deploy-preview yet), so "preview" env vars in Vercel have never been
+      # verified and are the likely reason this job failed against real CI
+      # after being added (built fine, but the app had no working Supabase
+      # credentials, so Shop had no products, so every DOM wait here timed
+      # out). There's only one real Supabase project used everywhere in this
+      # repo anyway — production and preview would point at the same
+      # database regardless — so this loses nothing and matches
+      # deploy-production's own proven-working env source.
       - name: Pull Vercel env vars
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+        run: npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       # Vite inlines VITE_* vars at build time, not runtime, so they need to land
       # in .env.local (Vite's own convention) before `npm run build`, not just
       # exist in the pulled .vercel/ files.
-      - name: Build against preview env
+      - name: Build against production env
         run: |
-          cp .vercel/.env.preview.local .env.local
+          cp .vercel/.env.production.local .env.local
           npm run build
 
       - name: Serve the build
@@ -92,6 +102,24 @@ jobs:
           done
           echo "Preview server never came up:" && cat vite-preview.log && exit 1
 
+      # Fails fast with a specific, obvious message if the pulled Vercel env
+      # vars don't actually work against Supabase, instead of letting
+      # Playwright time out downstream with a much less diagnosable error —
+      # exactly the failure mode that broke this job the first time (pulled
+      # the "preview" Vercel environment, which nothing had ever verified
+      # actually has working Supabase credentials in it).
+      - name: Sanity check the pulled Supabase credentials actually work
+        run: |
+          SUPABASE_URL=$(grep '^VITE_SUPABASE_URL=' .env.local | cut -d= -f2-)
+          SUPABASE_KEY=$(grep '^VITE_SUPABASE_PUBLISHABLE_KEY=' .env.local | cut -d= -f2-)
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "::error::VITE_SUPABASE_URL/VITE_SUPABASE_PUBLISHABLE_KEY missing from the pulled Vercel env"
+            exit 1
+          fi
+          curl -sf "$SUPABASE_URL/rest/v1/products?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -o /dev/null \
+            || { echo "::error::Pulled Supabase credentials don't work against the real API — this is why the browser test below has no products to click through"; exit 1; }
+
       # TEST_EMAIL/TEST_PASSWORD are optional repo secrets: unset, the suite
       # still covers browse → product → add-to-cart → checkout-redirect and
       # skips only the post-login continuation (tests/e2e/smoke.spec.ts handles
@@ -100,7 +128,7 @@ jobs:
         env:
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-        run: npx playwright test tests/e2e --config=playwright.config.ts
+        run: npx playwright test tests/e2e --config=playwright.config.ts --reporter=list
 
       - name: Upload Playwright report on failure
         if: failure()
