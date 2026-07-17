@@ -63,43 +63,86 @@
   needing the server-side Admin API approach for (b). User asked to pause and
   think about it further before implementing either option.
 
-- [ ] **Local migration history doesn't reconstruct the real production
-  schema — worse than "incomplete," it's actively wrong.** Found during a
-  7-item self-audit (2026-07-16). Remote `supabase_migrations.schema_migrations`
-  has 43 applied migrations; `supabase/migrations/` has only 31 files — 11
-  exist only on remote, invisible to git. The most severe: the *very first*
-  local migration (`20260328220859_...sql`) already creates a full
-  `products`/`orders`/`user_roles`/etc. schema (3-value `app_role` enum:
-  `admin, moderator, user`; denormalized `orders.items jsonb`, no
-  `order_items` table). A remote-only migration named `core_schema`
-  (version `20260408003807`, 8.5KB of SQL, no local file) later runs a plain
-  `create table public.products (...)` — no `IF NOT EXISTS` — which could
-  only succeed if the original tables had already been dropped outside of
-  any tracked migration (no local file drops them either). Verified against
-  the live DB: production's `orders` table and `app_role` enum
-  (`admin, moderator, grower, customer`) match `core_schema`'s shape, not
-  the original 20260328 one — confirming the schema really was replaced
-  wholesale, invisibly. **Running `supabase db push`/`db reset` from this
-  repo alone today would not fail loudly — it would silently produce a
-  different, incompatible, long-obsolete schema.** The other 10 remote-only
-  migrations: `fix_security` (RLS + search_path hardening, also
-  2026-04-08), a duplicate-named `checkout_sessions` and
-  `add_sku_to_products` pair (remote has an extra version of each under a
-  different timestamp than the local file), `seed_first_admin_user`, 4 of
-  the "advisor_fixes_batch1-4" perf/security migrations, and an earlier
-  duplicate of `fix_certificate_code_pgcrypto_search_path` (applied to
-  remote 2026-07-14 22:51 via dashboard/SQL editor, then re-applied a day
-  later as a proper local migration on 2026-07-15 13:00 — byte-for-byte
-  identical SQL, because whoever fixed it the second time had no way of
-  knowing it was already patched — **this is the direct cause of the
-  certificate-generation bug below**). **Not fixed** — reconstructing the 11
-  missing migrations from `supabase_migrations.schema_migrations.statements`
-  (all 11 already pulled and read once this session) is mechanical but has
-  real subtleties (the duplicate-named pairs need reconciling, ordering
-  matters), so it needs a explicit go-ahead before touching migration
-  history, not a silent fix.
+- [x] **Local migration history didn't reconstruct the real production
+  schema — worse than "incomplete," it was actively wrong.** Found during a
+  7-item self-audit (2026-07-16), reconciled 2026-07-17 with explicit
+  go-ahead. **Read this split carefully — it's two different facts, not
+  one:**
+
+  **Done: local migration *history* now matches remote exactly.** Pulled
+  fresh state before touching anything (things can drift between sessions):
+  remote `supabase_migrations.schema_migrations` had 42 applied migrations,
+  local had 31 files, 11 remote-only. Wrote all 11 as local `.sql` files,
+  generated programmatically from `schema_migrations.statements` (not
+  retyped by hand — the whole point was faithfulness) at their real
+  timestamps, including both members of every duplicate-named pair
+  (`checkout_sessions`, `add_sku_to_products`, three `advisor_fixes_batchN`
+  pairs, `fix_certificate_code_pgcrypto_search_path`, `wechat_identities` —
+  each pair genuinely is two independently-applied migrations on remote,
+  not a mistake to collapse). Re-diffed programmatically after writing:
+  42 local versions, 42 remote versions, zero discrepancy either direction.
+  Confirmed nothing written here reflects guesswork — every file's content
+  came directly from the authoritative `schema_migrations` table.
+
+  **Not done, and can't be done from tracked history alone: a from-scratch
+  rebuild still doesn't work.** Didn't take that on faith — ran the actual
+  discriminating test: `supabase start` (local Docker Postgres, zero
+  contact with production) replaying every migration in order. It fails,
+  confirming the original finding empirically rather than just by
+  inspection: `core_schema` (`20260408003807`) runs a bare
+  `create table public.growers (...)` with no `IF NOT EXISTS`, and errors
+  `relation "growers" already exists` — because the *original* schema
+  (`20260328220859`, 3-value `app_role`, denormalized `orders.items jsonb`)
+  already created it, and whatever dropped the original tables before
+  `core_schema` recreated them was never captured in any tracked
+  migration, local or remote. That gap is real and, from migration history
+  alone, unrecoverable — the actual `DROP` was executed directly against
+  the database outside of migration tracking, at a moment nothing here has
+  a record of. **Deliberately did not paper over this with a hand-written
+  synthetic drop migration**: even a correct one wouldn't be sufficient —
+  `20260714120018` (one of the 11 just added) runs `ALTER POLICY ... ON
+  public.product_reviews` and calls `can_review_product()`, but
+  `product_reviews` isn't created until the later `20260714130000`. Fixing
+  one forward-reference without knowing whether others exist is exactly
+  the kind of guess that could quietly introduce a *new* silent divergence
+  — the same class of bug this whole item is about. A real from-scratch
+  rebuild needs a dedicated pass with the local DB up, fixing errors one at
+  a time as `db reset` surfaces them, verifying each fix against actual
+  replay rather than reasoning about the SQL — not something to rush
+  through as a side effect of a history-reconciliation pass.
+
+  **What this does fix today, concretely**: local `supabase/migrations/`
+  now enumerates the same 42 versions as production, so schema-drift
+  tooling (e.g. a future `supabase db diff` CI check) has an accurate
+  baseline to compare against, and nobody reads this repo's migration
+  folder and reasonably concludes it's the complete history — it now is,
+  even though replaying it from zero still isn't possible yet.
+
+  Verified via `supabase migration list --linked` was attempted and hit
+  the same CLI-auth wall documented elsewhere in this file (`LegacyProjectNotLinkedError`)
+  — the version-set diff above (done via direct comparison against
+  `list_migrations`, not the CLI) is the actual verification instead, and
+  is equivalent to what that command would have shown.
 
 ## P1 — Fix soon (real but lower-frequency impact)
+
+- [ ] **Migration history can't be replayed from scratch yet** (split off
+  from the reconciliation work above, 2026-07-17, so it doesn't get lost in
+  that entry's prose). Confirmed via an actual local `supabase start` +
+  migration replay, not just reasoning: fails at `core_schema`
+  (`relation "growers" already exists" — an untracked `DROP` that happened
+  outside any migration, sometime between the original schema and
+  `core_schema` replacing it, with no record anywhere of what exactly ran).
+  There's likely at least one more failure past that — `20260714120018`
+  references `product_reviews`/`can_review_product()` before
+  `20260714130000` creates them — and possibly others not yet discovered,
+  since replay stops at the first error. Needs a dedicated session with a
+  local Supabase instance running: fix one `db reset` failure at a time,
+  re-run, repeat until a fresh reset actually succeeds, verified by the
+  tool each time rather than assumed. Not urgent — production itself is
+  fine and unaffected either way — but real: today, disaster recovery or
+  spinning up a genuinely fresh environment from this repo alone would not
+  work.
 
 - [ ] **No integration/RPC test coverage — DB function bugs can fail
   silently for months.** `src/test/certificate.test.ts` only tests two pure
