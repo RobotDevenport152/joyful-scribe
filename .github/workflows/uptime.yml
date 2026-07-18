@@ -28,9 +28,18 @@ name: Uptime check
 # real card-testing/credential-stuffing exposure — a security posture
 # change, not a monitoring fix, and not done here.
 
+# Schedule disabled (2026-07-18), at the user's request, after every single
+# scheduled run since this workflow existed failed on Cloudflare's Bot
+# Fight Mode challenging GitHub Actions' IP range (AS8075/Azure) -- an
+# actual interactive Turnstile "Just a moment..." page, which curl can
+# never solve regardless of retries. The 5x retry fix above is committed
+# but UNVERIFIED against a real run -- every failure checked so far,
+# including the one that triggered this, predates that commit. Re-enable
+# the schedule only after a manual workflow_dispatch run (still enabled
+# below) is confirmed passing -- don't just uncomment this blind.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # schedule:
+  #   - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
 permissions: {}

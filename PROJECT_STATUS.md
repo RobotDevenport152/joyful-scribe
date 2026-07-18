@@ -228,6 +228,26 @@
 
 ## Fixed
 
+- [ ] **`uptime.yml`'s scheduled trigger disabled (2026-07-18), at the user's
+  request, after checking real run history via the GitHub API and finding
+  every single run — 8 in a row over ~13 hours, `#10` through `#17` — failed
+  on the exact same Cloudflare 403, and every one of them still ran on
+  `a506a10`, the commit *before* the 5x-retry fix below. The retry fix has
+  never actually been exercised by a real run yet. Worth noting for whoever
+  re-enables this: the failure body is a genuine interactive Turnstile
+  challenge page (`challenges.cloudflare.com`, "Just a moment...") — curl
+  cannot solve that no matter how many times it's retried, so if a real
+  post-fix run also fails 5/5, that's likely proof retries don't help here
+  (unlike the three prior cases elsewhere in this file where a retry from
+  the same class of traffic did recover) and the realistic remaining
+  options are back to the ones already discussed and deliberately not
+  taken: allowlist AS8075 in Cloudflare (rejected — see below, it's the
+  zone's only protection on `/login`/`/checkout`), or move this check off
+  GitHub Actions entirely to a third-party monitor not hosted on Azure IP
+  ranges. `schedule` is commented out in `uptime.yml` (not deleted),
+  `workflow_dispatch` still works for a manual test run. **Do not re-enable
+  the schedule until a manual run is confirmed passing.**
+
 - [x] **`uptime.yml`'s recurring Cloudflare-Bot-Fight-Mode false positives fixed
   with retries, not a WAF allowlist (2026-07-18)** — investigated the durable
   fix (allowlisting GitHub Actions' IP ranges in Cloudflare) and confirmed it's
