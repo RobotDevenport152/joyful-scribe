@@ -228,6 +228,54 @@
 
 ## Fixed
 
+- [x] **Certificates are now auto-generated per online order, not just via
+  the admin panel (2026-07-18)** — clarified with the user which of two
+  models the brand actually wants: (a) certificates pre-printed on physical
+  cards shipped with stock, generated manually via `/admin/certificates`,
+  decoupled from any specific order (matches the real physical certificate
+  the user photographed, which points at the legacy `pacificalpacas.com`
+  domain and a different code format — a separate, not-yet-resolved
+  question, see the P1 entries above); or (b) one certificate automatically
+  issued per unit at the moment of each online purchase, linked to that
+  order. **User confirmed (b).** `product_certificates.order_id` already
+  existed in the schema but nothing populated it — confirmed by grepping
+  `create-checkout`/`stripe-webhook` before touching anything, neither ever
+  referenced `product_certificates`.
+  - `stripe-webhook/index.ts`'s `checkout.session.completed` handler now
+    generates one `product_certificates` row per unit for every line item
+    with a real `product_id`, right after `order_items` is populated: looks
+    up each product's `fiber_batch_id` (same lookup `AdminCertificates.tsx`
+    already does) and inserts `quantity` rows per item, `code` left to the
+    column's own `generate_certificate_code()` default. Best-effort, same
+    principle as the promo-code claim just below it — a failure here logs
+    and continues rather than blocking order fulfillment, since the
+    customer already paid. Re-verified with `deno check` (real Deno
+    type-check, not just ESLint/tsc) after editing.
+  - New migration `20260718090000_certificates_own_read.sql`: `RLS` on
+    `product_certificates` previously only allowed the admin role
+    (`certificates_admin_all`) — customers had no way to read a table that,
+    until now, they never had rows in. Added `certificates_own_read`
+    (`order_id in (select id from orders where user_id = auth.uid())`),
+    same pattern already used by `order_items_own_read`.
+  - `MyOrders.tsx` now embeds `product_certificates(code, product_id)` in
+    its existing order query and renders a "Verify authenticity →" link
+    (`/verify/:code`) under each line item that has one — without this, a
+    customer would have a certificate row in the database with no way to
+    ever discover their own code to actually use `/verify`.
+  - Verified: `deno check` clean on `stripe-webhook`, `tsc --noEmit` clean,
+    ESLint unchanged (0 errors, 81 warnings — same baseline as before this
+    change), all 59 vitest tests pass, production build succeeds.
+  - **Not yet deployed**: the migration needs to be run manually in the
+    Supabase SQL Editor (same CLI-auth wall documented elsewhere in this
+    file — `supabase db push` isn't available here); the edge function
+    change should auto-deploy via the now-active `deploy-functions` CI job
+    on the next push to `master`, worth confirming that run actually
+    completes rather than assuming.
+  - **Deliberately out of scope**: bulk-printing/exporting codes for
+    physical certificates (model (a)) is unrelated to this — see the
+    certificate-scale gaps discussed earlier (chunked generation, bulk
+    CSV/card export, pagination), still not built.
+
 - [ ] **`uptime.yml`'s scheduled trigger disabled (2026-07-18), at the user's
   request, after checking real run history via the GitHub API and finding
   every single run — 8 in a row over ~13 hours, `#10` through `#17` — failed

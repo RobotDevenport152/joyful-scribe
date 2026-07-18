@@ -39,6 +39,10 @@ supabase/.temp/
 # Local dev
 *.local
 
+# Generated anti-counterfeit certificate codes — never commit these,
+# this repo is public on GitHub.
+certificate-codes-output/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

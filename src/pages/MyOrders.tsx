@@ -35,11 +35,16 @@ interface Order {
   tracking_number?: string | null;   // P1: physical shipment tracking
   carrier?: string | null;
   order_items: {
+    product_id?: string | null;
     product_name: string;
     variant: string | null;
     quantity: number;
     unit_price: number;
     batch_code?: string | null;      // P2: traceability link
+  }[];
+  product_certificates?: {
+    code: string;
+    product_id: string | null;
   }[];
 }
 
@@ -55,7 +60,7 @@ export default function MyOrdersPage() {
     const fetchOrders = async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(*)')
+        .select('*, order_items(*), product_certificates(code, product_id)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (!error && data) setOrders(data as any);
@@ -138,6 +143,17 @@ export default function MyOrdersPage() {
                                 {locale === 'zh' ? '追溯来源 →' : 'Trace origin →'}
                               </a>
                             )}
+                            {order.product_certificates
+                              ?.filter(c => c.product_id === item.product_id)
+                              .map(c => (
+                                <Link
+                                  key={c.code}
+                                  to={`/verify/${c.code}`}
+                                  className="block text-xs text-gold hover:underline mt-0.5 font-mono"
+                                >
+                                  {locale === 'zh' ? '防伪码验证 →' : 'Verify authenticity →'} {c.code}
+                                </Link>
+                              ))}
                           </div>
                           <span>{fp(Number(item.unit_price) * item.quantity)}</span>
                         </div>

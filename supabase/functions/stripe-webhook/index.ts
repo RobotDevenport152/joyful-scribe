@@ -13,6 +13,11 @@ interface StoredCheckoutItem {
   price: number;
 }
 
+interface ProductFiberBatch {
+  id: string;
+  fiber_batch_id: string | null;
+}
+
 interface CheckoutSessionRow {
   id: string;
   status: string;
@@ -171,6 +176,64 @@ serve(async (req) => {
       }));
 
       await serviceClient.from("order_items").insert(orderItemRows);
+
+      // One anti-counterfeit certificate per unit purchased, linked to this
+      // order via order_id. Previously certificates only existed if an admin
+      // manually pre-generated them via /admin/certificates (for physical
+      // cards printed and shipped with stock, decoupled from any specific
+      // online order) — this is the digital counterpart: every online
+      // purchase gets its own real code a customer can look up on /verify,
+      // surfaced to them in MyOrders.tsx. Best-effort: a failure here must
+      // not block order fulfillment, the customer already paid (same
+      // principle as the promo-code claim below).
+      const certificateProductIds = [...new Set(
+        checkoutData.items.map((item) => item.productId).filter((id): id is string => Boolean(id))
+      )];
+
+      if (certificateProductIds.length > 0) {
+        const { data: productBatches, error: productBatchError } = await serviceClient
+          .from("products")
+          .select("id, fiber_batch_id")
+          .in("id", certificateProductIds) as { data: ProductFiberBatch[] | null; error: { message: string } | null };
+
+        if (productBatchError) {
+          console.error("webhook_certificate_product_lookup_failed", {
+            order_id: order.id,
+            error: productBatchError.message,
+          });
+        } else {
+          const fiberBatchByProduct = new Map(
+            (productBatches ?? []).map((p) => [p.id, p.fiber_batch_id])
+          );
+
+          const certificateRows = checkoutData.items.flatMap((item) => {
+            if (!item.productId) return [];
+            const fiberBatchId = fiberBatchByProduct.get(item.productId) ?? null;
+            return Array.from({ length: item.quantity }, () => ({
+              product_id: item.productId,
+              fiber_batch_id: fiberBatchId,
+              order_id: order.id,
+            }));
+          });
+
+          if (certificateRows.length > 0) {
+            const { error: certError } = await serviceClient
+              .from("product_certificates")
+              .insert(certificateRows);
+            if (certError) {
+              console.error("webhook_certificate_generate_failed", {
+                order_id: order.id,
+                error: certError.message,
+              });
+            } else {
+              console.log("webhook_certificates_created", {
+                order_id: order.id,
+                count: certificateRows.length,
+              });
+            }
+          }
+        }
+      }
 
       // Atomically redeem the promo code now that payment is confirmed —
       // this is the only point in the whole flow that increments used_count,

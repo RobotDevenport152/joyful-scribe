@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "ci:check-supabase-env": "node scripts/ci-check-supabase-env.mjs",
-    "generate-image-variants": "node scripts/generate-image-variants.mjs"
+    "generate-image-variants": "node scripts/generate-image-variants.mjs",
+    "generate-certificate-codes": "node scripts/generate-certificate-codes.mjs"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.2.11",
