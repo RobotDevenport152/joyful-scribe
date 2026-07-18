@@ -47,6 +47,52 @@
 
 ## P0 — Fix first (visible to every customer, or blocks purchase)
 
+- [x] **`create-checkout`'s CORS allowlist had the wrong domain — likely
+  blocking every real checkout on the live site (2026-07-18/19)**, found via
+  a real Sentry event: `checkout_failed`, `"error":"Failed to send a request
+  to the Edge Function"` — the exact generic message the Supabase client
+  throws when a fetch to an Edge Function is CORS-blocked before it gets a
+  response. Confirmed against real data before touching anything: the
+  Sentry breadcrumb trail showed a real logged-in customer (same `user_id`
+  as the `abandoned`/`pending_payment` `checkout_sessions` rows from
+  2026-07-16) completing the whole checkout form and clicking pay, then the
+  `POST .../functions/v1/create-checkout` failing outright — and separately,
+  the database's `checkout_sessions`/`orders` tables showed **zero
+  successful real orders**, `now()` vs the latest row a ~2-day gap, meaning
+  this wasn't a one-off.
+  
+  Root cause, found via `git log -p` on `create-checkout/index.ts`:
+  `isAllowedOrigin()` checked `origin === "https://pacificalpacas.com"`
+  (plural) — but the real live domain, used correctly by every other edge
+  function (`chat`, `recommend`, `wechat-auth`, `bright-task`), is
+  `pacificalpaca.com` (singular). `f081705` ("Repoint the real domain to
+  pacificalpaca.com, not pacificalpacas.com") had this function correct;
+  `9a873df` ("Improve CI Supabase checks and E2E checkout coverage" — a CI
+  hardening commit unrelated to domains, committed directly by the user)
+  silently regressed it back to the plural typo, and nothing caught it
+  since — this function has no test coverage (see the P1 entry on
+  integration/RPC tests below). Net effect: a real customer on the real
+  `https://pacificalpaca.com` sends that as `Origin`; the function's CORS
+  response only allows the plural domain, the browser blocks reading the
+  actual response, and the client sees a generic, unhelpful "failed to send
+  a request" — this is the same failure *shape* as the earlier
+  `JAVASCRIPT-REACT-7` incident (CORS/origin mismatch) but a different,
+  independent bug.
+  
+  Fixed all three occurrences (`isAllowedOrigin`, `getCorsHeaders`'s
+  fallback, and the Stripe `success_url`/`cancel_url` `baseUrl` fallback —
+  that third one meant even a working request would have redirected a real
+  customer to the wrong domain after payment) back to singular
+  `pacificalpaca.com`. Re-verified with `deno check` (clean). Confirmed via
+  grep that every other remaining `pacificalpacas.com` (plural) reference in
+  the repo is a legitimate data-provenance one (scraped product image URLs,
+  "source:" comments) — not another live copy of this bug.
+  
+  **Not yet deployed** — needs a push to `master` for the now-active
+  `deploy-functions` CI job to redeploy `create-checkout`; worth watching
+  that run complete and then asking the affected customer (or testing
+  directly) to retry checkout once it's live.
+
 - [ ] **Checkout forces account creation/login before purchase** — `/checkout`
   is wrapped in `<ProtectedRoute>` (`App.tsx`), no guest checkout path exists.
   **On hold, needs a product decision from the user, not just a code fix**:
