@@ -228,6 +228,28 @@
 
 ## Fixed
 
+- [x] **`uptime.yml`'s recurring Cloudflare-Bot-Fight-Mode false positives fixed
+  with retries, not a WAF allowlist (2026-07-18)** — investigated the durable
+  fix (allowlisting GitHub Actions' IP ranges in Cloudflare) and confirmed it's
+  not practical as originally framed: GitHub publishes ~7,208 individual CIDR
+  ranges via `api.github.com/meta`, all under one ASN, AS8075
+  (Microsoft/Azure) — far more entries than the Free plan's rule-count limit
+  supports one-by-one. The only single-rule way to allow them is an
+  ASN-level allowlist for AS8075 itself, which was **deliberately rejected**:
+  that ASN is all of Azure, not just GitHub Actions' slice of it, and this
+  zone's only protection on `/login` and `/checkout` (`cloudflare.tf`'s rate
+  limit only covers `/admin`) is Bot Fight Mode — exempting a top-3 public
+  cloud from it on a Stripe-integrated checkout would trade a monitoring
+  false-positive for real card-testing/credential-stuffing exposure. This is
+  a security-posture decision, surfaced to and made by the user, not
+  something to change unprompted. Fixed instead by giving all three checks
+  in `uptime.yml` the same 5-retry/10s-gap pattern already written (but not
+  yet verified live) in `ci.yml`'s `verify-production` job: a real outage
+  fails consistently across retries, a Cloudflare challenge usually doesn't.
+  **Not yet verified against a real Cloudflare false-positive occurring
+  naturally** — will confirm once the next one happens and the retry
+  actually recovers instead of failing the run.
+
 - [x] **Installed Deno locally (`irm https://deno.land/install.ps1 | iex`)
   and real-Deno-type-checked all 6 Edge Functions for the first time ever
   in this project's history (2026-07-18)**, after `deploy-functions`'s

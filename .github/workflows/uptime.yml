@@ -13,6 +13,20 @@ name: Uptime check
 # default — no Slack webhook or external service required. If you want
 # Slack/SMS paging instead, that needs a webhook URL added as a repo
 # secret; ask for that to be wired in once one exists.
+#
+# Each check retries 5x with a 10s gap before failing (2026-07-18), same
+# pattern already used by ci.yml's verify-production health check. This
+# zone has Cloudflare Bot Fight Mode enabled, and GitHub Actions' datacenter
+# IP range (AS8075, Microsoft/Azure) gets occasionally challenged by it —
+# a real outage fails consistently across retries, a Cloudflare false
+# positive usually doesn't. Deliberately NOT fixed by allowlisting AS8075
+# in Cloudflare: that ASN is all of Azure, not just GitHub Actions, and
+# this zone's only protection on /login and /checkout (no rate limit
+# exists on those paths, only /admin has one — see cloudflare.tf) is Bot
+# Fight Mode. Exempting an entire top-3 public cloud from it on a
+# Stripe-integrated checkout would trade a monitoring false-positive for a
+# real card-testing/credential-stuffing exposure — a security posture
+# change, not a monitoring fix, and not done here.
 
 on:
   schedule:
@@ -29,25 +43,28 @@ jobs:
       # -A: a plain curl UA plus GitHub Actions' datacenter IP range is
       # exactly the traffic profile Cloudflare's Bot Fight Mode (enabled on
       # this zone, see infra/terraform/cloudflare.tf) is designed to
-      # challenge — two real runs already came back non-2xx (curl exit 22)
-      # for reasons unrelated to the site's real health, confirmed by
-      # manually curling the same URL successfully seconds later from a
-      # different network. A browser UA doesn't guarantee passing Cloudflare's
-      # scoring (TLS fingerprint matters too, which curl can't fake), but it's
-      # a real, cheap improvement worth trying before concluding this needs a
-      # Cloudflare-side allowlist for GitHub's IP ranges instead.
+      # challenge. A browser UA doesn't guarantee passing Cloudflare's
+      # scoring (TLS fingerprint matters too, which curl can't fake), so
+      # this also retries 5x/10s before concluding the site is actually down.
       - name: Homepage reachable and serving real content
         run: |
-          HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
-            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            https://pacificalpaca.com/)
-          echo "HTTP status: $HTTP_CODE"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Non-200 response ($HTTP_CODE) — check whether this is a real outage or Cloudflare challenging GitHub Actions' IP range (Bot Fight Mode is enabled on this zone)."
+          HEALTHY=false
+          for i in 1 2 3 4 5; do
+            HTTP_CODE=$(curl -s -o /tmp/body.html -w "%{http_code}" --max-time 15 \
+              -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              https://pacificalpaca.com/)
+            echo "Attempt $i: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ] && grep -q "Pacific Alpacas" /tmp/body.html; then
+              HEALTHY=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$HEALTHY" != "true" ]; then
+            echo "::error::Non-200 or missing content after 5 attempts (last: HTTP $HTTP_CODE) — check whether this is a real outage or Cloudflare challenging GitHub Actions' IP range (Bot Fight Mode is enabled on this zone)."
             head -c 500 /tmp/body.html
             exit 1
           fi
-          grep -q "Pacific Alpacas" /tmp/body.html || { echo "::error::Got 200 but the homepage didn't contain expected content"; exit 1; }
 
       - name: Supabase API reachable
         env:
@@ -56,17 +73,32 @@ jobs:
           # this repo: this class of key is meant to be public).
           SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5bW5xdXl4cG9lcWtrdXp6aWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDcyMzMsImV4cCI6MjA5MTE4MzIzM30.-q0rjRbjArN__-H6BPw9ZUHfb_BQSYBC2-fkYQSEBbc
         run: |
-          curl -sf --max-time 15 "https://pymnquyxpoeqkkuzzial.supabase.co/rest/v1/products?select=id&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            -o /dev/null
+          for i in 1 2 3 4 5; do
+            if curl -sf --max-time 15 "https://pymnquyxpoeqkkuzzial.supabase.co/rest/v1/products?select=id&limit=1" \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -o /dev/null; then
+              exit 0
+            fi
+            echo "Attempt $i failed"
+            sleep 10
+          done
+          echo "::error::Supabase API unreachable after 5 attempts"
+          exit 1
 
       - name: Checkout CORS preflight allows the real domain
         run: |
-          ALLOW_ORIGIN=$(curl -s --max-time 15 -X OPTIONS \
-            "https://pymnquyxpoeqkkuzzial.supabase.co/functions/v1/create-checkout" \
-            -H "Origin: https://pacificalpaca.com" \
-            -H "Access-Control-Request-Method: POST" \
-            -D - -o /dev/null | grep -i "access-control-allow-origin" | tr -d '\r')
-          echo "$ALLOW_ORIGIN"
-          echo "$ALLOW_ORIGIN" | grep -q "https://pacificalpaca.com" || { echo "CORS preflight no longer allows pacificalpaca.com — this is exactly the JAVASCRIPT-REACT-7 class of bug"; exit 1; }
+          for i in 1 2 3 4 5; do
+            ALLOW_ORIGIN=$(curl -s --max-time 15 -X OPTIONS \
+              "https://pymnquyxpoeqkkuzzial.supabase.co/functions/v1/create-checkout" \
+              -H "Origin: https://pacificalpaca.com" \
+              -H "Access-Control-Request-Method: POST" \
+              -D - -o /dev/null | grep -i "access-control-allow-origin" | tr -d '\r')
+            echo "Attempt $i: $ALLOW_ORIGIN"
+            if echo "$ALLOW_ORIGIN" | grep -q "https://pacificalpaca.com"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::CORS preflight didn't allow pacificalpaca.com after 5 attempts — this is exactly the JAVASCRIPT-REACT-7 class of bug"
+          exit 1
