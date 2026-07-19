@@ -13,6 +13,8 @@ function isSupabaseConfigured() {
   return !!import.meta.env.VITE_SUPABASE_URL;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function toDisplayPrices(nzd: number, rates: ExchangeRates): Record<Currency, number> {
   return {
     NZD: nzd,
@@ -107,20 +109,15 @@ export function useProduct(id: string) {
       return found;
     }
 
-    // Try by UUID first, then by slug
-    let result = await supabase
+    // The route param is either a real product UUID (most internal links) or a
+    // slug (AI chat product links, SEO URLs) -- check the shape instead of
+    // always querying by id first, which threw a Postgres "invalid input
+    // syntax for type uuid" error on every single slug-based page load.
+    const result = await supabase
       .from('products')
       .select('*')
-      .eq('id', id)
+      .eq(UUID_RE.test(id) ? 'id' : 'slug', id)
       .maybeSingle();
-
-    if (!result.data) {
-      result = await supabase
-        .from('products')
-        .select('*')
-        .eq('slug', id)
-        .maybeSingle();
-    }
 
     if (result.error) throw result.error;
     if (!result.data) throw new Error('Product not found');
