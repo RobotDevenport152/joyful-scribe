@@ -3,10 +3,15 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, MapPin, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle, MapPin, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 type OrderStatus = 'loading' | 'paid' | 'processing_payment' | 'payment_failed' | 'not_found';
+
+interface OrderCertificate {
+  code: string;
+  productName: string;
+}
 
 const MAX_POLLS     = 8;
 const POLL_INTERVAL = 2000;
@@ -22,6 +27,7 @@ export default function OrderSuccessPage() {
   const [orderStatus, setOrderStatus] = useState<OrderStatus>(
     orderNumber ? 'loading' : 'not_found',
   );
+  const [certificates, setCertificates] = useState<OrderCertificate[]>([]);
 
   useEffect(() => {
     if (!orderNumber || !user) return;
@@ -34,7 +40,7 @@ export default function OrderSuccessPage() {
 
       const { data } = await supabase
         .from('orders')
-        .select('status')
+        .select('status, order_items(product_id, product_name), product_certificates(code, product_id)')
         .eq('order_number', orderNumber)
         .eq('user_id', user!.id)
         .maybeSingle();
@@ -46,6 +52,12 @@ export default function OrderSuccessPage() {
         if (['paid', 'processing', 'shipped', 'delivered'].includes(status)) {
           setOrderStatus('paid');
           clearCart();
+          const items = (data.order_items ?? []) as { product_id: string | null; product_name: string }[];
+          const certs = (data.product_certificates ?? []) as { code: string; product_id: string | null }[];
+          setCertificates(certs.map(c => ({
+            code: c.code,
+            productName: items.find(i => i.product_id === c.product_id)?.product_name || '',
+          })));
           return;
         }
         // 'payment_failed' is not currently a valid DB enum value but handle it defensively
@@ -105,8 +117,8 @@ export default function OrderSuccessPage() {
             <p className="font-mono text-lg text-gold font-semibold mb-8">{orderNumber}</p>
             <p className="text-muted-foreground font-body text-sm mb-8 max-w-md mx-auto">
               {locale === 'zh'
-                ? '付款成功！我们会尽快处理并发货，您将收到一封确认邮件。'
-                : 'Payment successful! We will process and ship your order soon. A confirmation email is on its way.'}
+                ? '付款成功！我们会尽快处理并发货，订单详情与防伪码可随时在"我的订单"查看。'
+                : 'Payment successful! We will process and ship your order soon. Your order details and authenticity code(s) are always available under "My Orders".'}
             </p>
 
             <div className="flex gap-4 justify-center mb-10">
@@ -136,6 +148,41 @@ export default function OrderSuccessPage() {
                 {locale === 'zh' ? '📱 查看溯源故事 →' : '📱 View Trace Story →'}
               </Link>
             </motion.div>
+
+            {certificates.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                className="max-w-md mx-auto bg-card border border-border rounded-lg p-6 mt-4"
+              >
+                <div className="flex items-center gap-2 mb-3 justify-center">
+                  <ShieldCheck className="w-4 h-4 text-gold" />
+                  <p className="font-display text-lg font-semibold">
+                    {locale === 'zh' ? '您的正品防伪码' : 'Your Authenticity Code(s)'}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground font-body mb-3">
+                  {locale === 'zh'
+                    ? '请妥善保存以下防伪码，可随时在正品验证页面核实真伪。'
+                    : 'Save these codes — you can verify authenticity with them anytime.'}
+                </p>
+                <div className="space-y-2">
+                  {certificates.map(c => (
+                    <div key={c.code} className="flex items-center justify-between gap-2 bg-background rounded-sm px-3 py-2">
+                      <div className="text-left">
+                        {c.productName && <p className="text-xs text-muted-foreground font-body">{c.productName}</p>}
+                        <p className="font-mono text-sm font-semibold text-gold">{c.code}</p>
+                      </div>
+                      <Link
+                        to={`/verify/${c.code}`}
+                        className="text-xs text-gold hover:underline font-body whitespace-nowrap"
+                      >
+                        {locale === 'zh' ? '验证 →' : 'Verify →'}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         )}
 
