@@ -13,9 +13,13 @@ A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand tar
 | Server state | TanStack React Query | Declarative cache with stale-time control. Product catalogue changes infrequently — 5-min stale time eliminates redundant DB hits without stale UI. |
 | Backend | Supabase (PostgreSQL + Auth + Edge Functions) | Row-Level Security means access control lives in the database, not scattered across API handlers. Eliminates an entire class of privilege escalation bugs. |
 | Payments | Stripe Checkout + Webhook | Checkout session offloads PCI scope. Order creation happens in the webhook handler after Stripe confirms payment — not at the "Place Order" click — so inventory is never decremented on failed payments. |
-| AI Chat | Google Gemini 3.5 Flash (Edge Function) | Runs server-side so the API key never reaches the client. The Edge Function transforms Gemini's response to OpenAI format, making the ChatWidget provider-agnostic. |
+| AI Chat | Google Gemini 3.5 Flash (Edge Function) | Runs server-side so the API key never reaches the client. The Edge Function transforms Gemini's response to OpenAI format, making the ChatWidget provider-agnostic. Has real order lookup and persistent multi-turn history for logged-in customers. |
 | i18n | react-i18next | Two locales (zh/en). All strings in `src/i18n/index.ts`; locale state in React Context synced to i18next on every change so the language switcher updates all components atomically. |
 | Currency | Live rates via Frankfurter API | Exchange rates fetched with a 6-hour stale time, with fallback to hardcoded values on failure. Prices stored in NZD only — conversions happen at render time. |
+| Error monitoring | Sentry | Auto-initialized in production builds only (`src/lib/sentry.ts`), so local dev never burns quota. Catching and used to diagnose real production incidents (see Current Status). |
+| Transactional email | Resend (Edge Function) | Order confirmation emails, including per-unit anti-counterfeit certificate codes; also powers the contact/wholesale form notifications. |
+| SMS notifications | Twilio (Edge Function) | Order-confirmed and order-shipped SMS. Fully gated on three secrets being configured — a no-op until then, so it ships ahead of the Twilio account existing. |
+| WeChat login | WeChat Official Account OAuth (Edge Function) | Bridges WeChat's web OAuth into a real Supabase session for customers browsing inside WeChat's in-app browser. Built and tested; pending real AppID/AppSecret credentials. |
 
 ---
 
@@ -49,8 +53,11 @@ Every table has RLS enabled. The `has_role(user_id, role)` security-definer func
 - **Fiber traceability** — QR-scannable batch codes linking products to specific NZ farms, with 6-step processing chain visualisation
 - **Grower portal** — Authenticated dashboard for NZ farmers: fiber batches, credit balance, transaction history
 - **Admin panel** — Full back-office: products, orders, growers, fiber batches, promo codes, 6-month revenue chart
-- **AI chat assistant** — In-page customer service powered by Gemini 3.5 Flash
+- **AI chat assistant** — In-page customer service powered by Gemini 3.5 Flash, with real order lookup and persistent multi-turn history for logged-in customers
 - **Stripe payments** — Secure checkout with webhook-driven order creation and inventory decrement trigger
+- **Anti-counterfeit certificates** — One certificate code auto-generated per unit at checkout, surfaced in the order confirmation email and `/my-orders`, publicly checkable at `/verify`
+- **Order notifications** — Confirmation email (Resend) always on; SMS (Twilio) for order-confirmed and order-shipped, shipping when configured
+- **WeChat login** — OAuth bridge for customers inside WeChat's in-app browser (pending live credentials)
 - **Sleep quiz** — Interactive product recommender
 
 ---
@@ -84,9 +91,13 @@ src/
 
 supabase/
 ├── functions/
-│   ├── create-checkout/  # Stripe Checkout session creation
-│   ├── stripe-webhook/   # Order creation after payment confirmed + signature verification
-│   └── chat/             # Gemini API proxy, transforms response to OpenAI format
+│   ├── create-checkout/  # Stripe Checkout session creation, server-side pricing
+│   ├── stripe-webhook/   # Order + certificate creation after payment confirmed, signature verification, confirmation email/SMS
+│   ├── chat/             # Gemini API proxy with order lookup, rate-limited
+│   ├── recommend/        # Sleep-quiz product recommender, rate-limited
+│   ├── wechat-auth/      # WeChat OAuth code exchange -> Supabase session
+│   ├── bright-task/      # Contact/wholesale form emails (Resend)
+│   └── notify-shipped/   # Admin-only: marks an order shipped + sends the shipped SMS
 └── migrations/           # Append-only PostgreSQL migrations
 ```
 
@@ -109,7 +120,7 @@ cp .env.example .env
 npm run dev        # http://localhost:8080
 
 # 4. Run tests
-npm run test       # 42 unit tests
+npm run test       # 59 unit tests
 npm run lint       # ESLint
 ```
 
@@ -128,56 +139,39 @@ npx vercel --prod
 
 ---
 
-## Current Status (2026-07-09)
+## Current Status (2026-07-19)
 
-**Live deployment:** https://pacific-alpaca-website.vercel.app — connected to the production Supabase project (`pymnquyxpoeqkkuzzial`). Stripe checkout is verified end-to-end (real orders and webhook events already exist in the database), and `create-checkout` now prices every item from the `products` table server-side rather than trusting the client.
+**Live in production:** https://pacificalpaca.com (custom domain cutover is complete — the old WordPress/WooCommerce site is fully replaced, no longer a blocker) plus `www.pacificalpaca.com` and the Vercel-assigned domains, all on the same project. Connected to the production Supabase project (`pymnquyxpoeqkkuzzial`, `ap-northeast-1`). Real customers are placing real orders through Stripe end-to-end. CI/CD (GitHub Actions) deploys both the frontend and Edge Functions automatically on every push to `master`.
 
-**Blocking cutover:**
-- Custom domain `pacificalpacas.com` is still not attached to this Vercel project (currently only `pacific-alpaca-website.vercel.app` and its team alias) — needs to be added in Vercel → Settings → Domains, then DNS repointed at the registrar. **The live domain is still serving the old WordPress/WooCommerce site**, entirely unrelated to this codebase — until the domain is moved, nothing deployed here is publicly reachable at pacificalpacas.com.
-- Conversely, the live site's only two WooCommerce categories are `duvets` and `carpets` — the rebuild's Supabase catalogue also has `coat`, `vest`, `sweater`, and `scarf`/baby products that don't exist on the live site at all. Confirm with the client whether these are an intentional new product expansion before launch, since customers won't recognize them from the current site.
+**Monitoring:** Sentry is live in production (`src/lib/sentry.ts`) and has already been used to diagnose and fix real incidents — see below.
 
-**Recently fixed:**
-- `create-checkout` no longer trusts client-supplied prices/exchange rates — looks up `products.price_nzd` server-side (price-tampering fix).
-- **Added per-variant pricing.** `size_options` entries can now carry their own `price_nzd`; `dbToLegacyProduct` maps this into `variants[].prices`, and a new `getItemPrices(cartItem)` helper (`src/lib/store.ts`) is the single place price is read from for a cart line — used by `CartContext`, `CartDrawer`, and `Checkout.tsx` instead of the base product price. `ProductDetail.tsx` shows a price range ("$840 – $10,286") until a size is picked, then the exact price for that size. `create-checkout` independently resolves the authoritative price server-side from `size_options[].price_nzd` and rejects any item whose `variant` doesn't match a real size — the client's price is still never trusted, now for variants too.
-- **All 20 Suri alpaca carpets now have real per-size pricing** ($840–$10,286 across all 11 sizes, matching the live site's WooCommerce variation prices exactly), so they're sale-ready.
-- Homepage grower-network map dots now link out to their nearest NZ region on Google Maps (previously inert decoration).
-- 3 duvet products (`all-seasons`, `spring-autumn-duvet`, `summer-duvets`) had an empty `images` array — fixed directly in the live DB.
-- All 20 Suri alpaca carpets added to the catalogue (`carpet-akaroa` … `carpet-waikato`, real SKUs `RUG01`–`RUG20`, matching names/descriptions/photos from the live WordPress Store API).
-- Desktop nav was missing a way to reach secondary pages (traceability, wholesale, compare, returns, China landing, my orders, admin) — added a "More" dropdown next to the primary nav links (`src/components/Navbar.tsx`).
-- The dev-mode Supabase stub client (used automatically when `VITE_SUPABASE_URL` isn't set) was missing `auth.onAuthStateChange`/`getSession` and several query builder methods (`ilike`, `gte`, etc.), which threw uncaught errors and rendered blank pages on `/my-orders`, `/admin`, and the traceability search. The stub now covers the methods the app actually calls (`src/integrations/supabase/client.ts`).
-- Closed 5 of the 6 gaps below found against the live site (carpet category scaffolding, Chinese size variants, address correction, Grower Login CTA, Code of Welfare text, GST pricing note) — see "Gap analysis" for what's still open.
+**Recently fixed (this week):**
+- **Edge function CORS allowlists were missing `www.pacificalpaca.com`** (`create-checkout`, `chat`, `wechat-auth`, `bright-task`, `recommend`) — a customer landing on the `www.` variant had every request CORS-blocked, surfacing as a generic "Failed to send a request to the Edge Function." Root-caused via Sentry's Seer analysis on a real `checkout_failed` issue.
+- **`useProduct()` always queried `products.id` first**, even for slug-based route params (AI chat links, SEO URLs) — threw a Postgres "invalid input syntax for type uuid" error on every single slug-based product page load before silently falling back. Now checks the param's shape up front.
+- **Rate limiting on `chat`/`recommend`/`bright-task` was silently non-functional** — the `check_rate_limit()` migration was recorded as applied but had never actually run against the live database (confirmed via direct query; the function and its backing table didn't exist). Re-applied for real; these public, unauthenticated, paid-API-calling endpoints are now actually protected.
+- **`verify_certificate()` silently rejected valid certificate codes** typed in lowercase/mixed case, and could return "not found" for a genuinely valid certificate if its product row was ever missing (`INNER` vs `LEFT` join bug).
+- **`create-checkout`'s CORS allowlist had a typo** (`pacificalpacas.com`, plural) that had been silently blocking real checkouts for ~2 days — found via a real Sentry `checkout_failed` event plus zero successful orders in that window.
+- Order-success page now surfaces certificate codes directly instead of only relying on the confirmation email; the confirmation email itself (Resend) now actually sends with the certificate codes included.
+- Chat assistant now does real order lookups and keeps persistent multi-turn history, instead of a stateless per-message assistant with no order awareness.
 
-### Gap analysis vs. the live pacificalpacas.com site
+**In progress:**
+- **SMS notifications (Twilio)** — order-confirmed and order-shipped SMS code is shipped and deployed, gated on three Supabase secrets. Twilio account/number setup and end-to-end verification still pending.
+- **WeChat Official Account login** — OAuth flow, Edge Function, and DB schema are all built; pending the real AppID/AppSecret from the account owner's WeChat backend, plus confirming the account is verified (required for the `snsapi_userinfo` scope this uses).
 
-A side-by-side review of the real production site (WordPress/WooCommerce) against this rebuild surfaced:
-
-- ~~**Missing product line** — the live site sells 20 handmade Suri alpaca carpets ($840–$10,286 each)~~ Fixed: all 20 added to Supabase with real names/SKUs/photos from the live site, now with correct per-size pricing matching the live site exactly.
-- ~~**Missing size variants** — live duvets offer 9 sizes~~ Fixed: `DUVET_SIZE_VARIANTS` in `store.ts` now lists all 5 NZ standard + 4 Chinese standard sizes, applied to all three duvet tiers.
-- ~~**Incorrect postal address**~~ Fixed: Footer and Contact page now show `P.O. Box 28684, Remuera, Auckland 1541`, matching the live site.
-- ~~**Missing Albany office**~~ Fixed: Footer now lists the North Island office (Building B, 14-22 Triton Drive, Albany); Contact page's building/street number corrected to match.
-- ~~**Missing Code of Welfare compliance text**~~ Fixed: the attestation requirement is now reproduced on the Growers page collection-points tab.
-- ~~**No visible "Grower Login" CTA**~~ Fixed: added Join Now / Buy Fibre / Grower Login buttons to the growers page hero.
-- Also added the "prices are NZD, inclusive of GST" disclosure (not on the original gap list, but noticed on the live product page) to `ProductDetail.tsx` and the checkout summary.
-- Confirmed correct: brand tagline, "Cloud of Dreams" product naming, and social media links all match the live site.
-- **Still open — needs verification before launch:** CGTN media coverage and Hurun Report awards are referenced as required trust signals for the Chinese market, but do not appear anywhere on the current live site (re-checked 2026-07-09); get the actual source material from the client before publishing these claims.
-- **Still open:** the Certificate of Licence link now points to the real PDF hosted on the live site (`pacificalpacas.com/wp-content/uploads/...`) rather than hosting our own copy — fine short-term, but should be replaced with a copy we control if the live site's file ever moves.
+Full running log of everything found/fixed, including lower-priority open items (guest checkout decision, integration test coverage, etc.), lives in `PROJECT_STATUS.md`.
 
 ---
 
 ## Tests
 
-42 tests across 3 files:
+59 tests across 4 files:
 
-| Area | Count |
-|---|---|
-| `formatPrice` — NZD / CNY / USD formatting | 5 |
-| `EXCHANGE_RATES` — fallback range validation | 3 |
-| `dbToLegacyProduct` — field mapping, exchange rate application, image fallback | 9 |
-| `checkoutSchema` — name, email, phone, payment method, gift message | 7 |
-| `contactSchema` — required fields, message length | 3 |
-| `batchCodeSchema` — PA-YYYY-NNN regex | 5 |
-| Cart store — add, deduplicate, discount, clear | 8 |
-| Placeholder | 1 |
+| File | Count | Covers |
+|---|---|---|
+| `business-logic.test.ts` | 43 | `formatPrice`, `CURRENCY_SYMBOLS`, `EXCHANGE_RATES` fallback, `dbToLegacyProduct`, `getItemPrices`, `checkoutSchema`, `contactSchema`, `batchCodeSchema` |
+| `cartStore.test.ts` | 8 | Add, deduplicate, discount, clear |
+| `certificate.test.ts` | 7 | `isCertificateCodeFormat`, `buildVerifyUrl` |
+| `example.test.ts` | 1 | Placeholder |
 
 ```bash
 npm run test          # single run
@@ -188,19 +182,23 @@ npm run test:watch    # watch mode
 
 ## Database Schema
 
-Tables: `products`, `orders`, `order_items`, `growers`, `fiber_batches`, `grower_transactions`, `promo_codes`, `user_roles`, `processed_webhook_events`
+Tables: `products`, `orders`, `order_items`, `checkout_sessions`, `product_certificates`, `product_reviews`, `growers`, `grower_applications`, `fiber_batches`, `grower_transactions`, `promo_codes`, `user_roles`, `wechat_identities`, `rate_limits`, `sleep_assessments`, `stock_notifications`, `processed_webhook_events`
 
 Key constraints:
 - All prices stored in NZD only (`price_nzd`) — display conversions never touch the DB
 - Grower credit balances maintained by a DB trigger on `grower_transactions` insert, never updated directly
 - Stock decremented by trigger when `orders.status` changes to `'paid'`
+- One `product_certificates` row auto-generated per unit at checkout (`stripe-webhook`), linked via `order_id`; `verify_certificate()` is the public, case-insensitive lookup RPC behind `/verify`
 - RLS enabled on every table; `has_role()` security-definer function centralises admin checks
+- `check_rate_limit()` (service-role only) backs a `rate_limits` table protecting the public, unauthenticated `chat`/`recommend`/`bright-task` Edge Functions from abuse
 
 ---
 
 ## Security Notes
 
 - **Stripe webhook**: signature verified with `stripe.webhooks.constructEventAsync()` before any DB write
-- **API keys**: Gemini and Stripe keys exist only in Supabase Edge Function secrets, never in the client bundle
+- **API keys**: Gemini, Stripe, Resend, and Twilio keys exist only in Supabase Edge Function secrets, never in the client bundle (Sentry's DSN is the one exception — DSNs aren't secrets, they're meant to ship in the public bundle)
 - **Auth**: Supabase JWT; frontend route guards are UX-only — RLS is the actual enforcement layer
 - **SQL injection**: Supabase client uses parameterised queries throughout; no raw string concatenation
+- **CORS**: every Edge Function that accepts browser requests validates `Origin` against an explicit allowlist (`pacificalpaca.com`, `www.pacificalpaca.com`, localhost, preview domains) rather than reflecting an arbitrary origin
+- **Rate limiting**: public, unauthenticated Edge Functions that call paid third-party APIs (`chat`, `recommend`, `bright-task`) are protected by a per-key sliding-window limit enforced in the database
