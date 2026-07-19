@@ -18,6 +18,65 @@ interface ProductFiberBatch {
   fiber_batch_id: string | null;
 }
 
+// Same Resend setup already proven out in bright-task/index.ts (contact/wholesale
+// form emails) — pacificalpaca.com is verified there, so RESEND_FROM_EMAIL is a
+// real project secret, not per-function config. Unlike bright-task, this never
+// falls back to a hardcoded from-address: without RESEND_FROM_EMAIL the send is
+// skipped entirely (see the RESEND_FROM_EMAIL check below).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendEmail(apiKey: string, from: string, to: string, subject: string, html: string) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to, subject, html }),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Resend API error (${response.status}): ${body}`);
+  }
+}
+
+function buildOrderConfirmationEmail(
+  orderNumber: string,
+  checkoutData: CheckoutSessionRow,
+  certificates: { code: string }[],
+): { subject: string; html: string } {
+  const itemsHtml = checkoutData.items.map((item) =>
+    `<li>${escapeHtml(item.name)}${item.variant ? ` (${escapeHtml(item.variant)})` : ""} × ${item.quantity} — ${checkoutData.currency} ${(item.price * item.quantity).toFixed(2)}</li>`
+  ).join("");
+
+  const certsHtml = certificates.length > 0
+    ? `<h3>正品防伪码 / Authenticity Code(s)</h3>
+       <ul>${certificates.map((c) =>
+         `<li><code>${escapeHtml(c.code)}</code> — <a href="https://pacificalpaca.com/verify/${encodeURIComponent(c.code)}">验证真伪 / Verify →</a></li>`
+       ).join("")}</ul>
+       <p style="font-size:13px;color:#666;">请妥善保存以上防伪码。/ Please keep these codes safe.</p>`
+    : "";
+
+  const html = `
+    <p>您好 ${escapeHtml(checkoutData.shipping_name)}，感谢您在太平洋羊驼购物！<br/>
+    Hi ${escapeHtml(checkoutData.shipping_name)}, thank you for your order with Pacific Alpacas!</p>
+    <p><strong>订单编号 / Order Number:</strong> ${escapeHtml(orderNumber)}</p>
+    <ul>${itemsHtml}</ul>
+    <p><strong>总计 / Total:</strong> ${checkoutData.currency} ${Number(checkoutData.total).toFixed(2)}</p>
+    ${certsHtml}
+    <p><a href="https://pacificalpaca.com/my-orders">查看订单详情 / View order details →</a></p>
+  `;
+
+  return { subject: `订单确认 Order Confirmed — ${orderNumber}`, html };
+}
+
 interface CheckoutSessionRow {
   id: string;
   status: string;
@@ -189,6 +248,7 @@ serve(async (req) => {
       const certificateProductIds = [...new Set(
         checkoutData.items.map((item) => item.productId).filter((id): id is string => Boolean(id))
       )];
+      let insertedCertificates: { code: string }[] = [];
 
       if (certificateProductIds.length > 0) {
         const { data: productBatches, error: productBatchError } = await serviceClient
@@ -217,15 +277,17 @@ serve(async (req) => {
           });
 
           if (certificateRows.length > 0) {
-            const { error: certError } = await serviceClient
+            const { data: insertedCerts, error: certError } = await serviceClient
               .from("product_certificates")
-              .insert(certificateRows);
+              .insert(certificateRows)
+              .select("code");
             if (certError) {
               console.error("webhook_certificate_generate_failed", {
                 order_id: order.id,
                 error: certError.message,
               });
             } else {
+              insertedCertificates = insertedCerts ?? [];
               console.log("webhook_certificates_created", {
                 order_id: order.id,
                 count: certificateRows.length,
@@ -255,6 +317,28 @@ serve(async (req) => {
             error: promoError.message,
           });
         }
+      }
+
+      // Order confirmation email — same Resend setup as bright-task's contact-form
+      // emails. Best-effort: a delivery failure must not block order fulfillment,
+      // the customer already paid. RESEND_FROM_EMAIL gates this exactly like in
+      // bright-task — without a verified sending domain, Resend's sandbox sender
+      // can't deliver to an arbitrary customer address, so skip rather than fail.
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL");
+      if (resendApiKey && resendFromEmail && checkoutData.shipping_email && orderNumber) {
+        try {
+          const { subject, html } = buildOrderConfirmationEmail(orderNumber, checkoutData, insertedCertificates);
+          await sendEmail(resendApiKey, resendFromEmail, checkoutData.shipping_email, subject, html);
+          console.log("webhook_order_confirmation_email_sent", { order_id: order.id });
+        } catch (e) {
+          console.error("webhook_order_confirmation_email_failed", {
+            order_id: order.id,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      } else if (!resendFromEmail) {
+        console.log("webhook_order_confirmation_email_skipped_no_verified_domain", { order_id: order.id });
       }
 
       // Mark session complete — second-layer idempotency guard
