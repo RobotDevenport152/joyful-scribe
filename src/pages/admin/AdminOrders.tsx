@@ -34,8 +34,18 @@ const AdminOrders = () => {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id);
-    if (error) { toast.error(error.message); return; }
+    // "shipped" goes through notify-shipped instead of a direct table update
+    // so the Twilio SMS (if configured) fires atomically with the status
+    // change, using the service role rather than the admin's own session.
+    if (status === 'shipped') {
+      const { error } = await supabase.functions.invoke('notify-shipped', {
+        body: { orderId: id },
+      });
+      if (error) { toast.error(error.message); return; }
+    } else {
+      const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+      if (error) { toast.error(error.message); return; }
+    }
     toast.success('状态已更新');
     loadOrders();
     if (selected?.id === id) setSelected({ ...selected, status });

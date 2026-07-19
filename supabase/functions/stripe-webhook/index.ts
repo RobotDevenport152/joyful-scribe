@@ -47,6 +47,21 @@ async function sendEmail(apiKey: string, from: string, to: string, subject: stri
   }
 }
 
+async function sendSms(accountSid: string, authToken: string, from: string, to: string, body: string) {
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
+  });
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Twilio API error (${response.status}): ${errBody}`);
+  }
+}
+
 function buildOrderConfirmationEmail(
   orderNumber: string,
   checkoutData: CheckoutSessionRow,
@@ -339,6 +354,29 @@ serve(async (req) => {
         }
       } else if (!resendFromEmail) {
         console.log("webhook_order_confirmation_email_skipped_no_verified_domain", { order_id: order.id });
+      }
+
+      // Order confirmation SMS via Twilio — same best-effort principle as the
+      // email above: a failure here must not block order fulfillment. Gated
+      // on all three Twilio secrets being set (unset in a fresh deployment
+      // until the account exists) and the customer having given a phone
+      // number, which is optional at checkout.
+      const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+      const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+      const twilioFromNumber = Deno.env.get("TWILIO_FROM_NUMBER");
+      if (twilioAccountSid && twilioAuthToken && twilioFromNumber && checkoutData.shipping_phone && orderNumber) {
+        try {
+          const smsBody = `您的太平洋羊驼订单 ${orderNumber} 已确认，感谢您的购买！/ Your Pacific Alpacas order ${orderNumber} is confirmed — thank you!`;
+          await sendSms(twilioAccountSid, twilioAuthToken, twilioFromNumber, checkoutData.shipping_phone, smsBody);
+          console.log("webhook_order_confirmation_sms_sent", { order_id: order.id });
+        } catch (e) {
+          console.error("webhook_order_confirmation_sms_failed", {
+            order_id: order.id,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      } else if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber) {
+        console.log("webhook_order_confirmation_sms_skipped_not_configured", { order_id: order.id });
       }
 
       // Mark session complete — second-layer idempotency guard
