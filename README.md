@@ -20,6 +20,8 @@ A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand tar
 | Transactional email | Resend (Edge Function) | Order confirmation emails, including per-unit anti-counterfeit certificate codes; also powers the contact/wholesale form notifications. |
 | SMS notifications | Twilio (Edge Function) | Order-confirmed and order-shipped SMS. Fully gated on three secrets being configured — a no-op until then, so it ships ahead of the Twilio account existing. |
 | WeChat login | WeChat Official Account OAuth (Edge Function) | Bridges WeChat's web OAuth into a real Supabase session for customers browsing inside WeChat's in-app browser. Built and tested; pending real AppID/AppSecret credentials. |
+| CI/CD | GitHub Actions | Separate jobs for lint/unit-test/type-check/dependency-audit, Playwright e2e, Supabase Edge Function deploy, and Vercel production/preview deploy — each deploy job gated behind the test job passing first. |
+| E2E Testing | Playwright | Smoke test suite (`tests/e2e/smoke.spec.ts`) run in CI against a real production-config build before every deploy, and again against every PR's Vercel preview deployment. |
 
 ---
 
