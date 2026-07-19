@@ -52,7 +52,7 @@
 - Fiber traceability — QR-scannable batch codes linking products to specific NZ farms
 - Grower portal — authenticated dashboard for NZ farmers to view batches and credit balances
 - Admin panel — full back-office (products, orders, growers, fiber batches, promos)
-- AI chat assistant — in-page product/brand Q&A powered by a Supabase Edge Function
+- AI chat assistant — in-page product/brand Q&A and (for logged-in users) real order status lookup, powered by a Supabase Edge Function
 - Sleep quiz — interactive product recommender tracked for conversion analytics
 
 **Non-goals:**

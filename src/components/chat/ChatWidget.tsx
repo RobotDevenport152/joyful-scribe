@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,28 +46,67 @@ const QUICK_REPLIES = [
   { zh: '查询我的订单',             en: 'Check my order status' },
 ];
 
+const CHAT_STORAGE_KEY = 'pa-chat-history';
+// Full history is sent to the model on every turn — cap it so a long-lived
+// stored conversation doesn't grow the request payload/cost without bound.
+const MAX_HISTORY = 40;
+
+const greeting = (lang: string): Msg => ({
+  role: 'assistant',
+  content: lang === 'zh'
+    ? '您好！我是太平洋羊驼的 AI 助手，可以帮您了解产品、查询订单或推荐最适合您的羊驼被。'
+    : "Hi! I'm Pacific Alpacas' AI assistant. I can help you with products, orders, or finding the perfect alpaca duvet.",
+});
+
+const isMsg = (m: unknown): m is Msg =>
+  !!m && typeof m === 'object'
+  && ((m as Msg).role === 'user' || (m as Msg).role === 'assistant')
+  && typeof (m as Msg).content === 'string';
+
+const loadStoredMessages = (lang: string): Msg[] => {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isMsg)) return parsed;
+    }
+  } catch {
+    // corrupted or inaccessible storage — fall back to a fresh greeting
+  }
+  return [greeting(lang)];
+};
+
+const trimHistory = (msgs: Msg[]) => msgs.length > MAX_HISTORY ? msgs.slice(msgs.length - MAX_HISTORY) : msgs;
+
 const ChatWidget = () => {
   const lang = (() => { try { return localStorage.getItem('pa-locale') || 'zh'; } catch { return 'zh'; } })();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: 'assistant', content: lang === 'zh'
-        ? '您好！我是太平洋羊驼的 AI 助手，可以帮您了解产品、查询订单或推荐最适合您的羊驼被。'
-        : "Hi! I'm Pacific Alpacas' AI assistant. I can help you with products, orders, or finding the perfect alpaca duvet." },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>(() => loadStoredMessages(lang));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showQuick, setShowQuick] = useState(true);
+  const [showQuick, setShowQuick] = useState(messages.length <= 1);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo(0, listRef.current.scrollHeight);
   }, [messages]);
 
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); } catch {
+      // storage unavailable (private browsing, quota) — conversation just won't persist
+    }
+  }, [messages]);
+
+  const startNewChat = () => {
+    setMessages([greeting(lang)]);
+    setShowQuick(true);
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     setShowQuick(false);
     const userMsg: Msg = { role: 'user', content: text };
-    const newMsgs = [...messages, userMsg];
+    const newMsgs = trimHistory([...messages, userMsg]);
     setMessages(newMsgs);
     setInput('');
     setLoading(true);
@@ -80,7 +119,7 @@ const ChatWidget = () => {
       if (error) throw error;
       const reply = data?.choices?.[0]?.message?.content || data?.content || data?.text
         || (lang === 'zh' ? '抱歉，我暂时无法回答，请稍后再试。' : "Sorry, I can't answer that right now — please try again.");
-      setMessages([...newMsgs, { role: 'assistant', content: reply }]);
+      setMessages(trimHistory([...newMsgs, { role: 'assistant', content: reply }]));
     } catch (e: any) {
       console.error('Chat error:', e);
       let message = lang === 'zh'
@@ -93,7 +132,7 @@ const ChatWidget = () => {
       } catch {
         // response body wasn't JSON — fall back to the generic message above
       }
-      setMessages([...newMsgs, { role: 'assistant', content: message }]);
+      setMessages(trimHistory([...newMsgs, { role: 'assistant', content: message }]));
     } finally {
       setLoading(false);
     }
@@ -131,9 +170,18 @@ const ChatWidget = () => {
                 <h3 className="text-primary-foreground font-display text-sm">太平洋羊驼 AI 助手</h3>
                 <p className="text-primary-foreground/60 text-xs">在线</p>
               </div>
-              <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={startNewChat}
+                  title={lang === 'zh' ? '开始新对话' : 'Start new conversation'}
+                  className="text-primary-foreground/70 hover:text-primary-foreground p-1"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+                <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}

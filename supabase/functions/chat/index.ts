@@ -45,7 +45,25 @@ function buildCatalogText(products: any[], locale: string): string {
   }).join("\n");
 }
 
-function buildSystemPrompt(catalogText: string, locale: string): string {
+function buildOrderContext(orders: any[], locale: string, loggedIn: boolean): string {
+  if (!loggedIn) {
+    return locale === "en"
+      ? "(Customer is not logged in — no order data available. If asked about an order, direct them to log in and check /my-orders, or provide their order number for WeChat support / info@pacificalpaca.com. Never say you can't access order info — always give this redirect instead.)"
+      : "（客户未登录，无订单数据。如客户询问订单状态，请引导其登录后前往 /my-orders 查看，或提供订单号联系微信客服 / info@pacificalpaca.com。禁止说'我无法查询/访问'，一律用上述引导代替。）";
+  }
+  if (!orders.length) {
+    return locale === "en"
+      ? "(This logged-in customer has no orders on file.)"
+      : "（该已登录客户名下暂无订单记录。）";
+  }
+  return orders.map((o) => {
+    const tracking = o.tracking_number ? ` | tracking ${o.tracking_number}${o.carrier ? ` (${o.carrier})` : ""}` : "";
+    const date = new Date(o.created_at).toISOString().slice(0, 10);
+    return `- #${o.order_number} | ${o.status} | ${o.currency} ${o.total} | ${date}${tracking}`;
+  }).join("\n");
+}
+
+function buildSystemPrompt(catalogText: string, orderContext: string, locale: string): string {
   if (locale === "en") {
     return `You are the professional shopping consultant and customer service assistant for Pacific Alpacas.
 
@@ -53,13 +71,18 @@ ${BRAND_FACTS_EN}
 
 ## Your core task: understand the customer's needs and recommend the best-fit product
 1. If you don't yet know enough (budget, sleeping preferences — hot/cold sleeper, allergies, bed size, season, who it's for), ask 1-2 short clarifying questions first.
-2. Once you understand their needs, pick 1-2 products from the "Current catalogue" below that best match, and briefly explain WHY (e.g. warmth level, price fit, fiber content, size).
-3. When recommending a product, include a link in this exact format: [Product Name](/product/slug)
-4. Never invent products, prices, or specs that are not in the catalogue below. If nothing fits, say so honestly and suggest contacting WeChat support or info@pacificalpaca.com.
-5. Keep replies concise (under 120 words), friendly but professional.
+2. Once you have enough information, briefly restate what you understood in a short clause (e.g. "for a cold sleeper, budget around $300") so the customer can correct you if you got it wrong — then pick 1-2 products from the "Current catalogue" below that best match, and briefly explain WHY (e.g. warmth level, price fit, fiber content, size).
+3. Treat earlier turns in this conversation as already-confirmed — don't re-ask for details the customer already gave.
+4. When recommending a product, include a link in this exact format: [Product Name](/product/slug)
+5. Never invent products, prices, or specs that are not in the catalogue below. If nothing fits, say so honestly and suggest contacting WeChat support or info@pacificalpaca.com.
+6. If the customer asks about an order's status, tracking, or history, answer only from the "Customer's orders" section below — never invent an order number, status, or tracking code.
+7. Keep replies friendly but professional.
 
 ## Current catalogue (only recommend from this list)
-${catalogText}`;
+${catalogText}
+
+## Customer's orders (only source of truth for order questions)
+${orderContext}`;
   }
 
   return `你是太平洋羊驼（Pacific Alpacas）的专业购物顾问与客服助手。
@@ -68,13 +91,18 @@ ${BRAND_FACTS}
 
 ## 你的核心任务：理解客户需求，并推荐最合适的产品
 1. 如果信息不足（预算、睡眠习惯：怕冷/怕热、过敏情况、床品尺寸、季节、送礼对象等），先用1-2个简短问题澄清需求。
-2. 了解需求后，从下方"当前在售商品目录"中挑选1-2款最匹配的产品，并简要说明推荐理由（如保暖等级、价格区间、纤维成分、尺寸是否合适）。
-3. 推荐产品时，必须使用以下格式附上链接：[产品名称](/product/slug)
-4. 不要编造目录之外不存在的产品、价格或参数。如果没有合适的产品，请如实告知，并引导联系微信客服或邮箱 info@pacificalpaca.com。
-5. 回答简洁（200字以内），专业且亲切。
+2. 信息足够后，先用一句话简要复述你理解的需求（如"怕冷、预算300纽币左右"），让客户可以纠正你的理解是否有误；再从下方"当前在售商品目录"中挑选1-2款最匹配的产品，并简要说明推荐理由（如保暖等级、价格区间、纤维成分、尺寸是否合适）。
+3. 把对话中之前几轮已确认的信息当作已知，不要重复询问客户已经给过的信息。
+4. 推荐产品时，必须使用以下格式附上链接：[产品名称](/product/slug)
+5. 不要编造目录之外不存在的产品、价格或参数。如果没有合适的产品，请如实告知，并引导联系微信客服或邮箱 info@pacificalpaca.com。
+6. 如果客户询问订单状态、物流或历史订单，只能根据下方"客户订单"部分作答，禁止编造订单号、状态或物流单号。
+7. 回答专业且亲切。
 
 ## 当前在售商品目录（只能从此列表中推荐）
-${catalogText}`;
+${catalogText}
+
+## 客户订单（订单相关问题的唯一依据）
+${orderContext}`;
 }
 
 // Guards against the model breaking character (disclosing it's an AI,
@@ -87,7 +115,7 @@ function validateOutput(content: string, locale: "zh" | "en"): { valid: boolean;
     : "AI 助手暂时无法回复，请稍后再试或联系微信客服 / info@pacificalpaca.com。";
 
   if (!content || content.length < 2) return { valid: false, fallback: genericFallback };
-  if (content.length > 1500) return { valid: false, fallback: genericFallback };
+  if (content.length > 4000) return { valid: false, fallback: genericFallback };
 
   const aiSelfDisclosure = ["As an AI", "I'm an AI", "I cannot access", "I don't have access", "作为一个AI", "作为AI"];
   if (aiSelfDisclosure.some((s) => content.includes(s))) return { valid: false, fallback: genericFallback };
@@ -144,8 +172,30 @@ serve(async (req) => {
 
     if (productsError) console.error("chat_products_fetch_error", { message: productsError.message });
 
+    // Chat is used by anonymous visitors too, so a missing/invalid Authorization
+    // header just means "not logged in" — never reject the request over it.
+    let authedUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const { data: userData } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+      authedUserId = userData?.user?.id ?? null;
+    }
+
+    let orders: any[] = [];
+    if (authedUserId) {
+      const { data: orderRows, error: ordersError } = await serviceClient
+        .from("orders")
+        .select("order_number, status, tracking_number, carrier, total, currency, created_at")
+        .eq("user_id", authedUserId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (ordersError) console.error("chat_orders_fetch_error", { message: ordersError.message });
+      orders = orderRows ?? [];
+    }
+
     const catalogText = buildCatalogText(products ?? [], lang);
-    const systemPrompt = buildSystemPrompt(catalogText, lang);
+    const orderContext = buildOrderContext(orders, lang, authedUserId !== null);
+    const systemPrompt = buildSystemPrompt(catalogText, orderContext, lang);
 
     // Convert OpenAI-format messages to Gemini format
     // Gemini uses "model" instead of "assistant" for role
@@ -162,7 +212,7 @@ serve(async (req) => {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
-          generationConfig: { maxOutputTokens: 500 },
+          generationConfig: { maxOutputTokens: 1500 },
         }),
       }
     );
