@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchWithRetry } from "../_shared/retry.ts";
 
 // Shape of one entry in checkout_sessions.items — written by create-checkout's
 // pricedItems.map() (see CheckoutRequestBody/PricedItem there), read back here
@@ -33,7 +34,7 @@ function escapeHtml(value: string): string {
 }
 
 async function sendEmail(apiKey: string, from: string, to: string, subject: string, html: string) {
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetchWithRetry("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -48,7 +49,7 @@ async function sendEmail(apiKey: string, from: string, to: string, subject: stri
 }
 
 async function sendSms(accountSid: string, authToken: string, from: string, to: string, body: string) {
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+  const response = await fetchWithRetry(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,

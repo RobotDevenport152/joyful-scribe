@@ -22,6 +22,7 @@ A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand tar
 | WeChat login | WeChat Official Account OAuth (Edge Function) | Bridges WeChat's web OAuth into a real Supabase session for customers browsing inside WeChat's in-app browser. Built and tested; pending real AppID/AppSecret credentials. |
 | CI/CD | GitHub Actions | Separate jobs for lint/unit-test/type-check/dependency-audit, Playwright e2e, Supabase Edge Function deploy, and Vercel production/preview deploy — each deploy job gated behind the test job passing first. |
 | E2E Testing | Playwright | Smoke test suite (`tests/e2e/smoke.spec.ts`) run in CI against a real production-config build before every deploy, and again against every PR's Vercel preview deployment. |
+| Resilience | `fetchWithRetry` (`supabase/functions/_shared/retry.ts`) | Exponential backoff with full jitter, applied to every third-party call in the request path (Resend, Twilio, Gemini, WeChat OAuth). Retries network errors, 429, and 5xx before the caller's existing fallback (best-effort log-and-swallow for email/SMS, a friendly error for chat) kicks in. |
 
 ---
 
@@ -42,6 +43,10 @@ Server state (products, orders, growers) has different semantics from client sta
 ### Why two i18n systems exist (and what was fixed)
 
 The home section components used `react-i18next` while the rest of the app used a custom typed `t` object in `AppContext`. The home sections were broken because `import '@/i18n'` was missing from `App.tsx`, so i18next was never initialised. Fix: add the import and call `i18n.changeLanguage()` inside `AppContext.setLocale()` so both systems stay in sync when the user switches language.
+
+### Why third-party calls retry instead of failing once
+
+Every Edge Function that talks to a third party does so synchronously inside the request path — a dropped connection to Resend used to mean a silently lost order-confirmation email, not a retried one. `fetchWithRetry` wraps those calls with up to 2 retries and exponential backoff with full jitter (jitter so concurrent invocations under load don't all retry in lockstep against an already-struggling API). It's deliberately not a circuit breaker: at this traffic volume, a per-call retry budget is enough, and a stateful breaker would need shared state across Edge Function invocations that don't share memory.
 
 ### Row-Level Security as the primary access control
 

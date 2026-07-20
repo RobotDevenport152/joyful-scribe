@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchWithRetry } from "../_shared/retry.ts";
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
@@ -21,7 +22,7 @@ function getCorsHeaders(origin: string | null) {
 }
 
 async function sendSms(accountSid: string, authToken: string, from: string, to: string, body: string) {
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+  const response = await fetchWithRetry(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,

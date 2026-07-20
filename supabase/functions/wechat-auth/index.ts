@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchWithRetry } from "../_shared/retry.ts";
 
 // Bridges WeChat Official Account web OAuth into a real Supabase session.
 // Supabase has no built-in WeChat provider, so this does the exchange by
@@ -77,7 +78,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 1. Exchange code for an access_token + openid.
-    const tokenRes = await fetch(
+    const tokenRes = await fetchWithRetry(
       `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appId}&secret=${appSecret}&code=${encodeURIComponent(code)}&grant_type=authorization_code`,
     );
     const token: WeChatTokenResponse = await tokenRes.json();
@@ -90,7 +91,7 @@ Deno.serve(async (req: Request) => {
     // without it since only openid is required to identify the user.
     let profile: WeChatUserInfo = {};
     try {
-      const profileRes = await fetch(
+      const profileRes = await fetchWithRetry(
         `https://api.weixin.qq.com/sns/userinfo?access_token=${token.access_token}&openid=${token.openid}&lang=zh_CN`,
       );
       profile = await profileRes.json();
