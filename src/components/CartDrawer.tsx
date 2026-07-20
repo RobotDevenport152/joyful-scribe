@@ -2,8 +2,10 @@ import { useApp } from '@/contexts/AppContext';
 import { X, Plus, Minus, Tag, Truck } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { type Currency, getItemPrices } from '@/lib/store';
 import { ResponsiveImage } from '@/components/storefront/ResponsiveImage';
+import WeChatStoreButton from '@/components/storefront/WeChatStoreButton';
 
 const FREE_SHIPPING_THRESHOLD: Record<Currency, number> = { NZD: 500, CNY: 2250, USD: 300 };
 
@@ -11,8 +13,6 @@ export default function CartDrawer() {
   const { cart, cartOpen, setCartOpen, removeFromCart, updateQuantity, cartTotal, promoDiscount, applyPromo, promoCode, setPromoCode, setPromoDiscount, fp, t, locale, currency } = useApp();
   const [codeInput, setCodeInput] = useState('');
   const [promoError, setPromoError] = useState('');
-
-  if (!cartOpen) return null;
 
   const handleApply = () => {
     const ok = applyPromo(codeInput);
@@ -22,9 +22,22 @@ export default function CartDrawer() {
   const shipping = cartTotal >= 500 ? 0 : 25;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-foreground/40 z-50" onClick={() => setCartOpen(false)} />
-      <div className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-background z-50 shadow-2xl animate-slide-in-right flex flex-col">
+    <AnimatePresence>
+      {cartOpen && (
+      <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-foreground/40 z-50"
+        onClick={() => setCartOpen(false)}
+      />
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-background z-50 shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="font-display text-2xl font-semibold">{t.cart.title}</h2>
           <button onClick={() => setCartOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -148,9 +161,12 @@ export default function CartDrawer() {
             >
               {t.cart.checkout}
             </Link>
+            <WeChatStoreButton locale={locale} />
           </div>
         )}
-      </div>
-    </>
+      </motion.div>
+      </>
+      )}
+    </AnimatePresence>
   );
 }
