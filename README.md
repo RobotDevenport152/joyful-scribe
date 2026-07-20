@@ -27,6 +27,23 @@ A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand tar
 
 ---
 
+## Architecture Layers
+
+Six layers, each mapped to where the code actually lives (not a theoretical N-tier diagram):
+
+| # | Layer | Where it lives | Responsibility |
+|---|---|---|---|
+| 1 | Presentation | `src/components`, `src/pages` | React UI for all four surfaces — storefront, checkout, grower portal, admin panel. |
+| 2 | Client state & data access | `src/contexts`, `src/stores`, `src/integrations/supabase`, `src/lib` | Locale/currency/cart state (Context + Zustand), React Query's server-state cache, the typed Supabase client, and business-logic helpers (certificate generation, WeChat helpers, i18n, Zod schemas). |
+| 3 | Edge Functions (backend compute) | `supabase/functions/*` | 7 Deno serverless functions: `create-checkout`, `stripe-webhook`, `chat`, `recommend`, `notify-shipped`, `wechat-auth`, `bright-task`. No always-on server — each request cold-starts a function. |
+| 4 | Data & persistence | `supabase/migrations` (45 files) | PostgreSQL schema, Row-Level Security policies, and triggers (e.g. `update_grower_balance`) — access control lives here, not in application code. |
+| 5 | Third-party services | Stripe, Resend, Twilio, Google Gemini, WeChat, Frankfurter | Payments, transactional email/SMS, AI chat, OAuth, and live currency rates — external systems this app calls out to, not owned code. |
+| 6 | Infrastructure & delivery | `infra/terraform` (Cloudflare + Vercel), `.github/workflows` | DNS/domain/CDN (Cloudflare), hosting (Vercel), and CI/CD gates (lint, unit tests, type-check, Playwright e2e, accessibility scan, dependency audit) before any deploy. |
+
+Sentry and Vercel Analytics are cross-cutting rather than a layer of their own — they observe all six rather than sitting in the request path of any single one.
+
+---
+
 ## Architecture Decisions
 
 ### Why Supabase over Firebase?
