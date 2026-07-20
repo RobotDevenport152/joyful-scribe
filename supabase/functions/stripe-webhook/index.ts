@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { fetchWithRetry } from "../_shared/retry.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 // Shape of one entry in checkout_sessions.items — written by create-checkout's
 // pricedItems.map() (see CheckoutRequestBody/PricedItem there), read back here
@@ -141,6 +142,16 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
+
+  // Everything below runs unguarded before this point in git history — an
+  // unhandled error (bad DB constraint, unexpected shape) surfaced as a
+  // bare 500 with no logging and no visibility into which order it was.
+  // The order-creation logic isn't wrapped in a smaller try/catch because a
+  // half-failed order (e.g. row inserted but the trigger errors) must not
+  // be silently treated as success — better to log, report, and let
+  // Stripe's own webhook retry mechanism (it retries non-2xx responses)
+  // try again.
+  try {
 
   // Idempotency: skip duplicate webhook deliveries from Stripe
   const { data: alreadyProcessed } = await serviceClient
@@ -419,4 +430,15 @@ serve(async (req) => {
   return new Response(JSON.stringify({ received: true }), {
     headers: { "Content-Type": "application/json" },
   });
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("webhook_processing_error", { message, event_id: event.id, event_type: event.type });
+    await captureException(error, { tags: { function: "stripe-webhook" }, extra: { event_id: event.id, event_type: event.type } });
+    // Non-2xx so Stripe retries delivery rather than treating this as handled.
+    return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 });

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { fetchWithRetry } from "../_shared/retry.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 // Bridges WeChat Official Account web OAuth into a real Supabase session.
 // Supabase has no built-in WeChat provider, so this does the exchange by
@@ -47,6 +48,11 @@ interface WeChatUserInfo {
   errmsg?: string;
 }
 
+// No user session exists yet at this point (this IS the login flow), so
+// keyed by IP rather than user id, same as chat/recommend/bright-task.
+const WECHAT_AUTH_RATE_LIMIT = 10;
+const WECHAT_AUTH_RATE_WINDOW_SECONDS = 60;
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -77,6 +83,23 @@ Deno.serve(async (req: Request) => {
       throw new Error("WECHAT_APPID / WECHAT_APPSECRET not configured");
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { data: allowed, error: rateLimitError } = await admin.rpc("check_rate_limit", {
+      _key: `wechat-auth:${clientIp}`,
+      _limit: WECHAT_AUTH_RATE_LIMIT,
+      _window_seconds: WECHAT_AUTH_RATE_WINDOW_SECONDS,
+    });
+    if (rateLimitError) console.error("rate_limit_check_failed", { message: rateLimitError.message });
+    if (rateLimitError === null && allowed === false) {
+      return new Response(JSON.stringify({ error: "Too many attempts — please wait a moment and try again." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // 1. Exchange code for an access_token + openid.
     const tokenRes = await fetchWithRetry(
       `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appId}&secret=${appSecret}&code=${encodeURIComponent(code)}&grant_type=authorization_code`,
@@ -98,10 +121,6 @@ Deno.serve(async (req: Request) => {
     } catch (e) {
       console.error("wechat_userinfo_error", e);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceRoleKey);
 
     // 3. Find or create the auth user linked to this openid.
     const { data: existing } = await admin
@@ -173,6 +192,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("wechat_auth_error", error);
+    await captureException(error, { tags: { function: "wechat-auth" } });
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

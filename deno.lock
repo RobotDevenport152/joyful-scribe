@@ -137,6 +137,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@axe-core/playwright@^4.12.1",
         "npm:@eslint/js@^9.32.0",
         "npm:@fontsource/cormorant-garamond@^5.2.11",
         "npm:@fontsource/inter@^5.2.8",
@@ -189,6 +190,7 @@
         "npm:cmdk@^1.1.1",
         "npm:date-fns@^3.6.0",
         "npm:embla-carousel-react@^8.6.0",
+        "npm:eslint-plugin-jsx-a11y@^6.10.2",
         "npm:eslint-plugin-react-hooks@^5.2.0",
         "npm:eslint-plugin-react-refresh@~0.4.20",
         "npm:eslint@^9.32.0",

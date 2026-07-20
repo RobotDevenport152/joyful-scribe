@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { captureException } from "../_shared/sentry.ts";
 
 interface CartItem {
   productId: string;
@@ -64,6 +65,13 @@ function getCorsHeaders(origin: string | null) {
     "Vary": "Origin",
   };
 }
+
+// Keyed by user id (not IP) since auth is already required at this point —
+// a shared office/VPN IP must not lock out other customers. Limit is
+// generous relative to chat/recommend's since a customer whose payment
+// fails needs to retry checkout without hitting a wall.
+const CHECKOUT_RATE_LIMIT = 12;
+const CHECKOUT_RATE_WINDOW_SECONDS = 60;
 
 // Read-only preview of the discount for pricing the Stripe session — the
 // customer hasn't paid yet, so nothing gets consumed here. The actual
@@ -132,6 +140,23 @@ serve(async (req) => {
       });
     }
 
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+
+    const { data: allowed, error: rateLimitError } = await serviceClient.rpc("check_rate_limit", {
+      _key: `checkout:${userData.user.id}`,
+      _limit: CHECKOUT_RATE_LIMIT,
+      _window_seconds: CHECKOUT_RATE_WINDOW_SECONDS,
+    });
+    if (rateLimitError) console.error("rate_limit_check_failed", { message: rateLimitError.message });
+    if (rateLimitError === null && allowed === false) {
+      return new Response(JSON.stringify({ error: "Too many checkout attempts — please wait a moment and try again." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { items, currency, shippingInfo, promoCode, paymentMethod } = await req.json() as CheckoutRequestBody;
 
     if (!items?.length) {
@@ -158,11 +183,6 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
 
     // Prices are never trusted from the client — look up the authoritative
     // NZD price for every item (and, if a size/variant was selected, that
@@ -329,6 +349,7 @@ serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("checkout_error", { message });
+    await captureException(error, { tags: { function: "create-checkout" } });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },

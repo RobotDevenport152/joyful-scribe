@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { fetchWithRetry } from "../_shared/retry.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
@@ -253,6 +254,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("chat_error", { message: e instanceof Error ? e.message : String(e) });
+    await captureException(e, { tags: { function: "chat" } });
     return new Response(JSON.stringify({
       error: lang === "en"
         ? "The AI assistant is temporarily unavailable. Please try again later or contact info@pacificalpaca.com."
