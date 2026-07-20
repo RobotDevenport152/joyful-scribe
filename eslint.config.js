@@ -37,8 +37,9 @@ export default tseslint.config(
       ...asWarnings(jsxA11y.flatConfigs.recommended.rules),
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
-      // TypeScript strict mode is not yet enabled (tracked in CLAUDE.md §20).
-      // Downgrade any-related rules to warnings so CI passes while debt is visible.
+      // tsconfig strict mode is on (see CLAUDE.md §15), but explicit `: any`
+      // is still legal TS and still exists at ~100 call sites — downgrade to
+      // warnings so CI passes while that debt is visible, not silent.
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
     },

@@ -68,18 +68,27 @@ const mockDbProduct: Tables<'products'> = {
   description_en: 'A fine duvet.',
   description_zh: '一条精美的被子。',
   price_nzd: 500,
+  price_cny: 2250,
+  price_usd: 300,
+  stock: 10,
   stock_quantity: 10,
   is_active: true,
   is_featured: false,
   sort_order: 1,
+  image: '/img/duvet.jpg',
   images: [{ url: '/img/duvet.jpg', alt: 'duvet', is_primary: true }],
   certifications: ['NZ Made'],
   size_options: [{ name: '200x230cm', value: '200x230' }],
   color_options: null,
   fill_material: '100% alpaca',
+  fill_power: null,
   fabric_material: '40S cotton',
   fiber_batch_id: null,
+  weight: null,
   weight_grams: 2600,
+  rating: null,
+  review_count: null,
+  sku: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 };
@@ -129,7 +138,10 @@ describe('dbToLegacyProduct', () => {
   });
 
   it('stock defaults to 0 when null', () => {
-    const p = dbToLegacyProduct({ ...mockDbProduct, stock_quantity: null });
+    // stock_quantity is NOT NULL in the current schema, but dbToLegacyProduct's
+    // `?? 0` fallback is defensive against that changing (or a raw SQL write
+    // bypassing the constraint) -- force the otherwise-impossible value through.
+    const p = dbToLegacyProduct({ ...mockDbProduct, stock_quantity: null as unknown as number });
     expect(p.stock).toBe(0);
   });
 

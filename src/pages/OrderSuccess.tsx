@@ -60,7 +60,6 @@ export default function OrderSuccessPage() {
           })));
           return;
         }
-        // 'payment_failed' is not currently a valid DB enum value but handle it defensively
         if (status === 'payment_failed') {
           setOrderStatus('payment_failed');
           return;

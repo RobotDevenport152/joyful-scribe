@@ -163,9 +163,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  const images: string[] = (product as any).images?.length > 0
-    ? (product as any).images
-    : [product.image];
+  const images: string[] = product.images?.length ? product.images : [product.image];
 
   // A selected size can cost far more than the base price (a carpet's largest
   // size is ~12x its smallest) — always price off the selected variant, and
@@ -271,7 +269,16 @@ export default function ProductDetailPage() {
         description={(locale === 'zh' ? product.descZh : product.descEn) || ''}
         image={images[0] ? toAbsoluteUrl(images[0]) : undefined}
       />
-      <ProductJsonLd product={product} />
+      <ProductJsonLd
+        product={{
+          nameEn: product.nameEn,
+          descEn: product.descEn,
+          images,
+          stock: product.stock,
+          slug: product.slug ?? product.id,
+          prices: { NZD: product.prices.NZD },
+        }}
+      />
 
       <div className="pt-24 pb-16 flex-1">
         <div className="container mx-auto px-6">

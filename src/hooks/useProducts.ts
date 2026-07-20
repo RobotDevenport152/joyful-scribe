@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { products as LOCAL_PRODUCTS } from '@/lib/store';
+import { products as LOCAL_PRODUCTS, type Product } from '@/lib/store';
 import type { Tables } from '@/integrations/supabase/types';
 import type { Currency } from '@/lib/store';
 import { useExchangeRates, type ExchangeRates } from '@/hooks/useExchangeRates';
@@ -24,7 +24,7 @@ function toDisplayPrices(nzd: number, rates: ExchangeRates): Record<Currency, nu
 }
 
 // Convert DB product to legacy Product format for compatibility
-export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_RATES) {
+export function dbToLegacyProduct(p: DbProduct, rates: ExchangeRates = FALLBACK_RATES): Product {
   // images is jsonb [{url,alt,is_primary}] or text[] of URL strings — handle both
   const rawImages = Array.isArray(p.images) ? (p.images as any[]) : [];
   const imageUrls: string[] = rawImages
@@ -104,7 +104,10 @@ export function useProduct(id: string) {
 
   const queryFn = async () => {
     if (useLocal) {
-      const found = LOCAL_PRODUCTS.find(p => p.id === id || p.slug === id);
+      // Product has no slug field distinct from id in the local fallback
+      // dataset -- id doubles as the human-readable slug here (e.g.
+      // 'duvet-classic'), unlike the real DB where id is a UUID.
+      const found = LOCAL_PRODUCTS.find(p => p.id === id);
       if (!found) throw new Error('Product not found');
       return found;
     }

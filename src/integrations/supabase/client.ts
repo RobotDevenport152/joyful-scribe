@@ -10,7 +10,9 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Local stub to prevent runtime crashes in dev when Supabase isn't configured.
 class FakeQuery {
-  then(resolve, reject) { return Promise.resolve({ data: [], error: null }).then(resolve, reject); }
+  then(resolve: (value: { data: never[]; error: null }) => unknown, reject?: (reason: unknown) => unknown) {
+    return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+  }
   single() { return Promise.resolve({ data: null, error: null }); }
   maybeSingle() { return Promise.resolve({ data: null, error: null }); }
   select() { return this; }

@@ -20,6 +20,16 @@ export interface Product {
   stock: number;
   featured: boolean;
   fiberBatchId?: string | null;
+  // Present when sourced from dbToLegacyProduct (real DB data); absent on
+  // the local fallback dataset below, where `id` already doubles as a slug
+  // and `image` as the sole photo. Every read site must handle undefined.
+  slug?: string;
+  images?: string[];
+  weight?: string | null;
+  fillPower?: string | null;
+  certifications?: string[];
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface CartItem {
