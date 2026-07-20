@@ -267,6 +267,8 @@ Database Layer        PostgreSQL via Supabase client
 
 **Architecture Sinkhole Anti-Pattern** (what to AVOID): A request that passes through all layers with zero logic in any of them. If AdminDashboard calls supabase directly and just displays the raw result, it is a sinkhole. Add business logic in the service layer (e.g., compute daily revenue, classify low stock).
 
+**Reality check (2026-07-20): this repository does not follow the rule above, and that's an accepted tradeoff, not unfixed debt.** `src/repositories/` does not exist. 30 of 116 page/component files import the Supabase client directly — Login, Register, Checkout, and most admin pages among them. Row-Level Security is the actual access-control boundary here (see §14), so a direct query from a component isn't a security gap — it's just a different layering choice than the one described above. A mechanical refactor of ~30 files, including the checkout path, to retrofit a repository layer onto a live revenue site was evaluated and rejected: real risk (touching Login/Checkout) for no user-facing benefit, on an app this size. If you're deciding where a *new* query should live: a hook is still the better default for anything reused across components, but a one-off read directly in a page component is acceptable — don't invent a repository file for it.
+
 In practice, the layers map to these directories:
 
 | Layer | Responsibility | Location |
@@ -761,7 +763,7 @@ $$;
 
 ### Current state
 
-TypeScript is configured with `strict: false` and `noImplicitAny: false`. This is technical debt (see §20). New code must be written as if strict mode is enabled.
+TypeScript is configured with `strict: true` and `noImplicitAny: true` (enabled 2026-07-20, see §19). Actual strict-mode type errors, not just style, will fail `npm run type-check`.
 
 ### Rules for new code
 
@@ -887,28 +889,29 @@ const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard'));
 
 These are production-blocking issues. Do NOT work around them; fix the root cause.
 
-**All previously listed P0/P1 bugs have been resolved.** Current open issues:
+**This section previously listed 4 items as open; all 4 are now resolved** (verified 2026-07-20 — this file had drifted well behind the codebase, in both directions: some "open" bugs were long fixed, and some real issues, like the ones below, weren't listed at all). Fixed for reference:
 
-| # | Severity | File | Issue | Fix |
-|---|---|---|---|---|
-| 1 | P1 | `user_roles` DB enum | `app_role` enum is `('admin','moderator','user')` — 'grower' is not a valid value. `ProtectedRoute requiredRole="grower"` always fails with a DB error, so grower routes are protected only by the dashboard's own DB lookup (`.eq('user_id', user.id)`). | Add 'grower' and 'customer' to `app_role` enum via migration. |
-| 2 | P1 | `orders` DB schema | `payment_failed` is not a valid `status` enum value. `OrderSuccess.tsx` has a branch for it but it is dead code — the DB will never store that value. | Add 'payment_failed' to the status check constraint, or remove the dead branch. |
-| 3 | P2 | `src/integrations/supabase/types.ts` | Types are stale — missing `user_id` on `growers`, `checkout_sessions` table, and other recent schema additions. | Run `npx supabase gen types typescript --local > src/integrations/supabase/types.ts` after applying all migrations. |
-| 4 | P2 | Root directory | Duplicate TSX files at repo root (`AuthorityBanner.tsx`, `BrandHeritageSection.tsx`, `ChinaLanding.tsx`, `HeroSection.tsx`, `MediaCoverageSection.tsx`) — not imported anywhere, just clutter. | Delete root-level duplicates; canonical versions are in `src/components/home/` and `src/pages/`. |
+1. `app_role` enum now includes `'grower'` and `'customer'` (`20260603120000_fix_role_and_status_enums.sql`).
+2. `orders.status` check constraint now allows `'payment_failed'` (same migration) — `OrderSuccess.tsx`'s branch for it is live, not dead code.
+3. `src/integrations/supabase/types.ts` includes `checkout_sessions` and `growers.user_id`.
+4. No duplicate TSX files at repo root.
+
+**Do not trust this section (or §19/§20 below) without spot-checking against the actual code first** — this is exactly the kind of drift that wastes a session re-verifying non-issues or missing real ones. If you find this file wrong again, fix the file, not just the code.
 
 ---
 
 ## 19. Incomplete Features
 
-All previously listed incomplete features are now complete:
+All previously listed incomplete features are complete, plus, as of 2026-07-20:
 
-- **Homepage** — all 9 sections assembled in the correct order in `Index.tsx`
-- **Stripe Webhook Handler** — `stripe-webhook/index.ts` verifies signatures, uses idempotency guards, creates orders post-payment, and handles `checkout.session.expired`
-- **GrowerCredits** — `useGrowerCredits` hook fetches real balance + transaction history from `growers` and `grower_transactions`
+- **Retry + backoff on all third-party calls** — `supabase/functions/_shared/retry.ts`, applied to every Resend/Twilio/Gemini/WeChat call
+- **Error reporting from Edge Functions** — `supabase/functions/_shared/sentry.ts`, a dependency-free envelope POST (not the SDK — see its file comment for why), no-op until `SENTRY_DSN` is set
+- **Rate limiting on all 6 public-facing Edge Functions** — `chat`, `recommend`, `bright-task` had it already; `create-checkout` (keyed by user id) and `wechat-auth` (keyed by IP) were added 2026-07-20. `stripe-webhook` deliberately has none — Stripe signature verification is its guard, and a limiter could drop legitimate Stripe retries.
+- **Accessibility CI gate** — `eslint-plugin-jsx-a11y` (lint, non-blocking) + `tests/e2e/accessibility.spec.ts` (axe, blocks CI on critical/serious)
+- **Promo code validation** — already DB-backed (`promo_codes` table), not the hardcoded constant this section used to describe as still-pending
+- **TypeScript strict mode** — `strict: true, noImplicitAny: true` in `tsconfig.app.json`. The blast radius was 9 errors, not the feared 100+: 2 missing type annotations, and 7 real gaps between the legacy `Product` interface (`src/lib/store.ts`) and what `dbToLegacyProduct` actually returns — `slug`/`images`/`weight`/`fillPower`/`certifications` were used at several call sites (already null-guarded there) but never declared on the type. One of those gaps was a live bug, not just a type hole: the local-fallback product lookup (`useProduct` when Supabase isn't configured) checked `p.slug === id`, but `Product` never had a `slug` field, so that comparison was always `undefined === id` — always false, since the dataset was created. Removed as dead code, not "fixed" — it never did anything in the first place.
 
-The next features to prioritise are the open bugs in §18, then:
-- Email notification on order creation (BullMQ / Supabase Edge Function + Resend)
-- Promo code validation moved to DB (`promo_codes` table) instead of the hardcoded constant in `create-checkout`
+Email notifications (order confirmation, shipped) are live via Resend/Twilio directly in the Edge Functions — synchronous with retry, not BullMQ. There's no message queue in this stack; don't add one without a concrete reason (see §6.2 in this file, which still describes BullMQ as a future step — it isn't happening, and this line should have been fixed when notifications shipped).
 
 ---
 
@@ -916,16 +919,15 @@ The next features to prioritise are the open bugs in §18, then:
 
 | Item | Location | Priority | Notes |
 |---|---|---|---|
-| Enable TypeScript strict mode | `tsconfig.app.json` | High | `noImplicitAny: true, strict: true` — fix type errors incrementally |
-| Migrate `uiStore.ts` to AppContext | `src/stores/uiStore.ts` | Medium | Language and mobile menu state should live in AppContext |
-| Evaluate `cartStore.ts` vs `CartContext` | `src/stores/`, `src/contexts/CartContext.tsx` | **High** | ⚠️ `cartStore` stores actual per-currency DB prices; `CartContext` uses `Math.round(nzd * 4.5)`. **Do NOT remove `cartStore` until `CartContext` uses DB prices.** |
-| Phase out `dbToLegacyProduct` adapter | `src/lib/store.ts` | Medium | Components should consume Supabase DB types directly |
-| Move promo code validation to DB | `create-checkout/index.ts` | Medium | Hardcoded `PROMO_CODES` constant should query `promo_codes` table for flexibility |
-| Regenerate Supabase types | `src/integrations/supabase/types.ts` | High | Stale — run `npx supabase gen types typescript --local > src/integrations/supabase/types.ts` after applying all migrations |
-| Add `.env.example` | repo root | Low | New developers need a template with placeholder values |
-| Playwright coverage for checkout flow | `supabase/functions/create-checkout` | Medium | No E2E tests cover the payment path |
-| Exchange rate staleness | `hooks/useExchangeRates.ts` | Low | Hardcoded fallback rates (CNY 4.5, USD 0.6) should be refreshed from a live API |
-| Stale `checkout_sessions` cleanup | `supabase/` | Low | Abandoned sessions accumulate; add a scheduled Edge Function or Supabase cron to delete sessions older than 24h with status='abandoned' |
+| Phase out `dbToLegacyProduct` adapter | `src/lib/store.ts` | Medium | Still 2 call sites. Components should consume Supabase DB types directly. |
+| Migrate `CrossSell.tsx` off `cartStore.ts` | `src/components/storefront/CrossSell.tsx` | Low | The reason this was flagged **High** — `CartContext` doing naive `Math.round(nzd * 4.5)` conversion instead of real per-currency prices — is fixed; `CartContext` now uses `getItemPrices()` like everything else. `cartStore.ts` is down to one remaining caller and is safe to fold in whenever someone's touching that file, not urgent. |
+| Playwright coverage for checkout flow | `tests/e2e/` | Medium | `smoke.spec.ts` covers add-to-cart → checkout redirect, not a completed payment (needs Stripe test-mode keys in CI, not currently wired). |
+| Stale `checkout_sessions` cleanup | `supabase/` | Low | `checkout.session.expired` webhook marks sessions `'abandoned'`, but nothing deletes old rows. No `pg_cron` job exists yet. |
+| `color-contrast` a11y debt | brand gold accent, footer muted text | Medium | Fails WCAG AA (~2.6:1 of 4.5:1 required) almost everywhere used as text. Excluded from the CI a11y gate pending a design pass — darkening brand colors needs sign-off, not a code fix. |
+| No staging environment | CI (`ci.yml`) | Medium | The e2e job builds against *production* Supabase/Vercel env vars directly. No tier between local dev and production catches a bad migration/config before it's one deploy from customers. |
+| No synthetic uptime monitoring | `.github/workflows/uptime.yml` | Medium | Schedule disabled since `a203b0a` — Cloudflare's bot challenge blocks GitHub Actions runners even after 5x retry. Needs either an external monitor with allowlisted probe IPs, or a health-check path Cloudflare doesn't challenge — not a WAF change to make without reviewing production traffic-filtering impact first. |
+
+Resolved items removed from this list (verified 2026-07-20): `uiStore.ts` migration (file no longer exists), `cartStore`/`CartContext` price bug (see above), Supabase types regeneration, `.env.example` (exists), exchange-rate live fetch (already implemented — `useExchangeRates.ts` calls Frankfurter; the hardcoded values are only the error/loading fallback, which is the correct permanent design, not debt).
 
 ---
 
