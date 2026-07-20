@@ -143,9 +143,10 @@ export default function ShopPage() {
               <input
                 type="text"
                 placeholder={t.nav.search}
+                aria-label={t.nav.search}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 border border-border rounded bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                className="w-full pl-11 pr-4 py-3 border border-border rounded bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs font-body">✕</button>
@@ -164,7 +165,12 @@ export default function ShopPage() {
                 </button>
               ))}
             </div>
-            <select value={sort} onChange={e => setSort(e.target.value as SortKey)} className="px-4 py-2 border border-border rounded font-body text-sm bg-background cursor-pointer">
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as SortKey)}
+              aria-label={locale === 'zh' ? '排序方式' : 'Sort by'}
+              className="px-4 py-2 border border-border rounded font-body text-sm bg-background cursor-pointer"
+            >
               {sorts.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
           </div>
@@ -232,6 +238,7 @@ export default function ShopPage() {
                             onClick={e => { e.stopPropagation(); handleAddToCart(product); }}
                             className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${outOfStock ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:bg-gold'}`}
                             disabled={outOfStock}
+                            aria-label={outOfStock ? (locale === 'zh' ? '缺货' : 'Out of stock') : (locale === 'zh' ? '加入购物车' : 'Add to cart')}
                           >
                             <ShoppingBag className="w-4 h-4" />
                           </button>

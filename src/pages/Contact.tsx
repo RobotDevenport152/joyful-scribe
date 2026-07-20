@@ -127,26 +127,26 @@ export default function ContactPage() {
                   {locale === 'zh' ? '发送询问' : 'Send Enquiry'}
                 </h2>
                 <div>
-                  <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '姓名 *' : 'Name *'}</label>
-                  <input type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <label htmlFor="contact-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '姓名 *' : 'Name *'}</label>
+                  <input id="contact-name" type="text" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
-                  <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <label htmlFor="contact-email" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
+                  <input id="contact-email" type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '咨询类型' : 'Enquiry Type'}</label>
-                  <select value={form.enquiryType} onChange={e => setForm(f => ({ ...f, enquiryType: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors cursor-pointer">
+                  <label htmlFor="contact-enquiry-type" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '咨询类型' : 'Enquiry Type'}</label>
+                  <select id="contact-enquiry-type" value={form.enquiryType} onChange={e => setForm(f => ({ ...f, enquiryType: e.target.value }))}
+                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors cursor-pointer">
                     {enquiryTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '消息 *' : 'Message *'}</label>
-                  <textarea required rows={5} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors resize-none" />
+                  <label htmlFor="contact-message" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '消息 *' : 'Message *'}</label>
+                  <textarea id="contact-message" required rows={5} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                    className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors resize-none" />
                 </div>
                 <button type="submit" disabled={loading}
                   className="w-full py-3 bg-accent text-accent-foreground font-body font-semibold rounded-sm tracking-wider hover:bg-accent/90 transition disabled:opacity-50">

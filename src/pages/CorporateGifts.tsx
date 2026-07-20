@@ -128,40 +128,40 @@ export default function CorporateGiftsPage() {
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '公司名称 *' : 'Company Name *'}</label>
-                <input type="text" required value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                <label htmlFor="cg-company-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '公司名称 *' : 'Company Name *'}</label>
+                <input id="cg-company-name" type="text" required value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '联系人 *' : 'Contact Name *'}</label>
-                <input type="text" required value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                <label htmlFor="cg-contact-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '联系人 *' : 'Contact Name *'}</label>
+                <input id="cg-contact-name" type="text" required value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
-                <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                <label htmlFor="cg-email" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
+                <input id="cg-email" type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '预估数量' : 'Est. Quantity'}</label>
-                <input type="text" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                <label htmlFor="cg-quantity" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '预估数量' : 'Est. Quantity'}</label>
+                <input id="cg-quantity" type="text" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
                   placeholder={locale === 'zh' ? '件数' : 'units'}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '使用场景/节日' : 'Occasion'}</label>
-              <input type="text" value={form.occasion} onChange={e => setForm(f => ({ ...f, occasion: e.target.value }))}
+              <label htmlFor="cg-occasion" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '使用场景/节日' : 'Occasion'}</label>
+              <input id="cg-occasion" type="text" value={form.occasion} onChange={e => setForm(f => ({ ...f, occasion: e.target.value }))}
                 placeholder={locale === 'zh' ? '如：春节客户礼品、员工年终福利' : 'e.g. Chinese New Year client gifts, year-end staff rewards'}
-                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '定制需求' : 'Customization Needs'}</label>
-              <textarea rows={3} value={form.customization} onChange={e => setForm(f => ({ ...f, customization: e.target.value }))}
+              <label htmlFor="cg-customization" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '定制需求' : 'Customization Needs'}</label>
+              <textarea id="cg-customization" rows={3} value={form.customization} onChange={e => setForm(f => ({ ...f, customization: e.target.value }))}
                 placeholder={locale === 'zh' ? '如：包装印企业logo、指定交付日期' : 'e.g. branded packaging, specific delivery date'}
-                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors resize-none" />
+                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors resize-none" />
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-3 bg-accent text-accent-foreground font-body font-semibold rounded-sm tracking-wider hover:bg-accent/90 transition disabled:opacity-50">

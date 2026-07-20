@@ -59,10 +59,11 @@ export default function VerifyPage() {
                 <input
                   type="text"
                   placeholder={locale === 'zh' ? '输入防伪码 (如: PA-CERT-XXXX)' : 'Enter code (e.g. PA-CERT-XXXX)'}
+                  aria-label={locale === 'zh' ? '防伪码' : 'Certificate code'}
                   value={searchCode}
                   onChange={e => setSearchCode(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && runVerify(searchCode)}
-                  className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
               <button

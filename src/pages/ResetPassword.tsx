@@ -68,19 +68,19 @@ export default function ResetPasswordPage() {
             </h1>
             <form onSubmit={handleReset} className="space-y-5">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '新密码' : 'New Password'}</label>
+                <label htmlFor="reset-password-new" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '新密码' : 'New Password'}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="reset-password-new" type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '确认新密码' : 'Confirm Password'}</label>
+                <label htmlFor="reset-password-confirm" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '确认新密码' : 'Confirm Password'}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="reset-password-confirm" type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
               <button type="submit" disabled={loading}

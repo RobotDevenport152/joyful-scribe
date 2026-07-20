@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import '@/i18n';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -68,6 +69,10 @@ function PageLoader() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    {/* reducedMotion="user" makes every motion.* component honor the OS-level
+        prefers-reduced-motion setting automatically, without touching each
+        animation individually. */}
+    <MotionConfig reducedMotion="user">
     <TooltipProvider>
       <AppProvider>
         <Toaster />
@@ -174,6 +179,7 @@ const App = () => (
         </BrowserRouter>
       </AppProvider>
     </TooltipProvider>
+    </MotionConfig>
   </QueryClientProvider>
 );
 

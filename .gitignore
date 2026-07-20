@@ -36,6 +36,10 @@ bun.lockb
 # Supabase CLI temp
 supabase/.temp/
 
+# Playwright output
+test-results/
+playwright-report/
+
 # Local dev
 *.local
 

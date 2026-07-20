@@ -50,6 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     i18n.changeLanguage(locale);
+    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
   }, [locale]);
 
   useEffect(() => {

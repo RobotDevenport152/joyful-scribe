@@ -136,7 +136,7 @@ export default function CheckoutPage() {
   }
 
   const fieldClass = (hasError: boolean) =>
-    `w-full px-3 py-2 border rounded-sm bg-background text-foreground font-body text-sm focus:outline-none focus:border-gold transition-colors ${
+    `w-full px-3 py-2 border rounded-sm bg-background text-foreground font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors ${
       hasError ? 'border-destructive' : 'border-border'
     }`;
 
@@ -191,10 +191,11 @@ export default function CheckoutPage() {
                     { field: 'address' as const, label: locale === 'zh' ? '详细地址 *' : 'Address *' },
                   ].map(f => (
                     <div key={f.field}>
-                      <label className="block text-sm font-body text-muted-foreground mb-1">
+                      <label htmlFor={`checkout-${f.field}`} className="block text-sm font-body text-muted-foreground mb-1">
                         {f.label}
                       </label>
                       <input
+                        id={`checkout-${f.field}`}
                         {...register(f.field)}
                         className={fieldClass(!!errors[f.field])}
                       />
@@ -222,12 +223,13 @@ export default function CheckoutPage() {
                     </label>
                     {isGift && (
                       <div>
-                        <label className="block text-xs font-body text-muted-foreground mb-1">
+                        <label htmlFor="checkout-gift-message" className="block text-xs font-body text-muted-foreground mb-1">
                           {locale === 'zh'
                             ? '礼品留言（将打印在精美卡片上随产品寄出）'
                             : 'Gift message (printed on a card included with the order)'}
                         </label>
                         <textarea
+                          id="checkout-gift-message"
                           {...register('giftMessage')}
                           maxLength={100}
                           rows={3}
@@ -236,7 +238,7 @@ export default function CheckoutPage() {
                               ? '写下您的祝福语，最多100字…'
                               : 'Your message, up to 100 characters…'
                           }
-                          className="w-full px-3 py-2 border border-border rounded-sm bg-background text-foreground font-body text-sm resize-none focus:outline-none focus:border-gold transition-colors"
+                          className="w-full px-3 py-2 border border-border rounded-sm bg-background text-foreground font-body text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                         />
                         <p className="text-xs text-muted-foreground font-body text-right mt-0.5">
                           {giftMessage.length}/100

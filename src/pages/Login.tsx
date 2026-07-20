@@ -60,36 +60,44 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="login-email" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '邮箱地址' : 'Email Address'}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
+                    id="login-email"
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="login-password" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '密码' : 'Password'}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
+                    id="login-password"
                     type={showPw ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                    className="w-full pl-10 pr-10 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                   />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showPw ? (locale === 'zh' ? '隐藏密码' : 'Hide password') : (locale === 'zh' ? '显示密码' : 'Show password')}
+                    aria-pressed={showPw}
+                  >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

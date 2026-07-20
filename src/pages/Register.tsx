@@ -71,50 +71,56 @@ export default function RegisterPage() {
 
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '姓名 *' : 'Name *'}</label>
+                <label htmlFor="register-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '姓名 *' : 'Name *'}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="text" required value={form.name} onChange={e => update('name', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="register-name" type="text" required value={form.name} onChange={e => update('name', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
+                <label htmlFor="register-email" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="email" required value={form.email} onChange={e => update('email', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="register-email" type="email" required value={form.email} onChange={e => update('email', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '手机号（可选）' : 'Phone (optional)'}</label>
+                <label htmlFor="register-phone" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '手机号（可选）' : 'Phone (optional)'}</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="tel" value={form.phone} onChange={e => update('phone', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="register-phone" type="tel" value={form.phone} onChange={e => update('phone', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '密码 *' : 'Password *'}</label>
+                <label htmlFor="register-password" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '密码 *' : 'Password *'}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type={showPw ? 'text' : 'password'} required value={form.password} onChange={e => update('password', e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <input id="register-password" type={showPw ? 'text' : 'password'} required value={form.password} onChange={e => update('password', e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showPw ? (locale === 'zh' ? '隐藏密码' : 'Hide password') : (locale === 'zh' ? '显示密码' : 'Show password')}
+                    aria-pressed={showPw}
+                  >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '确认密码 *' : 'Confirm Password *'}</label>
+                <label htmlFor="register-confirm-password" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '确认密码 *' : 'Confirm Password *'}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type={showPw ? 'text' : 'password'} required value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  <input id="register-confirm-password" type={showPw ? 'text' : 'password'} required value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                 </div>
               </div>
 

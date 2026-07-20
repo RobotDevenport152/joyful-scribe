@@ -51,7 +51,8 @@ export default function StockNotifyForm({ productId, locale }: Props) {
           onChange={e => setEmail(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           placeholder={locale === 'zh' ? '您的邮箱' : 'Your email'}
-          className="flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body focus:outline-none focus:border-gold"
+          aria-label={locale === 'zh' ? '您的邮箱' : 'Your email'}
+          className="flex-1 px-3 py-2 text-sm border border-border rounded-sm bg-background font-body focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold"
         />
         <button
           onClick={handleSubmit}

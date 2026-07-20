@@ -104,47 +104,47 @@ export default function WholesalePage() {
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '公司名称 *' : 'Company Name *'}</label>
-                <input type="text" required value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                <label htmlFor="wholesale-company-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '公司名称 *' : 'Company Name *'}</label>
+                <input id="wholesale-company-name" type="text" required value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '联系人 *' : 'Contact Name *'}</label>
-                <input type="text" required value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
-                <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
-              </div>
-              <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '国家' : 'Country'}</label>
-                <input type="text" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                <label htmlFor="wholesale-contact-name" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '联系人 *' : 'Contact Name *'}</label>
+                <input id="wholesale-contact-name" type="text" required value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '产品兴趣' : 'Product Interest'}</label>
-                <select value={form.productInterest} onChange={e => setForm(f => ({ ...f, productInterest: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors cursor-pointer">
+                <label htmlFor="wholesale-email" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱 *' : 'Email *'}</label>
+                <input id="wholesale-email" type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
+              </div>
+              <div>
+                <label htmlFor="wholesale-country" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '国家' : 'Country'}</label>
+                <input id="wholesale-country" type="text" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="wholesale-product-interest" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '产品兴趣' : 'Product Interest'}</label>
+                <select id="wholesale-product-interest" value={form.productInterest} onChange={e => setForm(f => ({ ...f, productInterest: e.target.value }))}
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors cursor-pointer">
                   {productOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '预估年采购量' : 'Est. Annual Volume'}</label>
-                <input type="text" value={form.volume} onChange={e => setForm(f => ({ ...f, volume: e.target.value }))}
+                <label htmlFor="wholesale-volume" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '预估年采购量' : 'Est. Annual Volume'}</label>
+                <input id="wholesale-volume" type="text" value={form.volume} onChange={e => setForm(f => ({ ...f, volume: e.target.value }))}
                   placeholder={locale === 'zh' ? '公斤或件数' : 'kg or units'}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '留言' : 'Message'}</label>
-              <textarea rows={4} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors resize-none" />
+              <label htmlFor="wholesale-message" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '留言' : 'Message'}</label>
+              <textarea id="wholesale-message" rows={4} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors resize-none" />
             </div>
             <button type="submit" disabled={loading}
               className="w-full py-3 bg-accent text-accent-foreground font-body font-semibold rounded-sm tracking-wider hover:bg-accent/90 transition disabled:opacity-50">

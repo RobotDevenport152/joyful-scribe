@@ -98,13 +98,14 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4">
           {/* China flag link */}
-          <Link to="/china" className="hidden lg:block text-lg hover:opacity-80 transition-opacity" title="中国专区">
+          <Link to="/china" className="hidden lg:block text-lg hover:opacity-80 transition-opacity" title="中国专区" aria-label="中国专区">
             🇨🇳
           </Link>
 
           <select
             value={currency}
             onChange={e => setCurrency(e.target.value as Currency)}
+            aria-label={locale === 'zh' ? '选择货币' : 'Select currency'}
             className="bg-transparent text-primary-foreground/80 text-xs border border-primary-foreground/20 rounded px-2 py-1 font-body cursor-pointer"
           >
             {currencies.map(c => (
@@ -121,11 +122,20 @@ export default function Navbar() {
           </button>
 
           {/* User menu */}
-          <Link to="/login" className="hidden lg:flex text-primary-foreground/80 hover:text-primary-foreground transition-colors" title={locale === 'zh' ? '登录/注册' : 'Login'}>
+          <Link
+            to="/login"
+            className="hidden lg:flex text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+            title={locale === 'zh' ? '登录/注册' : 'Login'}
+            aria-label={locale === 'zh' ? '登录/注册' : 'Login'}
+          >
             <User className="w-5 h-5" />
           </Link>
 
-          <button onClick={() => setCartOpen(true)} className="relative text-primary-foreground/80 hover:text-primary-foreground transition-colors">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+            aria-label={locale === 'zh' ? `购物车${cartCount > 0 ? `，${cartCount} 件商品` : ''}` : `Shopping cart${cartCount > 0 ? ` (${cartCount} items)` : ''}`}
+          >
             <ShoppingBag className="w-5 h-5" />
             {cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-body font-semibold">
@@ -134,14 +144,20 @@ export default function Navbar() {
             )}
           </button>
 
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden text-primary-foreground">
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden text-primary-foreground"
+            aria-label={mobileOpen ? (locale === 'zh' ? '关闭菜单' : 'Close menu') : (locale === 'zh' ? '打开菜单' : 'Open menu')}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-menu"
+          >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </nav>
 
       {mobileOpen && (
-        <div className="lg:hidden bg-primary/95 backdrop-blur-md border-t border-primary-foreground/10 px-6 py-6 space-y-4">
+        <div id="mobile-nav-menu" className="lg:hidden bg-primary/95 backdrop-blur-md border-t border-primary-foreground/10 px-6 py-6 space-y-4">
           {mobileLinks.map(link => (
             link.href.startsWith('#') || link.href.startsWith('/#') ? (
               <a key={link.href} href={link.href} onClick={() => setMobileOpen(false)}

@@ -81,16 +81,16 @@ export default function Footer() {
             </a>
           </div>
           <div className="flex items-center gap-4">
-            <a href="https://www.facebook.com/pacificalpacas/" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/40 hover:text-gold transition-colors">
+            <a href="https://www.facebook.com/pacificalpacas/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-primary-foreground/40 hover:text-gold transition-colors">
               <Facebook className="w-5 h-5" />
             </a>
-            <a href="https://www.youtube.com/channel/UCfI8KvHECEQmRvcTuFSq-SA" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/40 hover:text-gold transition-colors">
+            <a href="https://www.youtube.com/channel/UCfI8KvHECEQmRvcTuFSq-SA" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-primary-foreground/40 hover:text-gold transition-colors">
               <Youtube className="w-5 h-5" />
             </a>
-            <a href="https://www.instagram.com/pacific_alpacas/" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/40 hover:text-gold transition-colors">
+            <a href="https://www.instagram.com/pacific_alpacas/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-primary-foreground/40 hover:text-gold transition-colors">
               <Instagram className="w-5 h-5" />
             </a>
-            <a href="https://wa.me/6421950204" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/40 hover:text-gold transition-colors">
+            <a href="https://wa.me/6421950204" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="text-primary-foreground/40 hover:text-gold transition-colors">
               <MessageCircle className="w-5 h-5" />
             </a>
           </div>
@@ -100,7 +100,11 @@ export default function Footer() {
         <>
           <div className="fixed inset-0 bg-foreground/60 z-50" onClick={() => setWechatOpen(false)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-background rounded-lg shadow-2xl p-8 w-72 text-center">
-            <button onClick={() => setWechatOpen(false)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setWechatOpen(false)}
+              aria-label={locale === 'zh' ? '关闭' : 'Close'}
+              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+            >
               <X className="w-4 h-4" />
             </button>
             <p className="font-display text-xl mb-1">{locale === 'zh' ? '扫码添加客服' : 'Scan to Add on WeChat'}</p>

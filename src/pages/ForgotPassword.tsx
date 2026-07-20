@@ -66,11 +66,11 @@ export default function ForgotPasswordPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱地址' : 'Email'}</label>
+                  <label htmlFor="forgot-password-email" className="block text-xs font-body text-muted-foreground mb-1">{locale === 'zh' ? '邮箱地址' : 'Email'}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors" />
+                    <input id="forgot-password-email" type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors" />
                   </div>
                 </div>
                 <button type="submit" disabled={loading}

@@ -135,10 +135,11 @@ export default function TraceabilityPage() {
                 <input
                   type="text"
                   placeholder={locale === 'zh' ? '输入批次编号 (如: PA-2025-001)' : 'Enter batch code (e.g. PA-2025-001)'}
+                  aria-label={locale === 'zh' ? '批次编号' : 'Batch code'}
                   value={searchCode}
                   onChange={e => setSearchCode(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
               <button onClick={handleSearch} className="px-6 py-3 bg-accent text-accent-foreground rounded-sm font-body text-sm hover:bg-accent/90 transition-colors">

@@ -72,63 +72,68 @@ export default function ApplyGrowerPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="apply-grower-farm-name" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '农场名称' : 'Farm Name'}
                 </label>
                 <input
+                  id="apply-grower-farm-name"
                   required
                   value={form.farmName}
                   onChange={e => update('farmName', e.target.value)}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="apply-grower-owner-name" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '业主姓名' : 'Owner Name'}
                 </label>
                 <input
+                  id="apply-grower-owner-name"
                   required
                   value={form.ownerName}
                   onChange={e => update('ownerName', e.target.value)}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="apply-grower-region" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '所在地区' : 'Region'}
                 </label>
                 <input
+                  id="apply-grower-region"
                   required
                   value={form.region}
                   onChange={e => update('region', e.target.value)}
                   placeholder={locale === 'zh' ? '例如：Canterbury' : 'e.g. Canterbury'}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="apply-grower-phone" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '联系电话（选填）' : 'Phone (optional)'}
                 </label>
                 <input
+                  id="apply-grower-phone"
                   value={form.phone}
                   onChange={e => update('phone', e.target.value)}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors"
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-body text-muted-foreground mb-1">
+                <label htmlFor="apply-grower-message" className="block text-xs font-body text-muted-foreground mb-1">
                   {locale === 'zh' ? '补充信息（选填）' : 'Message (optional)'}
                 </label>
                 <textarea
+                  id="apply-grower-message"
                   value={form.message}
                   onChange={e => update('message', e.target.value)}
                   rows={3}
                   placeholder={locale === 'zh' ? '羊驼数量、纤维产量等' : 'Herd size, fibre volume, etc.'}
-                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:border-gold transition-colors resize-none"
+                  className="w-full px-4 py-3 border border-border rounded-sm bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:border-gold transition-colors resize-none"
                 />
               </div>
 
