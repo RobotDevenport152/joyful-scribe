@@ -6,15 +6,12 @@ This file starts now (2026-07-21) — it does not retroactively document the pro
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-21
+
 ### Added
 - `SECURITY.md`, `.github/dependabot.yml`, `.github/CODEOWNERS`, `LICENSE`, `.editorconfig`, this changelog.
 - Husky + lint-staged pre-commit hook (lint + type-check staged/changed files before commit).
 
 ### Changed
 - `AGENTS.md` and `DEVELOPMENT_GUIDE.md` now point to `CLAUDE.md` instead of duplicating it, to stop the two from drifting apart.
-
-<!--
-No version has shipped yet — this repo has no tags. Once the first version
-number is picked, move the entries above under a heading like `## [0.1.0] -
-2026-07-21` and start a new [Unreleased] section above it for what comes next.
--->
+- First tagged version — `package.json` moves from the Vite scaffold default `0.0.0` to `1.0.0`, marking this as the baseline for future changes.

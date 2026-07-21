@@ -4,7 +4,7 @@ Pacific Alpacas processes customer payments (via Stripe) and personal data (orde
 
 ## Reporting a Vulnerability
 
-Email **security@pacificalpaca.com** with:
+Email **jjun712@aucklanduni.ac.nz** with:
 
 - A description of the vulnerability and its potential impact
 - Steps to reproduce (proof-of-concept code or requests are welcome)
