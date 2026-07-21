@@ -1,0 +1,10 @@
+Copyright (c) 2026 Eric Geng / Pacific Alpacas. All rights reserved.
+
+This repository and its contents are proprietary and confidential. No part of
+this software, including its source code, design, or documentation, may be
+copied, modified, distributed, sublicensed, or used in any form without prior
+written permission from the copyright holder.
+
+This is not open-source software. `"private": true` in package.json marks it
+as unpublishable to npm, not permission to reuse — this file is the
+explicit statement of that.

@@ -1,6 +1,6 @@
 # CLAUDE.md — Pacific Alpacas Project Guide
 
-> This file is the authoritative context document for Claude Code (CLI).
+> This file is the authoritative context document for Claude Code (CLI) — and, as of 2026-07-21, the single source of truth for every coding agent in this repo. `AGENTS.md` and `DEVELOPMENT_GUIDE.md` are now pointers to this file, not copies of it; if you're tempted to fork this content into either of them again, don't — that's the drift that made this note necessary. For the live bug/incident log (different genre — a running log, not a snapshot), see `PROJECT_STATUS.md`.
 > Read this entire file before touching any code. Every decision here has a reason.
 
 ---
@@ -888,6 +888,8 @@ const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard'));
 ## 18. Known Bugs — Fix Before Adding Features
 
 These are production-blocking issues. Do NOT work around them; fix the root cause.
+
+This is a dated snapshot, not a running log — for the current, continuously-updated issue list (including anything found since this section was last verified), see `PROJECT_STATUS.md`.
 
 **This section previously listed 4 items as open; all 4 are now resolved** (verified 2026-07-20 — this file had drifted well behind the codebase, in both directions: some "open" bugs were long fixed, and some real issues, like the ones below, weren't listed at all). Fixed for reference:
 

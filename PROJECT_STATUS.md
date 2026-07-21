@@ -4,6 +4,9 @@
 > detail → cart → checkout → traceability → lookbook → compare → contact), 2026-07-13.
 > Updated as issues are found and fixed. Fixed items are struck through with the
 > commit that resolved them; do not delete history — this file is the running log.
+>
+> For architecture, schema, and engineering standards, see `CLAUDE.md` instead — this
+> file tracks issues, not how the system is built.
 
 ## Operational Notes — do this whenever asked to "check the project"
 

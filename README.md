@@ -1,5 +1,8 @@
 # Pacific Alpacas — Luxury Alpaca E-Commerce Platform
 
+[![CI/CD](https://github.com/RobotDevenport152/joyful-scribe/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/RobotDevenport152/joyful-scribe/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-proprietary-red)](./LICENSE)
+
 A full-stack e-commerce platform for a New Zealand luxury alpaca fiber brand targeting Chinese high-net-worth consumers. Built end-to-end: storefront, checkout, grower portal, admin panel, AI chat assistant, and fiber traceability.
 
 ---
