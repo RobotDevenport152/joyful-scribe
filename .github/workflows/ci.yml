@@ -378,11 +378,17 @@ jobs:
       - name: Health check preview URL
         env:
           DEPLOY_URL: ${{ needs.deploy-preview.outputs.preview_url }}
-        run: curl -fsSL "$DEPLOY_URL" > /dev/null
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        # Without the bypass header this would just curl Vercel's deployment-protection login
+        # page (a 200 response), which would "pass" the health check without ever touching the
+        # actual app — silently masking a real build failure behind it.
+        run: |
+          curl -fsSL -H "x-vercel-protection-bypass: $BYPASS_SECRET" "$DEPLOY_URL" > /dev/null
 
       - name: Run preview smoke test
         env:
           PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: npx playwright test tests/e2e/smoke.spec.ts --config=playwright.config.ts --reporter=list,html
