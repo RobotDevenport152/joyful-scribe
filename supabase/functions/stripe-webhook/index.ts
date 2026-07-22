@@ -506,12 +506,23 @@ serve(async (req) => {
       }
 
       // Closest existing terminal checkout_sessions status — no fulfilled
-      // order resulted, same as a customer walking away mid-checkout.
-      await serviceClient
+      // order resulted, same as a customer walking away mid-checkout. The
+      // payment_failed order row above is already the source of truth for
+      // the customer-facing outcome, so a failure here is logged, not
+      // thrown — same best-effort principle as the completed-handler's
+      // own session-status update.
+      const { error: sessionUpdateError } = await serviceClient
         .from("checkout_sessions")
         .update({ status: "abandoned" })
         .eq("id", checkoutData.id)
         .eq("status", "pending_payment");
+
+      if (sessionUpdateError) {
+        console.error("webhook_async_payment_failed_session_update_failed", {
+          checkout_session_id: checkoutData.id,
+          error: sessionUpdateError.message,
+        });
+      }
 
       console.log("webhook_async_payment_failed", {
         checkout_session_id: checkoutData.id,
