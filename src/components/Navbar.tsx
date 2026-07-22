@@ -32,25 +32,38 @@ export default function Navbar() {
     { href: isHome ? '#credentials' : '/#credentials', label: t.nav.credentials },
   ];
 
-  const moreLinks = [
-    { href: '/traceability', label: locale === 'zh' ? '溯源查询' : 'Traceability' },
-    { href: '/verify', label: locale === 'zh' ? '正品验证' : 'Verify' },
-    { href: '/lookbook', label: locale === 'zh' ? '造型集' : 'Lookbook' },
-    { href: '/culture', label: locale === 'zh' ? '艺术画廊' : 'Art Gallery' },
-    { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
-    { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
-    { href: '/corporate-gifts', label: locale === 'zh' ? '企业礼品定制' : 'Corporate Gifting' },
-    { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },
-    { href: '/china', label: locale === 'zh' ? '中国专区' : 'China' },
-    { href: '/my-orders', label: locale === 'zh' ? '我的订单' : 'My Orders' },
-    { href: '/admin', label: t.nav.admin },
+  // Grouped so the dropdown/mobile menu reads as distinct audiences (consumer service vs.
+  // wholesale/B2B) rather than one flat list mixing both — the two need different tone and
+  // shouldn't visually blend together.
+  const moreLinkGroups = [
+    {
+      label: locale === 'zh' ? '客户服务' : 'Customer Service',
+      links: [
+        { href: '/traceability', label: locale === 'zh' ? '溯源查询' : 'Traceability' },
+        { href: '/verify', label: locale === 'zh' ? '正品验证' : 'Verify' },
+        { href: '/lookbook', label: locale === 'zh' ? '造型集' : 'Lookbook' },
+        { href: '/culture', label: locale === 'zh' ? '艺术画廊' : 'Art Gallery' },
+        { href: '/compare', label: locale === 'zh' ? '产品对比' : 'Compare' },
+        { href: '/returns', label: locale === 'zh' ? '退换货政策' : 'Returns' },
+        { href: '/china', label: locale === 'zh' ? '中国专区' : 'China' },
+        { href: '/my-orders', label: locale === 'zh' ? '我的订单' : 'My Orders' },
+      ],
+    },
+    {
+      label: locale === 'zh' ? '商务合作' : 'Business & Wholesale',
+      links: [
+        { href: '/wholesale', label: locale === 'zh' ? '批发询价' : 'Wholesale' },
+        { href: '/corporate-gifts', label: locale === 'zh' ? '企业礼品定制' : 'Corporate Gifting' },
+      ],
+    },
   ];
 
-  const mobileLinks = [
-    ...navLinks,
-    ...moreLinks,
-    { href: '/login', label: locale === 'zh' ? '登录' : 'Login' },
-  ];
+  // Left outside the audience groups — this is an internal staff link, not part of the
+  // consumer/B2B split, and giving it its own visible "Admin" heading in a public menu
+  // would just draw attention to it.
+  const adminLink = { href: '/admin', label: t.nav.admin };
+
+  const moreLinks = [...moreLinkGroups.flatMap(g => g.links), adminLink];
 
   const currencies: Currency[] = ['CNY', 'NZD', 'USD'];
 
@@ -87,11 +100,21 @@ export default function Navbar() {
               <ChevronDown className="w-3.5 h-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-primary border-primary-foreground/10">
-              {moreLinks.map(link => (
-                <DropdownMenuItem key={link.href} asChild className="text-primary-foreground/80 focus:text-primary-foreground focus:bg-primary-foreground/10 cursor-pointer">
-                  <Link to={link.href}>{link.label}</Link>
-                </DropdownMenuItem>
+              {moreLinkGroups.map((group, gi) => (
+                <div key={group.label} className={gi > 0 ? 'mt-1 pt-1 border-t border-primary-foreground/10' : ''}>
+                  <p className="px-2 pt-1.5 pb-1 text-[10px] tracking-[0.15em] uppercase text-primary-foreground/40 font-body">
+                    {group.label}
+                  </p>
+                  {group.links.map(link => (
+                    <DropdownMenuItem key={link.href} asChild className="text-primary-foreground/80 focus:text-primary-foreground focus:bg-primary-foreground/10 cursor-pointer">
+                      <Link to={link.href}>{link.label}</Link>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
               ))}
+              <DropdownMenuItem asChild className="text-primary-foreground/80 focus:text-primary-foreground focus:bg-primary-foreground/10 cursor-pointer">
+                <Link to={adminLink.href}>{adminLink.label}</Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -158,7 +181,7 @@ export default function Navbar() {
 
       {mobileOpen && (
         <div id="mobile-nav-menu" className="lg:hidden bg-primary/95 backdrop-blur-md border-t border-primary-foreground/10 px-6 py-6 space-y-4">
-          {mobileLinks.map(link => (
+          {navLinks.map(link => (
             link.href.startsWith('#') || link.href.startsWith('/#') ? (
               <a key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
                 className="block text-primary-foreground/80 hover:text-primary-foreground text-sm tracking-wider font-body uppercase">
@@ -171,6 +194,30 @@ export default function Navbar() {
               </Link>
             )
           ))}
+
+          {moreLinkGroups.map(group => (
+            <div key={group.label} className="pt-3 mt-3 border-t border-primary-foreground/10 space-y-3">
+              <p className="text-[10px] tracking-[0.15em] uppercase text-primary-foreground/40 font-body">
+                {group.label}
+              </p>
+              {group.links.map(link => (
+                <Link key={link.href} to={link.href} onClick={() => setMobileOpen(false)}
+                  className="block text-primary-foreground/80 hover:text-primary-foreground text-sm tracking-wider font-body uppercase">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          ))}
+
+          <Link to={adminLink.href} onClick={() => setMobileOpen(false)}
+            className="block text-primary-foreground/80 hover:text-primary-foreground text-sm tracking-wider font-body uppercase pt-3 mt-3 border-t border-primary-foreground/10">
+            {adminLink.label}
+          </Link>
+
+          <Link to="/login" onClick={() => setMobileOpen(false)}
+            className="block text-primary-foreground/80 hover:text-primary-foreground text-sm tracking-wider font-body uppercase pt-1">
+            {locale === 'zh' ? '登录' : 'Login'}
+          </Link>
         </div>
       )}
     </header>

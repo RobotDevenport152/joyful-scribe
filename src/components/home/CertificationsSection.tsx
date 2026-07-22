@@ -16,7 +16,7 @@ const CertificationsSection = () => {
   ] as const;
 
   return (
-    <section ref={ref} className="py-20 md:py-32 bg-background">
+    <section id="credentials" ref={ref} className="py-20 md:py-32 bg-background">
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

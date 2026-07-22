@@ -63,12 +63,23 @@ const isMsg = (m: unknown): m is Msg =>
   && ((m as Msg).role === 'user' || (m as Msg).role === 'assistant')
   && typeof (m as Msg).content === 'string';
 
+type StoredChat = { lang: string; messages: Msg[] };
+
+const isStoredChat = (v: unknown): v is StoredChat =>
+  !!v && typeof v === 'object' && typeof (v as StoredChat).lang === 'string'
+  && Array.isArray((v as StoredChat).messages) && (v as StoredChat).messages.every(isMsg);
+
 const loadStoredMessages = (lang: string): Msg[] => {
   try {
     const raw = localStorage.getItem(CHAT_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isMsg)) return parsed;
+      // Only reuse stored history if it was saved under the *current* language — otherwise a
+      // locale switch mid-visit would resurrect a greeting/history in the old language while
+      // everything else (quick replies, labels) renders in the new one.
+      if (isStoredChat(parsed) && parsed.lang === lang && parsed.messages.length > 0) {
+        return parsed.messages;
+      }
     }
   } catch {
     // corrupted or inaccessible storage — fall back to a fresh greeting
@@ -92,10 +103,13 @@ const ChatWidget = () => {
   }, [messages]);
 
   useEffect(() => {
-    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)); } catch {
+    try {
+      const toStore: StoredChat = { lang, messages };
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+    } catch {
       // storage unavailable (private browsing, quota) — conversation just won't persist
     }
-  }, [messages]);
+  }, [messages, lang]);
 
   const startNewChat = () => {
     setMessages([greeting(lang)]);

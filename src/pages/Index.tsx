@@ -23,11 +23,11 @@ export default function Index() {
       />
       <HeroSection />
       <AuthorityBanner />
+      <CertificationsSection />
       <SleepScienceSection />
       <FiberSection />
       <FarmStorySection />
       <ProcessSection />
-      <CertificationsSection />
       <BrandHeritageSection />
       <MediaCoverageSection />
       <CultureShowcaseSection />

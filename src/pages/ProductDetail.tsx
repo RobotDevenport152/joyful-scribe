@@ -386,10 +386,20 @@ export default function ProductDetailPage() {
               <p className="text-gold font-display text-3xl font-semibold mb-1">
                 {priceRange ? `${fp(priceRange.min)} – ${fp(priceRange.max)}` : fp(displayPrices[currency])}
               </p>
-              <p className="text-muted-foreground/70 font-body text-xs mb-4">
+              <p className="text-muted-foreground/70 font-body text-xs mb-1">
                 {locale === 'zh'
                   ? '所有价格均以新西兰元 (NZD) 计价，已含GST。海外购买的货币兑换由您的信用卡机构负责。'
                   : 'All prices are in NZD and inclusive of GST. For international purchases, your credit card company is responsible for the currency conversion.'}
+              </p>
+              <p className="text-muted-foreground/70 font-body text-xs mb-1">
+                {locale === 'zh'
+                  ? '订单满 NZD 500 免运费，未满则运费为 NZD 25（结算时自动计算）。'
+                  : 'Free shipping on orders over NZD 500 — otherwise a flat NZD 25 shipping fee applies, calculated automatically at checkout.'}
+              </p>
+              <p className="text-muted-foreground/70 font-body text-xs mb-4">
+                {locale === 'zh'
+                  ? '国际订单可能产生目的地国家/地区的关税或进口税，具体金额以当地海关为准，由买家自行承担。'
+                  : 'International orders may be subject to destination-country customs duties or import taxes, determined by local customs and payable by the buyer.'}
               </p>
               <p className="text-muted-foreground font-body leading-relaxed mb-6">
                 {locale === 'zh' ? product.descZh : product.descEn}
