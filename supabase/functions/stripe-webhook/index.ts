@@ -168,13 +168,25 @@ serve(async (req) => {
   }
 
   switch (event.type) {
-    case "checkout.session.completed": {
+    // Async payment methods (e.g. Alipay) fire checkout.session.completed
+    // immediately with payment_status still "unpaid" — the actual result
+    // arrives later via async_payment_succeeded/failed. Sync methods (card)
+    // are already "paid" by the time checkout.session.completed fires, so
+    // the guard below is a no-op for them. See Stripe's fulfillment docs:
+    // https://docs.stripe.com/checkout/fulfillment
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
       const checkoutSessionId = session.metadata?.checkout_session_id ?? session.metadata?.order_id;
       const orderNumber      = session.metadata?.order_number;
 
       if (!checkoutSessionId && !orderNumber) {
         console.error("webhook_missing_metadata", { session_id: session.id, metadata: session.metadata });
+        break;
+      }
+
+      if (session.payment_status === "unpaid") {
+        console.log("webhook_awaiting_async_payment", { session_id: session.id, checkout_session_id: checkoutSessionId });
         break;
       }
 
@@ -418,6 +430,93 @@ serve(async (req) => {
           .eq("status", "pending_payment");
         console.log("webhook_session_abandoned", { checkout_session_id: checkoutSessionId });
       }
+      break;
+    }
+
+    case "checkout.session.async_payment_failed": {
+      // Async payment method (e.g. Alipay) resolved to a failure after
+      // checkout.session.completed already fired with payment_status
+      // "unpaid" — the guard above skipped fulfillment for it, so no order
+      // exists yet. Record the failure as its own orders row: 'payment_failed'
+      // has been a valid orders.status value since the enum fix in
+      // 20260603120000_fix_role_and_status_enums.sql, whose own comment notes
+      // OrderSuccess.tsx already had a UI branch for it that was unreachable
+      // dead code because nothing ever wrote that status. This is what
+      // finally makes that branch reachable, instead of the customer polling
+      // until MAX_POLLS and seeing a misleading "still processing".
+      const session = event.data.object as Stripe.Checkout.Session;
+      const checkoutSessionId = session.metadata?.checkout_session_id ?? session.metadata?.order_id;
+      const orderNumber      = session.metadata?.order_number;
+
+      if (!checkoutSessionId && !orderNumber) {
+        console.error("webhook_missing_metadata", { session_id: session.id, metadata: session.metadata });
+        break;
+      }
+
+      const checkoutQuery = checkoutSessionId
+        ? serviceClient.from("checkout_sessions").select("*").eq("id", checkoutSessionId).maybeSingle()
+        : serviceClient.from("checkout_sessions").select("*").eq("order_number", orderNumber).maybeSingle();
+
+      const { data: rawCheckoutData, error: fetchError } = await checkoutQuery;
+      const checkoutData = rawCheckoutData as CheckoutSessionRow | null;
+
+      if (fetchError || !checkoutData) {
+        console.error("webhook_checkout_session_not_found", {
+          checkout_session_id: checkoutSessionId,
+          order_number: orderNumber,
+          error: fetchError?.message,
+        });
+        break;
+      }
+
+      // Guard mirrors the completed-handler's: don't act twice on the same session.
+      if (checkoutData.status !== "pending_payment") {
+        console.log("webhook_async_payment_failed_ignored", {
+          checkout_session_id: checkoutData.id,
+          status: checkoutData.status,
+        });
+        break;
+      }
+
+      const { error: orderError } = await serviceClient
+        .from("orders")
+        .insert({
+          order_number:     checkoutData.order_number,
+          user_id:          checkoutData.user_id,
+          shipping_name:    checkoutData.shipping_name,
+          shipping_email:   checkoutData.shipping_email,
+          shipping_phone:   checkoutData.shipping_phone || null,
+          shipping_address: checkoutData.shipping_address,
+          subtotal:         checkoutData.subtotal,
+          discount:         checkoutData.discount,
+          shipping_cost:    checkoutData.shipping_cost,
+          total:            checkoutData.total,
+          currency:         checkoutData.currency,
+          payment_method:   "stripe",
+          promo_code:       checkoutData.promo_code || null,
+          status:           "payment_failed",
+        });
+
+      if (orderError) {
+        console.error("webhook_payment_failed_order_create_failed", {
+          checkout_session_id: checkoutData.id,
+          error: orderError.message,
+        });
+        break;
+      }
+
+      // Closest existing terminal checkout_sessions status — no fulfilled
+      // order resulted, same as a customer walking away mid-checkout.
+      await serviceClient
+        .from("checkout_sessions")
+        .update({ status: "abandoned" })
+        .eq("id", checkoutData.id)
+        .eq("status", "pending_payment");
+
+      console.log("webhook_async_payment_failed", {
+        checkout_session_id: checkoutData.id,
+        order_number: checkoutData.order_number,
+      });
       break;
     }
 
