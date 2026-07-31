@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
+import { useLiveStock } from '@/hooks/useLiveStock';
 
 interface Props {
   productId: string;
@@ -13,19 +12,7 @@ export function LiveInventory({ productId }: Props) {
   const { i18n } = useTranslation();
   const lang = i18n.language;
 
-  const { data: stock } = useQuery({
-    queryKey: ['inventory', productId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', productId)
-        .single();
-      return data?.stock_quantity ?? 0;
-    },
-    refetchInterval: 30000,
-    staleTime: 0,
-  });
+  const { data: stock } = useLiveStock(productId);
 
   if (stock === undefined || stock === null) return null;
   if (stock === 0) return (

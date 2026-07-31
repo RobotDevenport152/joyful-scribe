@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import type { Locale } from '@/lib/i18n';
 import { useProduct, useProducts } from '@/hooks/useProducts';
+import { useLiveStock } from '@/hooks/useLiveStock';
 import Footer from '@/components/Footer';
 import { ShieldCheck, Feather, Droplets, Bug, Zap, ChevronLeft, ChevronDown, ChevronUp, MapPin, Heart, ZoomIn, X, Star, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -126,6 +127,12 @@ export default function ProductDetailPage() {
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
   const { data: product, isLoading } = useProduct(id || '');
   const { data: allProducts } = useProducts();
+  // useProduct() is cached for 5 minutes (CLAUDE.md §17); stock can genuinely
+  // hit 0 well within that window. liveStock is the same always-fresh source
+  // LiveInventory renders its "in stock / low stock / out of stock" label
+  // from — falling back to product.stock only until it resolves, so the two
+  // can no longer disagree about whether Add to Cart should be clickable.
+  const { data: liveStock } = useLiveStock(id);
   const { user } = useAuth();
   const { data: reviews } = useProductReviews(product?.id);
   const { data: eligibility } = useReviewEligibility(product?.id, user?.id);
@@ -162,6 +169,8 @@ export default function ProductDetailPage() {
       </div>
     );
   }
+
+  const stock = liveStock ?? product.stock;
 
   const images: string[] = product.images?.length ? product.images : [product.image];
 
@@ -476,7 +485,7 @@ export default function ProductDetailPage() {
               </div>
 
               {/* P0 FIX: Variant required before add to cart */}
-              {product.stock <= 0 ? (
+              {stock <= 0 ? (
                 /* P1 FIX: Out-of-stock notify form replaces grey Sold Out button */
                 <StockNotifyForm productId={product.id} locale={locale as 'zh' | 'en'} />
               ) : (
@@ -902,10 +911,10 @@ export default function ProductDetailPage() {
             }
             addToCart(product, selectedVariant || undefined);
           }}
-          disabled={product.stock <= 0}
+          disabled={stock <= 0}
           className="flex-1 py-3 bg-accent text-accent-foreground font-body font-semibold rounded-sm disabled:opacity-50"
         >
-          {product.stock <= 0 ? (locale === 'zh' ? '已售罄' : 'Sold Out') : t.products.addToCart}
+          {stock <= 0 ? (locale === 'zh' ? '已售罄' : 'Sold Out') : t.products.addToCart}
         </button>
       </div>
 
