@@ -34,7 +34,14 @@ test('smoke: browse, add to cart, checkout', async ({ page }) => {
       })
       .first();
 
-    if (await variantButton.count()) {
+    // waitFor() polls (unlike count()/isVisible(), which check immediately) — a
+    // product with no variants should time out and fall through gracefully, not
+    // race the page's initial render the way the old Add to Cart check used to.
+    const hasVariant = await variantButton
+      .waitFor({ state: 'visible', timeout: 2000 })
+      .then(() => true)
+      .catch(() => false);
+    if (hasVariant) {
       await variantButton.click();
     }
 

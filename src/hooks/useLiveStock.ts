@@ -78,10 +78,15 @@ export function useLiveStockMap(productIds: string[]) {
         for (const id of productIds) map[id] = LOCAL_PRODUCTS.find(p => p.id === id)?.stock ?? 0;
         return map;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('id, stock_quantity')
         .in('id', productIds);
+      // Same reasoning as useLiveStock: throw on a real error instead of
+      // swallowing it into an empty map, so React Query's error/retry flow
+      // applies instead of silently caching a stale "no live data" result
+      // for a full 30s poll cycle.
+      if (error) throw error;
       const map: Record<string, number> = {};
       for (const row of data ?? []) map[row.id] = row.stock_quantity ?? 0;
       return map;
