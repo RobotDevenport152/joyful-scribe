@@ -132,7 +132,12 @@ export default function ProductDetailPage() {
   // LiveInventory renders its "in stock / low stock / out of stock" label
   // from — falling back to product.stock only until it resolves, so the two
   // can no longer disagree about whether Add to Cart should be clickable.
-  const { data: liveStock } = useLiveStock(id);
+  // Keyed by product.id (not the raw route `id`), same as LiveInventory
+  // below and useProductReviews() a few lines down — the route param can be
+  // a slug (see useProduct()'s UUID_RE branch), and useLiveStock queries the
+  // `id` column directly, so a slug here would silently resolve to 0 instead
+  // of the product's real stock.
+  const { data: liveStock } = useLiveStock(product?.id);
   const { user } = useAuth();
   const { data: reviews } = useProductReviews(product?.id);
   const { data: eligibility } = useReviewEligibility(product?.id, user?.id);

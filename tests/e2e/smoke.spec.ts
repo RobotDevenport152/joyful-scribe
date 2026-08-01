@@ -23,10 +23,14 @@ test('smoke: browse, add to cart, checkout', async ({ page }) => {
 
     // Many featured products require a size/variant selection before they can be added.
     // Pick the first visible variant when present so this flow works across products.
+    // Bedding sizes render with a dimension suffix ("Single (140×210cm)"), not the bare
+    // label, so the match needs an optional trailing "(...)" — an exact match here always
+    // missed every duvet, leaving selectedVariant unset and "Add to Cart" blocked behind
+    // the "please select a size" validation instead of actually adding to cart.
     const variantButton = page
       .locator('button')
       .filter({
-        hasText: /^(Single|King Single|Queen|King|Super King|Chinese Single|Chinese Double|Chinese Queen|Chinese King|S|M|L|XL)$/,
+        hasText: /^(Single|King Single|Queen|King|Super King|Chinese Single|Chinese Double|Chinese Queen|Chinese King|S|M|L|XL)(\s*\(.*\))?$/,
       })
       .first();
 

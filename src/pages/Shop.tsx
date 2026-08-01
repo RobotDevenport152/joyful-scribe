@@ -3,6 +3,7 @@ import { Search, ShoppingBag, Heart } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { type Product } from '@/lib/store';
 import { useProducts } from '@/hooks/useProducts';
+import { useLiveStockMap } from '@/hooks/useLiveStock';
 import { useWishlist } from '@/hooks/useWishlist';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
@@ -23,6 +24,15 @@ export default function ShopPage() {
   const [sort, setSort] = useState<SortKey>('featured');
 
   const { data: dbProducts, isLoading } = useProducts();
+
+  // dbProducts.stock comes from useProducts()'s 5-minute cache — fine for
+  // name/price/images, stale for stock, which can genuinely hit 0 well within
+  // that window (see useLiveStock.ts). getStock() is the single place this
+  // page reads stock from, so it can't drift from what LiveInventory /
+  // ProductDetail show for the same product a click away.
+  const productIds = useMemo(() => dbProducts?.map(p => p.id) ?? [], [dbProducts]);
+  const { data: liveStockMap } = useLiveStockMap(productIds);
+  const getStock = (product: Product) => liveStockMap?.[product.id] ?? product.stock;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -53,9 +63,9 @@ export default function ShopPage() {
       default: list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)); break;
     }
 
-    list.sort((a, b) => (a.stock <= 0 ? 1 : 0) - (b.stock <= 0 ? 1 : 0));
+    list.sort((a, b) => (getStock(a) <= 0 ? 1 : 0) - (getStock(b) <= 0 ? 1 : 0));
     return list;
-  }, [dbProducts, debouncedSearch, category, sort, locale, currency]);
+  }, [dbProducts, debouncedSearch, category, sort, locale, currency, liveStockMap]);
 
   const categories: { key: Category; label: string }[] = [
     { key: 'all', label: t.products.filter.all },
@@ -76,7 +86,7 @@ export default function ShopPage() {
   ];
 
   const handleAddToCart = (product: Product) => {
-    if (product.stock <= 0) {
+    if (getStock(product) <= 0) {
       toast.info(locale === 'zh' ? '该产品暂时缺货' : 'This product is out of stock.');
       return;
     }
@@ -191,7 +201,8 @@ export default function ShopPage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map(product => {
-                const outOfStock = product.stock <= 0;
+                const stock = getStock(product);
+                const outOfStock = stock <= 0;
                 return (
                   <div key={product.id} className={`group bg-card rounded-lg overflow-hidden border border-border hover:border-gold/30 hover:shadow-lg transition-all ${outOfStock ? 'opacity-70' : ''}`}>
                     <Link to={`/product/${product.id}`} className="block">
@@ -205,10 +216,10 @@ export default function ShopPage() {
                             <span className="bg-destructive text-destructive-foreground px-4 py-2 rounded-sm text-sm font-body font-semibold">{locale === 'zh' ? '缺货' : 'Out of Stock'}</span>
                           </div>
                         )}
-                        {!outOfStock && product.stock <= 10 && (
+                        {!outOfStock && stock <= 10 && (
                           <span className="absolute top-3 right-3 bg-destructive text-destructive-foreground text-[10px] px-2 py-1 rounded-full font-body">
-                            {product.stock <= 4
-                              ? (locale === 'zh' ? `仅剩${product.stock}件` : `Only ${product.stock} left`)
+                            {stock <= 4
+                              ? (locale === 'zh' ? `仅剩${stock}件` : `Only ${stock} left`)
                               : (locale === 'zh' ? '仅剩少量' : 'Low stock')}
                           </span>
                         )}
