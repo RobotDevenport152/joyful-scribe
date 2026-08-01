@@ -15,11 +15,6 @@ interface StoredCheckoutItem {
   price: number;
 }
 
-interface ProductFiberBatch {
-  id: string;
-  fiber_batch_id: string | null;
-}
-
 // Same Resend setup already proven out in bright-task/index.ts (contact/wholesale
 // form emails) — pacificalpaca.com is verified there, so RESEND_FROM_EMAIL is a
 // real project secret, not per-function config. Unlike bright-task, this never
@@ -92,6 +87,13 @@ function buildOrderConfirmationEmail(
   `;
 
   return { subject: `订单确认 Order Confirmed — ${orderNumber}`, html };
+}
+
+interface FulfillCheckoutSessionResult {
+  order_id: string | null;
+  order_number: string;
+  already_fulfilled: boolean;
+  certificate_codes: string[] | null;
 }
 
 interface CheckoutSessionRow {
@@ -210,131 +212,59 @@ serve(async (req) => {
 
       const checkoutSessionRowId = checkoutData.id;
 
-      // Guard: don't create a second order if this session was already fulfilled
-      if (checkoutData.status === "completed") {
-        console.log("webhook_order_already_created", { checkout_session_id: checkoutSessionRowId });
-        break;
-      }
-
       const paymentIntentId = typeof session.payment_intent === "string"
         ? session.payment_intent
         : session.payment_intent?.id ?? null;
 
-      // Map items to the format expected by the decrement_stock DB trigger:
-      // the trigger reads item->>'product_id' and item->>'qty'.
-      const orderItemsSnapshot = checkoutData.items.map((item) => ({
-        product_id: item.productId || null,
-        qty:        item.quantity,
-        name:       item.name,
-        price:      item.price,
-        variant:    item.variant || null,
-      }));
-
-      // Insert with status='paid' so the on_order_paid trigger fires immediately,
-      // decrementing stock in the same DB transaction.
-      const { data: order, error: orderError } = await serviceClient
-        .from("orders")
-        .insert({
-          order_number:     orderNumber,
-          user_id:          checkoutData.user_id,
-          shipping_name:    checkoutData.shipping_name,
-          shipping_email:   checkoutData.shipping_email,
-          shipping_phone:   checkoutData.shipping_phone || null,
-          shipping_address: checkoutData.shipping_address,
-          subtotal:         checkoutData.subtotal,
-          discount:         checkoutData.discount,
-          shipping_cost:    checkoutData.shipping_cost,
-          total:            checkoutData.total,
-          currency:         checkoutData.currency,
-          payment_method:   "stripe",
-          payment_intent_id: paymentIntentId,
-          promo_code:       checkoutData.promo_code || null,
-          status:           "paid",
+      // Everything that used to be a sequence of separate awaits here — insert
+      // orders (status='paid'), insert order_items, generate one
+      // product_certificates row per unit, mark checkout_sessions 'completed'
+      // — now happens inside fulfill_checkout_session, a single Postgres
+      // function call (see the migration of the same name). That makes it one
+      // transaction: either all of it commits, or (DB hiccup, connection
+      // drop, anything) none of it does and checkout_sessions stays
+      // 'pending_payment' so Stripe's automatic retry of this event starts
+      // clean. Previously a failure partway through (e.g. orders row written,
+      // order_items insert then fails) left an unrecoverable half-built order:
+      // the retry's orders insert would hit the order_number UNIQUE
+      // constraint, get logged and skipped, and the event would still be
+      // marked processed — no order_items, no certificates, no email/SMS,
+      // ever. The FOR UPDATE lock the function takes on the checkout_sessions
+      // row also means two concurrent deliveries of the same event (Stripe
+      // does this, not just retries-after-failure) serialize instead of both
+      // racing to create the order.
+      //
+      // A thrown/errored RPC call here is intentionally NOT caught locally —
+      // it propagates to this function's outer try/catch, which returns a
+      // non-2xx response so Stripe retries delivery. (The old per-step code
+      // logged-and-broke on an insert error instead of throwing, which meant
+      // a plain transient DB error on that one call was silently accepted as
+      // "handled" and never retried — that gap is closed too.)
+      const { data: fulfillResult, error: fulfillError } = await serviceClient
+        .rpc("fulfill_checkout_session", {
+          _checkout_session_id: checkoutSessionRowId,
+          _payment_intent_id: paymentIntentId,
         })
-        .select("id")
-        .single();
+        .single() as { data: FulfillCheckoutSessionResult | null; error: { message: string } | null };
 
-      if (orderError || !order) {
-        console.error("webhook_order_create_failed", {
-          checkout_session_id: checkoutSessionId,
-          error: orderError?.message,
+      if (fulfillError) {
+        throw new Error(`fulfill_checkout_session failed: ${fulfillError.message}`);
+      }
+      if (!fulfillResult?.order_id) {
+        throw new Error(`fulfill_checkout_session returned no order for session ${checkoutSessionRowId}`);
+      }
+
+      if (fulfillResult.already_fulfilled) {
+        console.log("webhook_order_already_created", {
+          checkout_session_id: checkoutSessionRowId,
+          order_id: fulfillResult.order_id,
         });
         break;
       }
 
-      // Populate order_items for admin order management views
-      const orderItemRows = checkoutData.items.map((item) => ({
-        order_id:     order.id,
-        product_id:   item.productId || null,
-        product_name: item.name,
-        variant:      item.variant || null,
-        quantity:     item.quantity,
-        unit_price:   item.price,
-        total_price:  item.price * item.quantity,
-      }));
-
-      await serviceClient.from("order_items").insert(orderItemRows);
-
-      // One anti-counterfeit certificate per unit purchased, linked to this
-      // order via order_id. Previously certificates only existed if an admin
-      // manually pre-generated them via /admin/certificates (for physical
-      // cards printed and shipped with stock, decoupled from any specific
-      // online order) — this is the digital counterpart: every online
-      // purchase gets its own real code a customer can look up on /verify,
-      // surfaced to them in MyOrders.tsx. Best-effort: a failure here must
-      // not block order fulfillment, the customer already paid (same
-      // principle as the promo-code claim below).
-      const certificateProductIds = [...new Set(
-        checkoutData.items.map((item) => item.productId).filter((id): id is string => Boolean(id))
-      )];
-      let insertedCertificates: { code: string }[] = [];
-
-      if (certificateProductIds.length > 0) {
-        const { data: productBatches, error: productBatchError } = await serviceClient
-          .from("products")
-          .select("id, fiber_batch_id")
-          .in("id", certificateProductIds) as { data: ProductFiberBatch[] | null; error: { message: string } | null };
-
-        if (productBatchError) {
-          console.error("webhook_certificate_product_lookup_failed", {
-            order_id: order.id,
-            error: productBatchError.message,
-          });
-        } else {
-          const fiberBatchByProduct = new Map(
-            (productBatches ?? []).map((p) => [p.id, p.fiber_batch_id])
-          );
-
-          const certificateRows = checkoutData.items.flatMap((item) => {
-            if (!item.productId) return [];
-            const fiberBatchId = fiberBatchByProduct.get(item.productId) ?? null;
-            return Array.from({ length: item.quantity }, () => ({
-              product_id: item.productId,
-              fiber_batch_id: fiberBatchId,
-              order_id: order.id,
-            }));
-          });
-
-          if (certificateRows.length > 0) {
-            const { data: insertedCerts, error: certError } = await serviceClient
-              .from("product_certificates")
-              .insert(certificateRows)
-              .select("code");
-            if (certError) {
-              console.error("webhook_certificate_generate_failed", {
-                order_id: order.id,
-                error: certError.message,
-              });
-            } else {
-              insertedCertificates = insertedCerts ?? [];
-              console.log("webhook_certificates_created", {
-                order_id: order.id,
-                count: certificateRows.length,
-              });
-            }
-          }
-        }
-      }
+      const orderId = fulfillResult.order_id;
+      const insertedCertificates: { code: string }[] =
+        (fulfillResult.certificate_codes ?? []).map((code) => ({ code }));
 
       // Atomically redeem the promo code now that payment is confirmed —
       // this is the only point in the whole flow that increments used_count,
@@ -343,7 +273,10 @@ serve(async (req) => {
       // limited-usage code can't both succeed once only one use is left.
       // A failed claim here (code got exhausted between quote and payment,
       // or was deactivated mid-flight) must not block order fulfillment —
-      // the customer already paid — so this is logged, not thrown.
+      // the customer already paid — so this is logged, not thrown. (Kept as
+      // its own RPC call, separate from fulfill_checkout_session: usage-count
+      // exhaustion is an expected, recoverable outcome, not a failure that
+      // should roll back an already-paid order.)
       if (checkoutData.promo_code) {
         const { error: promoError } = await serviceClient.rpc("claim_promo_code", {
           _code: checkoutData.promo_code,
@@ -351,7 +284,7 @@ serve(async (req) => {
         });
         if (promoError) {
           console.error("webhook_promo_claim_failed", {
-            order_id: order.id,
+            order_id: orderId,
             promo_code: checkoutData.promo_code,
             error: promoError.message,
           });
@@ -369,15 +302,15 @@ serve(async (req) => {
         try {
           const { subject, html } = buildOrderConfirmationEmail(orderNumber, checkoutData, insertedCertificates);
           await sendEmail(resendApiKey, resendFromEmail, checkoutData.shipping_email, subject, html);
-          console.log("webhook_order_confirmation_email_sent", { order_id: order.id });
+          console.log("webhook_order_confirmation_email_sent", { order_id: orderId });
         } catch (e) {
           console.error("webhook_order_confirmation_email_failed", {
-            order_id: order.id,
+            order_id: orderId,
             message: e instanceof Error ? e.message : String(e),
           });
         }
       } else if (!resendFromEmail) {
-        console.log("webhook_order_confirmation_email_skipped_no_verified_domain", { order_id: order.id });
+        console.log("webhook_order_confirmation_email_skipped_no_verified_domain", { order_id: orderId });
       }
 
       // Order confirmation SMS via Twilio — same best-effort principle as the
@@ -392,25 +325,21 @@ serve(async (req) => {
         try {
           const smsBody = `您的太平洋羊驼订单 ${orderNumber} 已确认，感谢您的购买！/ Your Pacific Alpacas order ${orderNumber} is confirmed — thank you!`;
           await sendSms(twilioAccountSid, twilioAuthToken, twilioFromNumber, checkoutData.shipping_phone, smsBody);
-          console.log("webhook_order_confirmation_sms_sent", { order_id: order.id });
+          console.log("webhook_order_confirmation_sms_sent", { order_id: orderId });
         } catch (e) {
           console.error("webhook_order_confirmation_sms_failed", {
-            order_id: order.id,
+            order_id: orderId,
             message: e instanceof Error ? e.message : String(e),
           });
         }
       } else if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber) {
-        console.log("webhook_order_confirmation_sms_skipped_not_configured", { order_id: order.id });
+        console.log("webhook_order_confirmation_sms_skipped_not_configured", { order_id: orderId });
       }
 
-      // Mark session complete — second-layer idempotency guard
-      await serviceClient
-        .from("checkout_sessions")
-        .update({ status: "completed" })
-        .eq("id", checkoutSessionRowId);
-
+      // checkout_sessions.status is already 'completed' at this point —
+      // fulfill_checkout_session set it in the same transaction as the order.
       console.log("webhook_order_created", {
-        order_id:     order.id,
+        order_id:     orderId,
         order_number: orderNumber,
         session_id:   session.id,
       });
