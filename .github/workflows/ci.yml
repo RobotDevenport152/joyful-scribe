@@ -43,11 +43,31 @@ jobs:
       - name: Dependency vulnerability scan (production deps)
         run: npm audit --omit=dev --audit-level=high
 
+      # No secrets needed (src/integrations/supabase/client.ts falls back to a
+      # stub when VITE_SUPABASE_URL is unset) -- this catches a build broken by
+      # the dependency itself (e.g. the tailwindcss 4.x / lucide-react 1.x bumps
+      # reverted in ee632e8) even on PRs that don't have secret access, like
+      # Dependabot's. Previously only `e2e` ran a real `vite build`, and that
+      # job is skipped below for Dependabot PRs precisely because it needs
+      # secrets this build step doesn't.
+      - name: Build (catches build-breaking dependency bumps without needing secrets)
+        run: npm run build
+
   e2e:
     name: End-to-end smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: test
+    # GitHub withholds repo secrets from workflows triggered by Dependabot's
+    # pull_request events (a real security boundary, not a bug -- prevents a
+    # malicious/compromised dependency from exfiltrating secrets via a CI run
+    # before a human reviews it). Without this, every Dependabot PR hard-fails
+    # here on `vercel pull --token=""` ("missing value") instead of skipping
+    # cleanly -- confirmed 2026-08-01: all 7 then-open Dependabot PRs were red
+    # for exactly this reason, none for an actual bad bump. The `test` job's
+    # new Build step above still validates these PRs without needing secrets;
+    # this job resumes normally once a human pushes/merges (not Dependabot).
+    if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
 
@@ -299,7 +319,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: test
-    if: github.event_name == 'pull_request'
+    # Same reasoning as the `e2e` job above: no VERCEL_TOKEN on Dependabot's
+    # pull_request runs, so this would otherwise hard-fail on a missing
+    # --token value instead of skipping. `preview-smoke` (needs: deploy-preview)
+    # skips automatically once this does.
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     permissions:
       contents: read
       pull-requests: write
