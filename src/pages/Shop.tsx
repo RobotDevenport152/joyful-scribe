@@ -2,6 +2,7 @@
 import { Search, ShoppingBag, Heart } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { type Product } from '@/lib/store';
+import { SHOW_PRICES } from '@/lib/config';
 import { useProducts } from '@/hooks/useProducts';
 import { useLiveStockMap } from '@/hooks/useLiveStock';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -230,8 +231,10 @@ export default function ShopPage() {
                         <h3 className="font-display text-lg font-semibold mb-1 hover:text-gold transition-colors">{locale === 'zh' ? product.nameZh : product.nameEn}</h3>
                       </Link>
                       <p className="text-xs text-muted-foreground font-body mb-3 line-clamp-2">{locale === 'zh' ? product.descZh : product.descEn}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gold font-display text-xl font-semibold">{fp(product.prices[currency])}</span>
+                      <div className="flex items-center justify-end">
+                        {SHOW_PRICES && (
+                          <span className="text-gold font-display text-xl font-semibold mr-auto">{fp(product.prices[currency])}</span>
+                        )}
                         <div className="flex items-center gap-1.5">
                           {/* P1 FIX: Wishlist heart on card */}
                           <button
@@ -285,7 +288,9 @@ export default function ShopPage() {
                       </div>
                       <div className="p-3">
                         <p className="font-body text-xs font-semibold truncate">{locale === 'zh' ? p.nameZh : p.nameEn}</p>
-                        <p className="text-gold font-display text-xs mt-0.5">{fp(p.prices[currency])}</p>
+                        {SHOW_PRICES && (
+                          <p className="text-gold font-display text-xs mt-0.5">{fp(p.prices[currency])}</p>
+                        )}
                       </div>
                     </Link>
                   ))}
