@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { SHOW_PRICES } from '@/lib/config';
 
 const AUTHORITY = [
   { icon: Trophy, title: '胡润至尚优品2023金奖', desc: '第十九届"软装家居"新秀奖' },
@@ -169,7 +170,9 @@ export default function ChinaLandingPage() {
                 </div>
                 <div className="p-4">
                   <h3 className="font-display text-sm font-semibold mb-1">{p.nameZh}</h3>
-                  <p className="text-gold font-display text-sm mb-3">{p.priceZh}</p>
+                  {SHOW_PRICES && (
+                    <p className="text-gold font-display text-sm mb-3">{p.priceZh}</p>
+                  )}
                   {p.slug ? (
                     <Link
                       to={`/shop`}

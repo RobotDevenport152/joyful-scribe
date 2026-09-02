@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCartStore, formatPrice } from '@/stores/cartStore';
+import { SHOW_PRICES } from '@/lib/config';
 
 interface Props {
   categoryId: string;
@@ -57,9 +58,11 @@ export function CrossSell({ categoryId, currentProductId }: Props) {
                 <h3 className="font-display text-base text-foreground group-hover:text-pa-gold transition-colors">
                   {lang === 'zh' ? p.name_zh : p.name_en}
                 </h3>
-                <p className="mt-1 font-body text-sm text-pa-gold">
-                  {formatPrice(p.price_nzd, currency)}
-                </p>
+                {SHOW_PRICES && (
+                  <p className="mt-1 font-body text-sm text-pa-gold">
+                    {formatPrice(p.price_nzd, currency)}
+                  </p>
+                )}
               </Link>
             );
           })}

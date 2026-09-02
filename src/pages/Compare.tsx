@@ -3,6 +3,7 @@ import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
+import { SHOW_PRICES } from '@/lib/config';
 
 const TIERS = [
   {
@@ -108,9 +109,11 @@ export default function ComparePage() {
                       <div className={`font-display text-2xl font-semibold mb-1 ${tier.highlight ? 'text-gold' : ''}`}>
                         {locale === 'zh' ? tier.nameZh : tier.nameEn}
                       </div>
-                      <div className="text-muted-foreground text-xs font-body">
-                        {locale === 'zh' ? tier.priceZh : tier.priceEn}
-                      </div>
+                      {SHOW_PRICES && (
+                        <div className="text-muted-foreground text-xs font-body">
+                          {locale === 'zh' ? tier.priceZh : tier.priceEn}
+                        </div>
+                      )}
                       {tier.highlight && (
                         <div className="mt-2 inline-block bg-gold/10 text-gold text-[10px] px-2 py-0.5 rounded-full font-body">
                           {locale === 'zh' ? '最受欢迎' : 'Most Popular'}
@@ -163,7 +166,9 @@ export default function ComparePage() {
                     <h2 className={`font-display text-2xl font-semibold ${tier.highlight ? 'text-gold' : ''}`}>
                       {locale === 'zh' ? tier.nameZh : tier.nameEn}
                     </h2>
-                    <p className="text-muted-foreground text-xs font-body mt-0.5">{locale === 'zh' ? tier.priceZh : tier.priceEn}</p>
+                    {SHOW_PRICES && (
+                      <p className="text-muted-foreground text-xs font-body mt-0.5">{locale === 'zh' ? tier.priceZh : tier.priceEn}</p>
+                    )}
                   </div>
                   {tier.highlight && (
                     <span className="bg-gold/10 text-gold text-[10px] px-2 py-1 rounded-full font-body">

@@ -2,6 +2,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import type { Locale } from '@/lib/i18n';
+import { SHOW_PRICES } from '@/lib/config';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useLiveStock } from '@/hooks/useLiveStock';
 import Footer from '@/components/Footer';
@@ -397,9 +398,11 @@ export default function ProductDetailPage() {
               <p className="text-muted-foreground font-body text-sm mb-2">
                 {locale === 'zh' ? product.nameEn : product.nameZh}
               </p>
-              <p className="text-gold font-display text-3xl font-semibold mb-1">
-                {priceRange ? `${fp(priceRange.min)} – ${fp(priceRange.max)}` : fp(displayPrices[currency])}
-              </p>
+              {SHOW_PRICES && (
+                <p className="text-gold font-display text-3xl font-semibold mb-1">
+                  {priceRange ? `${fp(priceRange.min)} – ${fp(priceRange.max)}` : fp(displayPrices[currency])}
+                </p>
+              )}
               <p className="text-muted-foreground/70 font-body text-xs mb-1">
                 {locale === 'zh'
                   ? '所有价格均以新西兰元 (NZD) 计价，已含GST。海外购买的货币兑换由您的信用卡机构负责。'
@@ -874,7 +877,9 @@ export default function ProductDetailPage() {
                       <ResponsiveImage src={p.image} alt={locale === 'zh' ? p.nameZh : p.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 50vw, 33vw" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p.nameZh : p.nameEn}</p>
-                    <p className="text-gold font-display text-sm">{fp(p.prices[currency])}</p>
+                    {SHOW_PRICES && (
+                      <p className="text-gold font-display text-sm">{fp(p.prices[currency])}</p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -894,7 +899,9 @@ export default function ProductDetailPage() {
                       <ResponsiveImage src={p!.image} alt={locale === 'zh' ? p!.nameZh : p!.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 50vw, 25vw" />
                     </div>
                     <p className="font-body font-semibold text-sm mb-1">{locale === 'zh' ? p!.nameZh : p!.nameEn}</p>
-                    <p className="text-gold font-display text-sm">{fp(p!.prices[currency])}</p>
+                    {SHOW_PRICES && (
+                      <p className="text-gold font-display text-sm">{fp(p!.prices[currency])}</p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -905,9 +912,11 @@ export default function ProductDetailPage() {
 
       {/* P2 FIX: Mobile sticky add-to-cart bar with variant guard */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 pt-4 safe-bottom flex items-center gap-4 z-40">
-        <span className="text-gold font-display text-xl font-semibold">
-          {priceRange ? `${fp(priceRange.min)}+` : fp(displayPrices[currency])}
-        </span>
+        {SHOW_PRICES && (
+          <span className="text-gold font-display text-xl font-semibold">
+            {priceRange ? `${fp(priceRange.min)}+` : fp(displayPrices[currency])}
+          </span>
+        )}
         <button
           onClick={() => {
             if (product.variants && product.variants.length > 0 && !selectedVariant) {
