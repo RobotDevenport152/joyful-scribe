@@ -6,7 +6,8 @@
 > commit that resolved them; do not delete history — this file is the running log.
 >
 > For architecture, schema, and engineering standards, see `CLAUDE.md` instead — this
-> file tracks issues, not how the system is built.
+> file tracks issues, not how the system is built. For the planned content/IA
+> overhaul (new nav structure, `/about` and `/quality` pages), see `CONTENT_STRATEGY.md`.
 
 ## Operational Notes — do this whenever asked to "check the project"
 

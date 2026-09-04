@@ -1,6 +1,6 @@
 # CLAUDE.md — Pacific Alpacas Project Guide
 
-> This file is the authoritative context document for Claude Code (CLI) — and, as of 2026-07-21, the single source of truth for every coding agent in this repo. `AGENTS.md` and `DEVELOPMENT_GUIDE.md` are now pointers to this file, not copies of it; if you're tempted to fork this content into either of them again, don't — that's the drift that made this note necessary. For the live bug/incident log (different genre — a running log, not a snapshot), see `PROJECT_STATUS.md`.
+> This file is the authoritative context document for Claude Code (CLI) — and, as of 2026-07-21, the single source of truth for every coding agent in this repo. `AGENTS.md` and `DEVELOPMENT_GUIDE.md` are now pointers to this file, not copies of it; if you're tempted to fork this content into either of them again, don't — that's the drift that made this note necessary. For the live bug/incident log (different genre — a running log, not a snapshot), see `PROJECT_STATUS.md`. For the planned content/IA overhaul and its competitive benchmark (Vispring, Hästens), see `CONTENT_STRATEGY.md`.
 > Read this entire file before touching any code. Every decision here has a reason.
 
 ---
